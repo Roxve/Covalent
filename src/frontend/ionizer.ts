@@ -24,7 +24,7 @@ export class Ionizer {
       set: Type.set_kw
   };
 
-  ion(value, type: Type) : Ion {
+  ion(value: any, type: Type) : Ion {
     return {
       value,
       type,
@@ -44,7 +44,7 @@ export class Ionizer {
   isOOp(x: string) : boolean {
     return "+-*/%=<&".includes(x);
   }
-  getLine(x: string) : boolean {
+  getLine(x: string | undefined) : boolean {
     if(x == "\n") {
       this.line++;
       this.colmun = 1;
@@ -57,7 +57,7 @@ export class Ionizer {
   isSkippableChar(x: string) {
     return "; ".includes(x) || x === "\t";
   }
-  private add(value,type: Type) {
+  private add(value: any,type: Type) {
     if(value === undefined) {
       this.ions.push(this.ion(this.atoms.shift(), type));
     }
@@ -75,6 +75,28 @@ export class Ionizer {
     
     while(this.atoms.length > 0) {
       switch(this.atoms[0]) {
+       //ooperators
+       case "+":
+       case "-":
+       case "*":
+       case "/":
+       case "%":
+       case "=":
+       case "&":
+       case "<":
+         this.add(this.take(), Type.ooperator);
+         continue;
+       case ">":
+         this.take();
+         if(this.atoms[0] == ">") {
+           this.take();
+           this.add(">>", Type.setter);
+         }
+         else {
+           this.add(">", Type.ooperator);
+         }
+         continue;
+       //symbols
        case "(" :
          this.add(undefined,Type.OpenParen);
          continue;
@@ -87,12 +109,22 @@ export class Ionizer {
        case "}":
          this.add(undefined, Type.CloseBrace);
          continue;
+       case "[":
+         this.add(undefined, Type.OpenBracket);
+         continue;
+       case "]":
+         this.add(undefined, Type.CloseBracket);
+         continue;
        case ",":
          this.add(undefined, Type.Comma);
          continue;
        case ".": 
          this.add(undefined, Type.Dot);
          continue;
+       case ":":
+         this.add(undefined, Type.Colon);
+         continue;
+       //strings
        case '"': 
        case "'":
         let char = this.take();
@@ -108,6 +140,7 @@ export class Ionizer {
           this.take();
         }
         continue;
+       //comments
        case "#":
          this.take();
          while(!this.getLine(this.atoms[0]) && this.atoms.length > 0) {

@@ -18,7 +18,7 @@ export enum Type {
   null_type,
 
   //
-  ooperators,
+  ooperator,
   id,
   setter,
 
