@@ -5,10 +5,19 @@ export class Ionizer {
   private ions: Ion[];
   line: number = 1;
   colmun: number = 1;
-
+  
   constructor(atoms: string) {
     this.atoms = atoms.split("");
     this.ions = new Array<Ion>();
+  }
+
+  error(message: string) {
+    console.log("%c" + message, 'background-color: gold; color: crimson');
+
+    return {
+      message,
+      type: "error"
+    };
   }
   
   private KEYWORDS: Record<string, Type> = {
@@ -57,6 +66,11 @@ export class Ionizer {
     }
     this.colmun++;
   }
+
+  private take() {
+    this.colmun++;
+    return this.atoms.shift();
+  }
   ionize(): Ion[] {
     
     while(this.atoms.length > 0) {
@@ -66,38 +80,65 @@ export class Ionizer {
          continue;
        case ")":
          this.add(undefined, Type.CloseParen);
-         continue; 
+         continue;
+       case "{": 
+         this.add(undefined, Type.OpenBrace);
+         continue;
+       case "}":
+         this.add(undefined, Type.CloseBrace);
+         continue;
+       case ",":
+         this.add(undefined, Type.Comma);
+         continue;
+       case ".": 
+         this.add(undefined, Type.Dot);
+         continue;
+       case '"': 
+       case "'":
+        let char = this.take();
+        let res = "";
+        while(this.atoms[0] != char && this.atoms.length > 0) {
+          res += this.take();
+        }
+        if(this.atoms[0] != char) {
+          this.error("reached end of file and didnt finish string");
+        }
+        else {
+          this.add(res, Type.str_type);
+          this.take();
+        }
+        continue;
        case "#":
-         this.atoms.shift();
+         this.take();
          while(!this.getLine(this.atoms[0]) && this.atoms.length > 0) {
-          this.atoms.shift();
-          this.colmun++;
+          this.take();
          }
          continue;
        case "\n":
-         this.getLine(this.atoms.shift());
+         this.getLine(this.take());
          continue;
        default:
          if(this.isSkippableChar(this.atoms[0])) {
-          this.atoms.shift();
-          this.colmun++;
+          this.take();
          }
          else if(this.isAllowedId(this.atoms[0])) {
           let res: string = "";
           while(this.atoms.length > 0 && this.isAllowedId(this.atoms[0])) {
-            res += this.atoms.shift();
+            res += this.take();
           }
           this.add(res, Type.id);
          }
 
          else {
-           console.log("e");
-           this.atoms.shift();
+           this.error("unknown char");
+           this.take();
          }
          continue;
       }
     }
+
     this.add("END", Type.EOF);
+    
     return this.ions;
   }
 
