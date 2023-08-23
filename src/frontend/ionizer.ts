@@ -34,7 +34,7 @@ export class Ionizer {
   }
 
   isAllowedId(x: string) : boolean {
-    return x.toUpperCase() != x.toLowerCase();
+    return x.toUpperCase() != x.toLowerCase() || this.isNum(x);
   }
 
   isNum(x: string) : boolean {
@@ -121,14 +121,32 @@ export class Ionizer {
          if(this.isSkippableChar(this.atoms[0])) {
           this.take();
          }
+         
+         //numbers
+         else if(this.isNum(this.atoms[0])) {
+           let res: string = "";
+           while(this.atoms.length > 0 && this.isNum(this.atoms[0])) {
+            res += this.take();  
+           }
+           this.add(res, Type.num_type);
+         }
+         //identify
          else if(this.isAllowedId(this.atoms[0])) {
           let res: string = "";
           while(this.atoms.length > 0 && this.isAllowedId(this.atoms[0])) {
             res += this.take();
           }
-          this.add(res, Type.id);
+          const keyword = this.KEYWORDS[res];
+          // 
+          if(keyword != undefined) {
+            this.add(res, keyword);
+          }
+          else {
+            this.add(res, Type.id);
+          }
          }
-
+         
+         
          else {
            this.error("unknown char");
            this.take();
