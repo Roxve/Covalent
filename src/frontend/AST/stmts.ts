@@ -2,6 +2,7 @@ export type Node =
   | "Program" 
   | "Num" 
   | "Str" 
+  | "Null" 
   | "Id" 
   | "BinaryExpr";
 

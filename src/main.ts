@@ -1,4 +1,5 @@
-import {Ionizer} from "./frontend/ionizer.ts"
+import {Ionizer} from "./frontend/ionizer.ts";
+import { Parser } from "./frontend/parser.ts";
 
 function main(args: string[]) {
   if(args === undefined || args === null || args.length <= 0) {
@@ -31,6 +32,10 @@ export function RunTest(atoms: string) {
   var ionizer = new Ionizer(atoms);
   var ionized = ionizer.ionize();
   console.log(ionized);
+
+  let parser: Parser = new Parser(ionized);
+  let ev = parser.productAST();
+  console.log(ev);
 }
 // Learn more at https://deno.land/manual/examples/module_metadata#concepts
 if (import.meta.main) {
