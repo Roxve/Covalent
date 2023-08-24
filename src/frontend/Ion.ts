@@ -16,6 +16,7 @@ export enum Type {
   str_type,
   num_type,
   null_type,
+  bool_type,
 
   //
   ooperator,

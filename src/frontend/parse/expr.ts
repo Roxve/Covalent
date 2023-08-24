@@ -1,5 +1,5 @@
 import { ParserStmt } from "./stmt.ts";
-import { Null, Num, Str } from "../AST/values.ts";
+import { Null, Num, Str, Bool } from "../AST/values.ts";
 import { Expr } from "../AST/stmts.ts";
 import { BinaryExpr } from "../AST/exprs.ts";
 import { Type, Ion } from "../Ion.ts";
@@ -69,6 +69,21 @@ export class ParserExpr extends ParserStmt {
                line: this.line,
                colmun: this.colmun
             } as Num;
+         case Type.bool_type:
+            return {
+               type: "Bool",
+               value: this.take().value == "true" ? true : false,
+               line: this.line,
+               colmun: this.colmun
+            } as Bool;
+         case Type.null_type:
+            this.take();
+            return {
+               type: "Null",
+               value: null,
+               line: this.line,
+               colmun: this.colmun
+            } as Null;
          default:
             this.error("unexcepted ION", "AT0001");
             this.take();

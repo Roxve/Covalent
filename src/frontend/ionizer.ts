@@ -21,7 +21,10 @@ export class Ionizer {
   }
   
   private KEYWORDS: Record<string, Type> = {
-      set: Type.set_kw
+      set: Type.set_kw,
+      true: Type.bool_type,
+      false: Type.bool_type,
+      null: Type.null_type
   };
 
   ion(value: any, type: Type) : Ion {

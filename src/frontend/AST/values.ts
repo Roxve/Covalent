@@ -15,6 +15,10 @@ export interface Str extends Expr {
     type: "Str";
     value: string;
 }
+export interface Bool extends Expr {
+    type: "Bool";
+    value: boolean;
+}
 export interface Null extends Expr {
     type: "Null";
     value: null;
