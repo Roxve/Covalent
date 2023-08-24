@@ -21,3 +21,11 @@ export interface BoolVal extends RuntimeVal {
   type: "bool";
   value: boolean;
 }
+export interface NullVal extends RuntimeVal {
+  type: "null";
+  value: null;
+}
+
+export function MK_NULL() : NullVal {
+  return { type: "null", value: null } as NullVal;
+}
