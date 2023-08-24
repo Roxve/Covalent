@@ -49,7 +49,7 @@ jobs:
       # - name: zip arm64 files
         # run: tar cvf - ./out/linux-arm64/ | gzip -7 - > atomic-arm64.tar.gz
       - name: zip x64 files
-        run: tar cvf - ./out/linux-x64/ | gzip -8 - > atomic-linux-x64.tar.gz
+        run: tar cvf - ./out/linux-x64/ | gzip -7 - > atomic-linux-x64.tar.gz
       - uses: actions/upload-artifact@v3
         with:
           name: atomic-linux-x64
