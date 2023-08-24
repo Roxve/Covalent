@@ -6,6 +6,7 @@ export class ParserExpr extends ParserStmt {
    protected parse_primary_expr() : Expr {
       switch(this.at().type) {
          default:
+            this.error("unexcepted ION", "AT0001");
             this.take();
             return {
                type: "Null",
