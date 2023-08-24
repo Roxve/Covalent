@@ -29,7 +29,7 @@ export class ParserMain {
       console.log(`%cParser Error:${msg}\nat => line: ${this.line}, colmun:${this.colmun}\ngot => value:${this.at().value}, type:${this.getTypeName(this.at().type)}, ErrorCode:${code}`, 'color: crimson; background-color: gold');
 
    }
-   protected take() : Ion | undefined {
+   protected take() : Ion {
       if(this.ions.length <= 0) {
          return {
             value: "END",
@@ -40,10 +40,20 @@ export class ParserMain {
       }
       else {
          this.Update();
-         return this.ions.shift();
+         const ion: Ion = this.ions.shift() || {} as Ion;
+          
+         return ion;
       }
    }
-
+   protected except(correct_type: Type) : Ion {
+      if(this.at().type != correct_type) {
+         this.error(`unexcepted ION, excepted type:${this.getTypeName(correct_type)}`, "AT0002");
+         return this.take();
+      }
+      else {
+         return this.take();
+      }
+   }
    protected at() : Ion {
       if(this.ions.length <= 0) {
          return {

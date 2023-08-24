@@ -25,6 +25,6 @@ export class Parser extends ParserExpr {
      }
    }
    protected parse_expr() : Expr {
-     return this.parse_primary_expr();
+     return this.parse_mathmatic_expr();
    }
 }

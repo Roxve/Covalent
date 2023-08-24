@@ -38,7 +38,7 @@ export class Ionizer {
   }
 
   isNum(x: string) : boolean {
-    return "0123456789٠١٢٣٤٥٦٧٨٩".includes(x);
+    return "0123456789.٠١٢٣٤٥٦٧٨٩".includes(x);
   }
 
   isOOp(x: string) : boolean {

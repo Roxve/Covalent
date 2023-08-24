@@ -26,6 +26,10 @@ function Repl() {
     var ionizer = new Ionizer(atoms);
     var ionized = ionizer.ionize();
     console.log(ionized);
+    let parser: Parser = new Parser(ionized);
+    let parsed = parser.productAST();
+
+    console.log(parsed);
   }
 }
 export function RunTest(atoms: string) {

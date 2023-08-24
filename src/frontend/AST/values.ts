@@ -13,7 +13,7 @@ export interface Num extends Expr {
 
 export interface Str extends Expr {
     type: "Str";
-    value: number;
+    value: string;
 }
 export interface Null extends Expr {
     type: "Null";
