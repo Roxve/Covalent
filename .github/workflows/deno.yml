@@ -43,9 +43,9 @@ jobs:
       - name: prepare
         run: mkdir ./out ./out/linux-x64/ ./out/linux-arm64
       - name: Compile For linux-x64
-        run: deno compile --allow-read ./main.ts --out ./out/linux-x64/atomic
+        run: deno compile --allow-read ./main.ts --output ./out/linux-x64/atomic
       - name: Compile For linux-arm64
-        run: deno compile --allow-read ./main.ts --out ./out/linux-arm64/atomic --target aarch64-unknown-linux-gnu
+        run: deno compile --allow-read ./main.ts --output ./out/linux-arm64/atomic --target aarch64-unknown-linux-gnu
       - name: zip arm64 files
         run: tar cvf - ./out/linux-arm64/ | gzip -7 - > atomic-arm64.tar.gz
       - name: zip x64 files
