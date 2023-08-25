@@ -1,2 +1,3 @@
-set test >> 16
-()
+5 + 5 * 5 # 30
+(5 + 5) * 5 # 50
+"test: true" - true + false # test: false

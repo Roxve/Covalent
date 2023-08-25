@@ -1,6 +1,7 @@
 
 import { Stmt, Expr} from "../AST/stmts.ts";
 import { Ion, Type } from "../Ion.ts";
+import { setError } from "../../etc.ts";
 
 export class ParserMain {
    protected ions: Array<Ion>;
@@ -27,7 +28,7 @@ export class ParserMain {
    }
    protected error(msg: string, code: string = "AT000") {
       console.log(`%cParser Error:${msg}\nat => line: ${this.line}, colmun:${this.colmun}\ngot => value:${this.at().value}, type:${this.getTypeName(this.at().type)}, ErrorCode:${code}`, 'color: crimson; background-color: gold');
-
+      setError();
    }
    protected take() : Ion {
       if(this.ions.length <= 0) {

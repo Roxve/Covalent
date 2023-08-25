@@ -9,9 +9,9 @@ export class ParserExpr extends ParserStmt {
       const main = this;
       function parse_additive_expr() : Expr {
          let left = parse_multiplactive_expr();
-         const val = main.at().value;
-         if(val === "+" || val === "-") {
-            main.take();
+         
+         while(main.at().value === "+" || main.at().value === "-") {
+            let val: string = main.take().value;
             const right = parse_multiplactive_expr();
             left = {
                type: "BinaryExpr",
@@ -28,9 +28,9 @@ export class ParserExpr extends ParserStmt {
 
       function parse_multiplactive_expr() : Expr {
          let left = main.parse_primary_expr();
-         const val = main.at().value;
-         if(val === "*" || val === "/" || val === "%") {
-            main.take();
+         
+         while(main.at().value === "*" || main.at().value === "/" || main.at().value === "%") {
+            let val: string = main.take().value;
             const right = main.parse_primary_expr();
             left = {
                type: "BinaryExpr",

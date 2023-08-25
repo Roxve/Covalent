@@ -2,6 +2,7 @@ import {Ionizer} from "./frontend/ionizer.ts";
 import { Parser } from "./frontend/parser.ts";
 import { Enviroment } from "./runtime/enviroment.ts";
 import { evaluate } from "./runtime/evaluate.ts";
+import { isError, setTest } from "./etc.ts";
 
 function main(args: string[]) {
   if(args === undefined || args === null || args.length <= 0) {
@@ -26,13 +27,18 @@ function Repl() {
   while(true) {
     console.log("Atomic");
     const atoms: any = prompt("=>");
+    if(atoms == ".exit") {
+      Deno.exit(0);
+    }
     const ionizer = new Ionizer(atoms);
     const ionized = ionizer.ionize();
-    console.log(ionized);
+    
     const parser: Parser = new Parser(ionized);
     const parsed = parser.productAST();
 
-    console.log(parsed);
+    if(isError) {
+      Deno.exit(1);
+    }
 
     const run = evaluate(parsed, env);
 
@@ -40,13 +46,18 @@ function Repl() {
   }
 }
 export function RunTest(atoms: string) {
-  var ionizer = new Ionizer(atoms);
-  var ionized = ionizer.ionize();
+  setTest();
+  const env = new Enviroment(null);
+  const ionizer = new Ionizer(atoms);
+  const ionized = ionizer.ionize();
   console.log(ionized);
 
-  let parser: Parser = new Parser(ionized);
-  let ev = parser.productAST();
-  console.log(ev);
+  const parser: Parser = new Parser(ionized);
+  const parsed = parser.productAST();
+  console.log(parsed);
+
+  const run = evaluate(parsed, env);
+  console.log(run);
 }
 // Learn more at https://deno.land/manual/examples/module_metadata#concepts
 if (import.meta.main) {

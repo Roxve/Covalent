@@ -1,4 +1,5 @@
 import {Ion, Type} from "./Ion.ts";
+import { setError } from "../etc.ts"
 
 export class Ionizer {
   private atoms;
@@ -12,8 +13,8 @@ export class Ionizer {
   }
 
   error(message: string) {
-    console.log("%c" + message, 'background-color: gold; color: crimson');
-
+    console.log(`%c${message}\nat => line:${this.line}, colmun:${this.colmun}\ngot => char:${this.atoms[0]}`, 'background-color: gold; color: crimson');
+    setError();
     return {
       message,
       type: "error"
