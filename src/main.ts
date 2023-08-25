@@ -25,7 +25,7 @@ function Repl() {
   console.log();
   const env: Enviroment = new Enviroment(null);
   while(true) {
-    console.log("%cAtomic", 'color: #dd1d21');
+    console.log("%cAtomic", 'color: #c22147');
     const atoms: any = prompt("=>");
     if(atoms == ".exit") {
       Deno.exit(0);
