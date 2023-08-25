@@ -1,5 +1,7 @@
 import {Ionizer} from "./frontend/ionizer.ts";
 import { Parser } from "./frontend/parser.ts";
+import { Enviroment } from "./runtime/enviroment.ts";
+import { evaluate } from "./runtime/evaluate.ts";
 
 function main(args: string[]) {
   if(args === undefined || args === null || args.length <= 0) {
@@ -20,16 +22,21 @@ function main(args: string[]) {
 
 function Repl() {
   console.log();
+  const env: Enviroment = new Enviroment(null);
   while(true) {
     console.log("Atomic");
     const atoms: any = prompt("=>");
-    var ionizer = new Ionizer(atoms);
-    var ionized = ionizer.ionize();
+    const ionizer = new Ionizer(atoms);
+    const ionized = ionizer.ionize();
     console.log(ionized);
-    let parser: Parser = new Parser(ionized);
-    let parsed = parser.productAST();
+    const parser: Parser = new Parser(ionized);
+    const parsed = parser.productAST();
 
     console.log(parsed);
+
+    const run = evaluate(parsed, env);
+
+    console.log(run);
   }
 }
 export function RunTest(atoms: string) {

@@ -29,3 +29,12 @@ export interface NullVal extends RuntimeVal {
 export function MK_NULL() : NullVal {
   return { type: "null", value: null } as NullVal;
 }
+export function MK_NUM(num: number = 0) : NumVal {
+  return { type: "num", value: num } as NumVal;
+}
+export function MK_STR(str: string = "") : StrVal {
+  return { type: "str", value: str } as StrVal;
+}
+export function MK_BOOL(bool: boolean = false) : BoolVal {
+  return { type: "bool", value: bool } as BoolVal;
+}
