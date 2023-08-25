@@ -25,7 +25,7 @@ function Repl() {
   console.log();
   const env: Enviroment = new Enviroment(null);
   while(true) {
-    console.log("Atomic");
+    console.log("%cAtomic", 'color: #dd1d21');
     const atoms: any = prompt("=>");
     if(atoms == ".exit") {
       Deno.exit(0);
@@ -36,13 +36,10 @@ function Repl() {
     const parser: Parser = new Parser(ionized);
     const parsed = parser.productAST();
 
-    if(isError) {
-      Deno.exit(1);
-    }
 
     const run = evaluate(parsed, env);
 
-    console.log(run);
+    console.log(`%c${run.value}`, `color: ${run.color}`);
   }
 }
 export function RunTest(atoms: string) {
@@ -55,9 +52,26 @@ export function RunTest(atoms: string) {
   const parser: Parser = new Parser(ionized);
   const parsed = parser.productAST();
   console.log(parsed);
+  if(isError) {
+    Deno.exit(1);
+  }
 
   const run = evaluate(parsed, env);
   console.log(run);
+}
+export function Run(atoms: string) {
+  const env = new Enviroment(null);
+
+  const ionizer = new Ionizer(atoms);
+  const ionized = ionizer.ionize();
+
+  const parser = new Parser(ionized);
+  const parsed = parser.productAST();
+
+  if(isError) {
+    Deno.exit(1);
+  }
+  const run = evaluate(parsed, env)
 }
 // Learn more at https://deno.land/manual/examples/module_metadata#concepts
 if (import.meta.main) {

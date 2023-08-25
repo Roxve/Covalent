@@ -4,9 +4,15 @@ export type ValueType =
 | "num"
 | "bool";
 
+export type ColorType = 
+  | "red" 
+  | "green" 
+  | "white"
+  | "yellow";
 export interface RuntimeVal {
   type: ValueType;
   value: any;
+  color: ColorType;
 }
 
 export interface NumVal extends RuntimeVal {
@@ -27,14 +33,14 @@ export interface NullVal extends RuntimeVal {
 }
 
 export function MK_NULL() : NullVal {
-  return { type: "null", value: null } as NullVal;
+  return { type: "null", value: null, color: "red" } as NullVal;
 }
 export function MK_NUM(num: number = 0) : NumVal {
-  return { type: "num", value: num } as NumVal;
+  return { type: "num", value: num, color: "yellow" } as NumVal;
 }
 export function MK_STR(str: string = "") : StrVal {
-  return { type: "str", value: str } as StrVal;
+  return { type: "str", value: str, color: "green" } as StrVal;
 }
 export function MK_BOOL(bool: boolean = false) : BoolVal {
-  return { type: "bool", value: bool } as BoolVal;
+  return { type: "bool", value: bool, color: bool ? "green" : "red" } as BoolVal;
 }
