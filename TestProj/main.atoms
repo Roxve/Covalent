@@ -1,3 +1,19 @@
-5 + 5 * 5 # 30
-(5 + 5) * 5 # 50
-"test: true" - true + false # test: false
+set user >> { 
+  numbers: 2,
+  one: {
+    name: "aton",
+    pass: 6578
+  },
+  two: { 
+    name: "thomas",
+    pass: 6279
+  }
+}
+
+user[0] # 2
+
+user.one # [object map]
+
+user.two.pass # 6279
+
+user[1].pass # 6578

@@ -107,3 +107,26 @@ export function eval_divide_binary_expr(lhs: RuntimeVal, rhs: RuntimeVal, expr: 
     return MK_NULL();
   }
 }
+
+export function eval_member_expr(expr: AST.MemberExpr, env: Enviroment) : RuntimeVal {
+   let obj = evaluate(expr.obj, env);
+
+   if(obj.type != "obj") {
+     error(`excepted an obj in MemberExpr`, "AT3007", expr);
+     return MK_NULL();
+   }
+   if(expr.isIndexed) {
+     if(expr.property.type != "Num") {
+       error("excepted index of num in indexed MemberExpr", "AT3007", expr);
+       return MK_NULL();
+     }
+      return env.getObjProperty(obj as VT.ObjVal, "null",expr, (expr.property as ASTV.Num).value)
+   }
+   else if(expr.property.type == "MemberExpr") {
+     return eval_member_expr(expr, env);
+   }
+   else if(expr.property.type == "Id") {
+     return env.getObjProperty(obj as VT.ObjVal, (expr.property as ASTV.Id).symbol, expr);
+   }
+   return MK_NULL();
+}

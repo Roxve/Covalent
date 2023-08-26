@@ -1,5 +1,7 @@
 import { RuntimeVal, ObjVal } from "./values.ts";
 import { Stmt } from "../frontend/AST/stmts.ts";
+import { Id } from "../frontend/AST/values.ts";
+import { MemberExpr } from "../frontend/AST/exprs.ts";
 import { MK_NULL } from "./values.ts";
 import { createError } from "../etc.ts";
 export class Enviroment {
@@ -40,8 +42,7 @@ export class Enviroment {
     return value;
   }
   
-  public setObjProperty(obj_name: string, property: string, value: RuntimeVal, stmt: Stmt, index?: number) : RuntimeVal {
-    let obj: ObjVal = this.findVar(obj_name, stmt) as ObjVal;
+  public setObjProperty(obj: ObjVal, property: string, value: RuntimeVal, stmt: Stmt, index?: number) : RuntimeVal {
     if(index) {
       let key = Array.from(obj.value.keys())[index];
       
@@ -50,22 +51,22 @@ export class Enviroment {
       return value;
     }
     if(!obj.value.has(property)) {
-      this.error(`object ${obj_name} doesnt contain property ${property}`, "At2004", stmt);
+      this.error(`object ${((stmt as MemberExpr).obj as Id).symbol} doesnt contain property ${property}`, "At2004", stmt);
       return MK_NULL();
     }
     obj.value.set(property, value);
 
     return value;
   }
-  public getObjProperty(obj_name: string, property: string, stmt: Stmt, index?: number) : RuntimeVal {
-    let obj: ObjVal = this.findVar(obj_name, stmt) as ObjVal;
-    if(index) {
+  public getObjProperty(obj: ObjVal, property: string, stmt: Stmt, index?: number) : RuntimeVal {
+    
+    if(index && index !== null || index !== undefined) {
       let key = Array.from(obj.value.keys())[index];
 
       return obj.value.get(key) || MK_NULL();
     }
     if(!obj.value.has(property)) {
-      this.error(`object ${obj_name} doesnt contain property ${property}`, "AT2004", stmt);
+      this.error(`object ${((stmt as MemberExpr).obj as Id).symbol} doesnt contain property ${property}`, "AT2004", stmt);
     }
 
     return obj.value.get(property) || MK_NULL();
