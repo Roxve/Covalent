@@ -1,5 +1,5 @@
 import { ParserStmt } from "./stmt.ts";
-import { Null, Num, Str, Bool, Id } from "../AST/values.ts";
+import { Null, Num, Str, Bool, Id, Property, Object } from "../AST/values.ts";
 import { Expr } from "../AST/stmts.ts";
 import { BinaryExpr, AssignExpr } from "../AST/exprs.ts";
 import { Type, Ion } from "../Ion.ts";
@@ -7,7 +7,7 @@ import { Type, Ion } from "../Ion.ts";
 export class ParserExpr extends ParserStmt {
 
    protected parse_assign_expr() : Expr {
-      const left = this.parse_mathmatic_expr();
+      const left = this.parse_obj_expr();
 
       if(this.at().type === Type.setter) {
          this.take();
@@ -25,6 +25,78 @@ export class ParserExpr extends ParserStmt {
 
       return left;
    }
+
+
+
+   protected parse_obj_expr() : Expr {
+      if(this.at().type != Type.OpenBrace) {
+         return this.parse_mathmatic_expr();
+      }
+
+      this.take();
+
+      let properties: Property[] = [];
+
+      while(this.notEOF() && this.at().type != Type.CloseBrace) {
+         let key = this.except(Type.id).value;
+
+
+         let property: Property;
+         
+         if(this.at().type === Type.Comma) {
+            this.take();
+            property = { 
+               type: "Property", 
+               key: key, 
+               value: null,
+               line: this.line,
+               colmun: this.colmun
+            }
+            properties.push(property);
+            continue;
+         }
+         else if(this.at().type === Type.CloseBrace) {
+            property = {
+               type: "Property",
+               key: key,
+               value: null,
+               line: this.line,
+               colmun: this.colmun
+            }
+            properties.push(property);
+            continue;
+         }
+         this.except(Type.Colon);
+
+         let value = this.parse_expr();
+
+         property = {
+            type: "Property",
+            key: key,
+            value: value,
+            line: this.line,
+            colmun: this.colmun
+         }
+
+         properties.push(property);
+
+         if(this.at().type != Type.CloseBrace) {
+            this.except(Type.Comma);
+         }
+      }
+      this.except(Type.CloseBrace);
+
+      let obj: Object = {
+         type: "Obj",
+         properties: properties,
+         line: this.line,
+         colmun: this.colmun
+      }
+      return obj;
+   }
+
+
+
    protected parse_mathmatic_expr() : Expr {
       const main = this;
       function parse_additive_expr() : Expr {

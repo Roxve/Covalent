@@ -23,3 +23,14 @@ export interface Null extends Expr {
     type: "Null";
     value: null;
 }
+
+export interface Property extends Expr {
+    type: "Property";
+    key: string;
+    value: Expr | null;
+}
+
+export interface Object extends Expr {
+    type: "Obj";
+    properties: Property[];
+}

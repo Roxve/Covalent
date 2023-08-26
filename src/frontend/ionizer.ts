@@ -39,7 +39,7 @@ export class Ionizer {
   }
 
   isAllowedId(x: string) : boolean {
-    return x.toUpperCase() != x.toLowerCase() || this.isNum(x);
+    return x.toUpperCase() != x.toLowerCase() || x != "." && this.isNum(x);
   }
 
   isNum(x: string) : boolean {

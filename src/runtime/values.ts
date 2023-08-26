@@ -2,7 +2,8 @@ export type ValueType =
 | "null"
 | "str"
 | "num"
-| "bool";
+| "bool"
+| "obj";
 
 export type ColorType = 
   | "red" 
@@ -19,14 +20,24 @@ export interface NumVal extends RuntimeVal {
   type: "num";
   value: number;
 }
+
+
 export interface StrVal extends RuntimeVal {
   type: "str";
   value: string;
 }
+
+
+export interface ObjVal extends RuntimeVal {
+  type: "obj";
+  value: Map<string, RuntimeVal>;
+}
+
 export interface BoolVal extends RuntimeVal { 
   type: "bool";
   value: boolean;
 }
+
 export interface NullVal extends RuntimeVal {
   type: "null";
   value: null;

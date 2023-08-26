@@ -1,6 +1,6 @@
 import { Stmt, Expr, Program, VarCreation } from "../frontend/AST/stmts.ts";
 import { BinaryExpr, AssignExpr } from "../frontend/AST/exprs.ts";
-import { Id, Num, Null, Str, Bool } from "../frontend/AST/values.ts";
+import { Id, Num, Null, Str, Bool, Object } from "../frontend/AST/values.ts";
 import { Enviroment } from "./enviroment.ts";
 import * as VT from "./values.ts";
 import * as expr from "./eval/expr.ts";
@@ -32,6 +32,8 @@ export function evaluate(node: Stmt, env: Enviroment) : VT.RuntimeVal {
       return VT.MK_STR((node as Str).value);
     case "Num":
       return VT.MK_NUM((node as Num).value);
+    case "Obj": 
+      return expr.eval_object(node as Object, env);
     case "VarCreation":
       return stmt.eval_var_creation(node as VarCreation, env);
     case "BinaryExpr":

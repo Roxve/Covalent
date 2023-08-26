@@ -6,7 +6,9 @@ export type Node =
   | "Str"
   | "Bool" 
   | "Null" 
-  | "Id" 
+  | "Id"
+  | "Property"
+  | "Obj" 
   | "BinaryExpr"
   | "AssignExpr";
 

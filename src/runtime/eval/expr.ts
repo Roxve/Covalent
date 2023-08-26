@@ -20,6 +20,27 @@ export function eval_assign_expr(expr: AST.AssignExpr, env: Enviroment) {
 }
 
 
+export function eval_object(expr: ASTV.Object, env: Enviroment) : RuntimeVal {
+  let properties: Map<string, RuntimeVal> = new Map();
+
+  for(let property of expr.properties) {
+    let value: RuntimeVal;
+    if(property.value === null) {
+      value = env.findVar(property.key, property);
+    }
+    else {
+      value = evaluate(property.value, env);
+    }
+    properties.set(property.key, value);
+  }
+  
+  return {
+    type: "obj",
+    value: properties,
+    color: "yellow"
+  } as VT.ObjVal;  
+}
+
 
 
 export function eval_binary_expr(expr: AST.BinaryExpr, env: Enviroment) : VT.RuntimeVal {
