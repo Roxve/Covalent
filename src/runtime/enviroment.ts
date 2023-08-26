@@ -49,7 +49,10 @@ export class Enviroment {
 
       return value;
     }
-
+    if(!obj.value.has(property)) {
+      this.error(`object ${obj_name} doesnt contain property ${property}`, "At2004", stmt);
+      return MK_NULL();
+    }
     obj.value.set(property, value);
 
     return value;
@@ -61,7 +64,9 @@ export class Enviroment {
 
       return obj.value.get(key) || MK_NULL();
     }
-    
+    if(!obj.value.has(property)) {
+      this.error(`object ${obj_name} doesnt contain property ${property}`, "AT2004", stmt);
+    }
 
     return obj.value.get(property) || MK_NULL();
   }
