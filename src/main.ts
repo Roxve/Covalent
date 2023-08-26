@@ -3,6 +3,7 @@ import { Parser } from "./frontend/parser.ts";
 import { Enviroment } from "./runtime/enviroment.ts";
 import { evaluate } from "./runtime/evaluate.ts";
 import { isError, setTest } from "./etc.ts";
+import { rgb24 } from "https://deno.land/std@0.200.0/fmt/colors.ts";
 
 function main(args: string[]) {
   if(args === undefined || args === null || args.length <= 0) {
@@ -26,7 +27,12 @@ function Repl() {
   const env: Enviroment = new Enviroment(null);
   while(true) {
     console.log("%cAtomic", 'color: #c22147');
-    const atoms: any = prompt("=>");
+    
+    const atoms: any = prompt(rgb24("=>", {
+      r: 194,
+      g: 33,
+      b: 71
+    }));
     if(atoms == ".exit") {
       Deno.exit(0);
     }

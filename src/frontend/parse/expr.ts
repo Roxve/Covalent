@@ -85,7 +85,7 @@ export class ParserExpr extends ParserStmt {
                colmun: this.colmun
             } as Null;
          default:
-            this.error("unexcepted ION", "AT0001");
+            this.error("unexcepted ION", "AT1001");
             this.take();
             return {
                type: "Null",

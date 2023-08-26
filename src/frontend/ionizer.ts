@@ -1,5 +1,5 @@
 import {Ion, Type} from "./Ion.ts";
-import { setError } from "../etc.ts"
+import { createError } from "../etc.ts"
 
 export class Ionizer {
   private atoms;
@@ -12,9 +12,9 @@ export class Ionizer {
     this.ions = new Array<Ion>();
   }
 
-  error(message: string) {
-    console.log(`%c${message}\nat => line:${this.line}, colmun:${this.colmun}\ngot => char:${this.atoms[0]}`, 'background-color: gold; color: crimson');
-    setError();
+  error(message: string, code: string) {
+    createError(`${message}\nat => line:${this.line}, colmun:${this.colmun}\ngot => char:${this.atoms[0]}, error code:${code}`);
+    
     return {
       message,
       type: "error"
@@ -137,7 +137,7 @@ export class Ionizer {
           res += this.take();
         }
         if(this.atoms[0] != char) {
-          this.error("reached end of file and didnt finish string");
+          this.error("reached end of file and didnt finish string", "AT0001");
         }
         else {
           this.add(res, Type.str_type);
@@ -185,7 +185,7 @@ export class Ionizer {
          
          
          else {
-           this.error("unknown char");
+           this.error("unknown char", "AT0002");
            this.take();
          }
          continue;

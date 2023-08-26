@@ -1,7 +1,7 @@
 
 import { Stmt, Expr} from "../AST/stmts.ts";
 import { Ion, Type } from "../Ion.ts";
-import { setError } from "../../etc.ts";
+import { createError } from "../../etc.ts";
 
 export class ParserMain {
    protected ions: Array<Ion>;
@@ -27,8 +27,7 @@ export class ParserMain {
       }
    }
    protected error(msg: string, code: string = "AT000") {
-      console.log(`%cParser Error:${msg}\nat => line: ${this.line}, colmun:${this.colmun}\ngot => value:${this.at().value}, type:${this.getTypeName(this.at().type)}, ErrorCode:${code}`, 'color: crimson; background-color: gold');
-      setError();
+      createError(`Parser Error:${msg}\nat => line: ${this.line}, colmun:${this.colmun}\ngot => value:${this.at().value}, type:${this.getTypeName(this.at().type)}, ErrorCode:${code}`);
    }
    protected take() : Ion {
       if(this.ions.length <= 0) {
@@ -48,7 +47,7 @@ export class ParserMain {
    }
    protected except(correct_type: Type) : Ion {
       if(this.at().type != correct_type) {
-         this.error(`unexcepted ION, excepted type:${this.getTypeName(correct_type)}`, "AT0002");
+         this.error(`unexcepted ION, excepted type:${this.getTypeName(correct_type)}`, "AT1002");
          return this.take();
       }
       else {

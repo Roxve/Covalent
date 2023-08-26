@@ -4,9 +4,10 @@ import { Id, Num, Null, Str, Bool } from "../frontend/AST/values.ts";
 import { Enviroment } from "./enviroment.ts";
 import * as VT from "./values.ts";
 import * as expr from "./eval/expr.ts"
+import { createError } from "../etc.ts";
 
 export function error(msg: string, code: string, stmt: Stmt) : void {
-  console.log(`%cRuntime Error:${msg}\nat => line:${stmt.line},colmun:${stmt.colmun},error code:${code}`, 'color: crimson; background-color: gold');
+  createError(`Runtime Error:${msg}\nat => line:${stmt.line},colmun:${stmt.colmun},error code:${code}`);
 }
 
 export function eval_program(prog: Program, env: Enviroment) : VT.RuntimeVal {
