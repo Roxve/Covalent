@@ -59,6 +59,6 @@ export class Enviroment {
     if(env === null) {
       return MK_NULL();
     }
-    return env.vars.get(name);
+    return env.vars.get(name) || MK_NULL();
   }
 }
