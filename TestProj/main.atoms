@@ -17,3 +17,12 @@ user.one # [object map]
 user.two.pass # 6279
 
 user[1].pass # 6578
+
+user[0] >> 3 # 3
+
+user.two.pass >> 7777 # 7777
+user[1].pass >> 7777 # 7777
+
+user[0]
+user.two.pass
+user[1].pass

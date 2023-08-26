@@ -43,7 +43,7 @@ export class Enviroment {
   }
   
   public setObjProperty(obj: ObjVal, property: string, value: RuntimeVal, stmt: Stmt, index?: number) : RuntimeVal {
-    if(index) {
+    if(index && index !== null || index !== undefined) {
       let key = Array.from(obj.value.keys())[index];
       
       obj.value.set(key, value);

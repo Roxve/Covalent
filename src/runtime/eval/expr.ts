@@ -10,13 +10,46 @@ import { error } from "../evaluate.ts";
 
 
 export function eval_assign_expr(expr: AST.AssignExpr, env: Enviroment) {
-  if(expr.assigne.type != "Id") {
-    error("excepted id(var name) to assigne to in assignment expr", "AT3004", expr);
-    return MK_NULL();
+  if(expr.assigne.type === "Id") { 
+    let name = (expr.assigne as ASTV.Id).symbol;
+    return env.setVar(name, evaluate(expr.value, env), expr);
   }
-  let name = (expr.assigne as ASTV.Id).symbol;
   
-  return env.setVar(name, evaluate(expr.value, env), expr);
+  else if(expr.assigne.type === "MemberExpr") {
+    let memberExpr: AST.MemberExpr = expr.assigne as AST.MemberExpr;
+    let obj = evaluate(memberExpr.obj, env);
+    function eval_assigne_member_expr(obj: RuntimeVal, expr: AST.MemberExpr, value: Expr) : RuntimeVal {
+      
+
+      if(obj.type != "obj") {
+        error(`excepted an obj in MemberExpr`, "AT3007", expr);
+        return MK_NULL();
+      }
+      if(expr.isIndexed) {
+        if(expr.property.type != "Num") {
+          error("excepted index of num in indexed MemberExpr", "AT3008", expr);
+          return MK_NULL();
+        }
+        return env.setObjProperty(obj as VT.ObjVal, "null",evaluate(value, env),expr, (expr.property as ASTV.Num).value)
+      }
+
+
+     if(expr.property.type == "MemberExpr") {
+        return eval_assigne_member_expr(evaluate(expr.obj, env),expr, value);
+     }
+
+
+     if(memberExpr.property.type == "Id") {
+        return env.setObjProperty(obj as VT.ObjVal, (memberExpr.property as ASTV.Id).symbol, evaluate(value,env), expr);
+     }
+     return MK_NULL();
+  }
+  return eval_assigne_member_expr(obj, memberExpr, expr.value);
+ }
+ else {
+   error("excepted id(var name) to assinge in assingement expr", "AT3004", expr);
+   return MK_NULL();
+ }
 }
 
 
@@ -122,11 +155,16 @@ export function eval_member_expr(expr: AST.MemberExpr, env: Enviroment) : Runtim
      }
       return env.getObjProperty(obj as VT.ObjVal, "null",expr, (expr.property as ASTV.Num).value)
    }
-   else if(expr.property.type == "MemberExpr") {
+
+
+   if(expr.property.type == "MemberExpr") {
      return eval_member_expr(expr, env);
    }
-   else if(expr.property.type == "Id") {
+
+
+   if(expr.property.type == "Id") {
      return env.getObjProperty(obj as VT.ObjVal, (expr.property as ASTV.Id).symbol, expr);
    }
+   
    return MK_NULL();
 }
