@@ -1,4 +1,4 @@
-import { RuntimeVal } from "./values.ts";
+import { RuntimeVal, ObjVal } from "./values.ts";
 import { Stmt } from "../frontend/AST/stmts.ts";
 import { MK_NULL } from "./values.ts";
 import { createError } from "../etc.ts";
@@ -40,7 +40,27 @@ export class Enviroment {
     return value;
   }
   
+  public setObjProperty(obj_name: string, property: string, stmt: Stmt, index?: number) : RuntimeVal {
+    let obj: ObjVal = this.findVar(obj_name, stmt) as ObjVal;
+    if(index) {
+      let key = Array.from(obj.value.keys())[index];
 
+      return obj.value.get(key) || MK_NULL();
+    }
+
+    return obj.value.get(property) || MK_NULL();
+  }
+  public getObjProperty(obj_name: string, property: string, stmt: Stmt, index?: number) : RuntimeVal {
+    let obj: ObjVal = this.findVar(obj_name, stmt) as ObjVal;
+    if(index) {
+      let key = Array.from(obj.value.keys())[index];
+
+      return obj.value.get(key) || MK_NULL();
+    }
+    
+
+    return obj.value.get(property) || MK_NULL();
+  }
   public setVar(name: string, value: RuntimeVal,stmt: Stmt) : RuntimeVal {
     const env = this.resolve(name, stmt);
     if(env === null) {
