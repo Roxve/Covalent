@@ -1,5 +1,5 @@
 import { ParserStmt } from "./stmt.ts";
-import { Null, Num, Str, Bool } from "../AST/values.ts";
+import { Null, Num, Str, Bool, Id } from "../AST/values.ts";
 import { Expr } from "../AST/stmts.ts";
 import { BinaryExpr } from "../AST/exprs.ts";
 import { Type, Ion } from "../Ion.ts";
@@ -55,6 +55,13 @@ export class ParserExpr extends ParserStmt {
             let expr = this.parse_expr();
             this.except(Type.CloseParen);
             return expr;
+         case Type.id:
+            return {
+               type: "Id",
+               symbol: this.take().value,
+               line: this.line,
+               colmun: this.colmun
+            } as Id;
          case Type.str_type:
             return {
                type: "Str",

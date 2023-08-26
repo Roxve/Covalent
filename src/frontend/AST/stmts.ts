@@ -1,5 +1,7 @@
 export type Node = 
-  | "Program" 
+  | "Program"
+  | "VarCreation"
+  | "FuncCreation"
   | "Num" 
   | "Str"
   | "Bool" 
@@ -17,5 +19,14 @@ export interface Program extends Stmt {
   type: "Program";
   body: Stmt[];
 }
+export interface VarCreation extends Stmt {
+  type: "VarCreation";
+  name: string;
+  isLocked: boolean;
+  value: Expr;
+}
+// note: a function is an expr
 
+
+// because exprs are stmts i guess
 export interface Expr extends Stmt {}

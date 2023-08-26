@@ -1,13 +1,14 @@
 import { RuntimeVal } from "./values.ts";
 import { Stmt } from "../frontend/AST/stmts.ts";
 import { MK_NULL } from "./values.ts";
+import { createError } from "../etc.ts";
 export class Enviroment {
   locked_vars: Set<string>
   vars: Map<string, RuntimeVal>
   parent: Enviroment | null;
   
   private error(msg: string, code: string, stmt: Stmt) : void {
-    console.log(`%cRuntime:${msg}\nat => line:${stmt.line}, colmun:${stmt.colmun},error code:${code}`, 'color: crimson; background-color: gold');
+    createError(`Runtime: ${msg}\nat => line:${stmt.line}, colmun:${stmt.colmun},error code:${code}`);
   }
   public constructor(parent: Enviroment | null) {
     this.vars = new Map();
