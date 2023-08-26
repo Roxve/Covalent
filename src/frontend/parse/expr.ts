@@ -1,7 +1,7 @@
 import { ParserStmt } from "./stmt.ts";
 import { Null, Num, Str, Bool, Id, Property, Object } from "../AST/values.ts";
 import { Expr } from "../AST/stmts.ts";
-import { BinaryExpr, AssignExpr, MemberExpr } from "../AST/exprs.ts";
+import { BinaryExpr, AssignExpr, MemberExpr, CallExpr} from "../AST/exprs.ts";
 import { Type, Ion } from "../Ion.ts";
 
 export class ParserExpr extends ParserStmt {
@@ -119,11 +119,11 @@ export class ParserExpr extends ParserStmt {
 
 
       function parse_multiplactive_expr() : Expr {
-         let left = main.parse_member_expr();
+         let left = main.parse_call_member_expr();
          
          while(main.at().value === "*" || main.at().value === "/" || main.at().value === "%") {
             let val: string = main.take().value;
-            const right = main.parse_member_expr();
+            const right = main.parse_call_member_expr();
             left = {
                type: "BinaryExpr",
                left: left,
@@ -139,7 +139,55 @@ export class ParserExpr extends ParserStmt {
       return parse_additive_expr();
    }
 
+   protected parse_call_member_expr() : Expr {
+      let member = this.parse_member_expr();
 
+      if(this.at().type === Type.OpenParen) {
+         return this.parse_call_expr(member);
+      }
+
+      return member;
+   }
+   
+   protected parse_call_expr(caller: Expr) : Expr{
+      let callExpr: Expr = {
+         type: "CallExpr",
+         caller,
+         args: this.parse_args(),
+         line: this.line,
+         colmun: this.colmun
+      } as CallExpr;
+      //dont know why i did this? but it doesnt work without it? 
+      if(this.at().type === Type.OpenParen) { 
+         callExpr = this.parse_call_expr(callExpr);
+      }
+      return callExpr;
+   }
+   
+
+   protected parse_args() : Expr[] {
+      this.except(Type.OpenParen);
+
+      let args: Expr[] = [];
+
+      if(this.at().type != Type.CloseParen) {
+         args = this.parse_args_list();
+      }
+      this.except(Type.CloseParen);
+
+      return args;
+   } 
+   protected parse_args_list() : Expr[] {
+      let args: Expr[] = [];
+      args.push(this.parse_assign_expr());
+
+      while(this.at().type === Type.Comma) {
+         this.take();
+         args.push(this.parse_assign_expr());
+      }
+
+      return args;
+   }
 
 
    protected parse_member_expr() : Expr {

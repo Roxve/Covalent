@@ -19,3 +19,8 @@ export interface MemberExpr extends Expr {
     property: Expr;
     isIndexed: boolean;
 }
+export interface CallExpr extends Expr {
+    type: "CallExpr";
+    args: Expr[];
+    caller: Expr;
+}
