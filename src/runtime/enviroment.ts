@@ -54,7 +54,7 @@ export class Enviroment {
     return value;
   }
 
-  public findVar(name: string, stmt: Stmt) {
+  public findVar(name: string, stmt: Stmt) : RuntimeVal{
     const env = this.resolve(name, stmt);
     if(env === null) {
       return MK_NULL();
