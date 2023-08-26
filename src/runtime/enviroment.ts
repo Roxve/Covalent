@@ -40,15 +40,19 @@ export class Enviroment {
     return value;
   }
   
-  public setObjProperty(obj_name: string, property: string, stmt: Stmt, index?: number) : RuntimeVal {
+  public setObjProperty(obj_name: string, property: string, value: RuntimeVal, stmt: Stmt, index?: number) : RuntimeVal {
     let obj: ObjVal = this.findVar(obj_name, stmt) as ObjVal;
     if(index) {
       let key = Array.from(obj.value.keys())[index];
+      
+      obj.value.set(key, value);
 
-      return obj.value.get(key) || MK_NULL();
+      return value;
     }
 
-    return obj.value.get(property) || MK_NULL();
+    obj.value.set(property, value);
+
+    return value;
   }
   public getObjProperty(obj_name: string, property: string, stmt: Stmt, index?: number) : RuntimeVal {
     let obj: ObjVal = this.findVar(obj_name, stmt) as ObjVal;
