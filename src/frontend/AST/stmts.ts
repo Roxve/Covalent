@@ -7,7 +7,8 @@ export type Node =
   | "Bool" 
   | "Null" 
   | "Id" 
-  | "BinaryExpr";
+  | "BinaryExpr"
+  | "AssignExpr";
 
 export interface Stmt {
   type: Node;
@@ -25,7 +26,13 @@ export interface VarCreation extends Stmt {
   isLocked: boolean;
   value: Expr;
 }
-// note: a function is an expr
+
+export interface FuncCreation extends Stmt {
+  type: "FuncCreation";
+  name: string;
+  body: Stmt[];
+  parameters: string[];
+}
 
 
 // because exprs are stmts i guess

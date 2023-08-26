@@ -1,10 +1,30 @@
 import { ParserStmt } from "./stmt.ts";
 import { Null, Num, Str, Bool, Id } from "../AST/values.ts";
 import { Expr } from "../AST/stmts.ts";
-import { BinaryExpr } from "../AST/exprs.ts";
+import { BinaryExpr, AssignExpr } from "../AST/exprs.ts";
 import { Type, Ion } from "../Ion.ts";
 
 export class ParserExpr extends ParserStmt {
+
+   protected parse_assign_expr() : Expr {
+      const left = this.parse_mathmatic_expr();
+
+      if(this.at().type === Type.setter) {
+         this.take();
+
+         const value = this.parse_expr();
+         
+         return {
+            type: "AssignExpr",
+            assigne: left,
+            value: value,
+            line: this.line,
+            colmun: this.colmun
+         } as AssignExpr;
+      }
+
+      return left;
+   }
    protected parse_mathmatic_expr() : Expr {
       const main = this;
       function parse_additive_expr() : Expr {

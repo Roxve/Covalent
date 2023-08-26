@@ -6,6 +6,22 @@ import { Expr, Stmt } from "../../frontend/AST/stmts.ts";
 import { Enviroment } from "../enviroment.ts";
 import { RuntimeVal, MK_NULL } from "../values.ts";
 import { error } from "../evaluate.ts";
+
+
+
+export function eval_assign_expr(expr: AST.AssignExpr, env: Enviroment) {
+  if(expr.assigne.type != "Id") {
+    error("excepted id(var name) to assigne to in assignment expr", "AT3004", expr);
+    return MK_NULL();
+  }
+  let name = (expr.assigne as ASTV.Id).symbol;
+  
+  return env.setVar(name, evaluate(expr.value, env), expr);
+}
+
+
+
+
 export function eval_binary_expr(expr: AST.BinaryExpr, env: Enviroment) : VT.RuntimeVal {
   const lhs: VT.RuntimeVal = evaluate(expr.left, env); const rhs: VT.RuntimeVal = evaluate(expr.right, env);
   switch(expr.ooperator) {
