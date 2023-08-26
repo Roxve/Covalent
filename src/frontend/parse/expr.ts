@@ -1,7 +1,7 @@
 import { ParserStmt } from "./stmt.ts";
 import { Null, Num, Str, Bool, Id, Property, Object } from "../AST/values.ts";
 import { Expr } from "../AST/stmts.ts";
-import { BinaryExpr, AssignExpr } from "../AST/exprs.ts";
+import { BinaryExpr, AssignExpr, MemberExpr } from "../AST/exprs.ts";
 import { Type, Ion } from "../Ion.ts";
 
 export class ParserExpr extends ParserStmt {
@@ -119,11 +119,11 @@ export class ParserExpr extends ParserStmt {
 
 
       function parse_multiplactive_expr() : Expr {
-         let left = main.parse_primary_expr();
+         let left = main.parse_member_expr();
          
          while(main.at().value === "*" || main.at().value === "/" || main.at().value === "%") {
             let val: string = main.take().value;
-            const right = main.parse_primary_expr();
+            const right = main.parse_member_expr();
             left = {
                type: "BinaryExpr",
                left: left,
@@ -137,6 +137,45 @@ export class ParserExpr extends ParserStmt {
       }
 
       return parse_additive_expr();
+   }
+
+
+
+
+   protected parse_member_expr() : Expr {
+      let left = this.parse_primary_expr();
+
+      while(this.notEOF() && (this.at().type === Type.Dot || this.at().type === Type.OpenBracket)) {
+         let ooperator = this.take();
+         let property: Expr; 
+         let isIndexed: boolean; //indexed => obj[index], !indexed obj.property
+
+         if(ooperator.type === Type.Dot) {
+            isIndexed = false;
+
+            property = this.parse_primary_expr();
+            if(property.type != "Id") {
+               this.error("excepted id of a property in a non indexed member expr", "AT1007");
+               return { type: "Null", value: null } as Null;
+            }
+          }
+            //excepts '['
+            else {
+               isIndexed = true;
+               property = this.parse_expr();
+
+               this.except(Type.CloseBracket);
+            }
+            left = {
+             type: "MemberExpr",
+             obj: left,
+             property,
+             isIndexed,
+             line: this.line,
+             colmun: this.colmun
+            } as MemberExpr;
+      }
+      return left;
    }
 
 

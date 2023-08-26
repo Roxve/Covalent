@@ -12,3 +12,10 @@ export interface AssignExpr extends Expr {
    assigne: Expr;
    value: Expr;
 }
+
+export interface MemberExpr extends Expr {
+    type: "MemberExpr";
+    obj: Expr;
+    property: Expr;
+    isIndexed: boolean;
+}

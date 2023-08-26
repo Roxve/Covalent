@@ -10,7 +10,9 @@ export type Node =
   | "Property"
   | "Obj" 
   | "BinaryExpr"
-  | "AssignExpr";
+  | "AssignExpr"
+  | "CallExpr"
+  | "MemberExpr";
 
 export interface Stmt {
   type: Node;
