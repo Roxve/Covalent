@@ -30,7 +30,8 @@ export class Enviroment {
     if(this.vars.has(name)) {
       return this;
     }
-    if(this.parent === null || this.parent === undefined) {
+    
+    if(!this.parent && this.parent === null || this.parent === undefined) {
       this.error(`cannot resolve ${name}`, "AT2003", stmt);
       return null;
     }

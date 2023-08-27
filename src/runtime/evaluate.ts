@@ -1,4 +1,4 @@
-import { Stmt, Expr, Program, VarCreation } from "../frontend/AST/stmts.ts";
+import { Stmt, Expr, Program, VarCreation, FuncCreation } from "../frontend/AST/stmts.ts";
 import { BinaryExpr, AssignExpr, MemberExpr, CallExpr } from "../frontend/AST/exprs.ts";
 import { Id, Num, Null, Str, Bool, Object } from "../frontend/AST/values.ts";
 import { Enviroment } from "./enviroment.ts";
@@ -40,6 +40,8 @@ export function evaluate(node: Stmt, env: Enviroment) : VT.RuntimeVal {
       return expr.eval_object(node as Object, env);
     case "VarCreation":
       return stmt.eval_var_creation(node as VarCreation, env);
+    case "FuncCreation":
+      return stmt.eval_func_creation(node as FuncCreation, env);
     case "BinaryExpr":
       return expr.eval_binary_expr(node as BinaryExpr, env);
     case "AssignExpr":

@@ -149,17 +149,34 @@ export function eval_call_expr(expr: AST.CallExpr, env: Enviroment) : RuntimeVal
   for(let arg of expr.args) {
     args.push(evaluate(arg, env));
   }
-
+  let results: RuntimeVal = MK_NULL(); 
   let fn = evaluate(expr.caller, env);
+  switch(fn.type) {
+    case "func":
+      let func = (fn as VT.FnVal);
+      results = MK_NULL();
+      let funcEnv = new Enviroment(func.env)
+      
+      if(args.length != func.parameters.length) {
+        error(`excepted ${func.parameters.length} of args got ${args.length}`, "AT3011", expr)
+        return MK_NULL();
+      }
 
-  if(fn.type != "native-func") {
-    error("cannot call a value that is not a function","AT3010", expr);
+      for(let x = 0; func.parameters.length > x; x++) {
+        funcEnv.declareVar(func.parameters[x], args[x], false, expr);
+      }
 
-    return MK_NULL();
+      for(let stmt of func.body) { 
+        evaluate(stmt, funcEnv);
+      }
+      return results;
+    case "native-func": 
+      results = (fn as VT.NativeFnVal).call(args, env);
+      return results;
+    default:
+      error("cannot call a value that is not a function","AT3010", expr);
+      return MK_NULL();
   }
-
-  let results = (fn as VT.NativeFnVal).call(args, env);
-  return results;
 }
 
 

@@ -1,6 +1,6 @@
 import { ParserMain } from "./main.ts";
-import { Stmt, Expr, VarCreation } from "../AST/stmts.ts";
-import { Null } from "../AST/values.ts";
+import { Stmt, Expr, VarCreation, FuncCreation } from "../AST/stmts.ts";
+import { Null, Id } from "../AST/values.ts";
 import { Type } from "../Ion.ts";
 
 export class ParserStmt extends ParserMain {
@@ -15,7 +15,13 @@ export class ParserStmt extends ParserMain {
       }
       let name = this.except(Type.id).value;
       switch(this.at().type) {
-         
+         case Type.OpenParen:
+            if(isLocked) { 
+              this.error("cannot declare a locked func because its already locked! did you mean: private", "AT1011");
+              return { type: "Null", value: null } as Null;
+            }
+            return this.parse_func_creation(name);
+            break;
          default:
             return this.parse_var_creation(name, isLocked); 
       }
@@ -37,11 +43,42 @@ export class ParserStmt extends ParserMain {
 
      return {
         type: "VarCreation",
-        name: name,
-        value: value,
-        isLocked: isLocked,
+        name,
+        value,
+        isLocked,
         line: this.line,
         colmun: this.colmun
      } as VarCreation;
+   }
+
+   parse_func_creation(name: string) : Stmt {
+     let args: Expr[] = this.parse_args(); 
+     let parameters: string[] = [];
+
+     for(let arg of args) {
+        if(arg.type != "Id") {
+           this.error("inside function creation parameters has to be ids", "AT1012");
+           return { type: "Null", value: null } as Null;
+        }
+        parameters.push((arg as Id).symbol);
+     }
+     this.except(Type.Colon);
+     this.except(Type.OpenBrace);
+
+     let body: Stmt[] = [];
+
+     while(this.notEOF() && this.at().type != Type.CloseBrace) {
+         body.push(this.parse_stmt());
+     }
+
+     this.except(Type.CloseBrace);
+     return {
+      type: "FuncCreation",
+      name,
+      parameters,
+      body,
+      line: this.line,
+      colmun: this.colmun
+     } as FuncCreation;
    }
 }

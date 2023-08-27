@@ -86,4 +86,7 @@ export class ParserMain {
    protected parse_expr() : Expr {
       return {} as Expr;
    }
+   protected parse_args() : Expr[] {
+      return [];
+   }
 }

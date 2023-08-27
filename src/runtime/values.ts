@@ -1,4 +1,5 @@
 import { Enviroment } from "./enviroment.ts";
+import { Stmt } from "../frontend/AST/stmts.ts";
 
 export type ValueType = 
 | "null"
@@ -7,7 +8,8 @@ export type ValueType =
 | "bool"
 | "obj"
 | "functionCall"
-| "native-func";
+| "native-func"
+| "func";
 
 export type ColorType = 
   | "red" 
@@ -58,6 +60,15 @@ export type FunctionCall = (
 export interface NativeFnVal extends RuntimeVal{
   type: "native-func";
   call: FunctionCall;
+  value: undefined;
+}
+
+export interface FnVal extends RuntimeVal {
+  type: "func";
+  name: string;
+  parameters: string[];
+  body: Stmt[];
+  env: Enviroment;
   value: undefined;
 }
 
