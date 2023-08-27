@@ -1,5 +1,5 @@
 import { Stmt, Expr, Program, VarCreation } from "../frontend/AST/stmts.ts";
-import { BinaryExpr, AssignExpr, MemberExpr } from "../frontend/AST/exprs.ts";
+import { BinaryExpr, AssignExpr, MemberExpr, CallExpr } from "../frontend/AST/exprs.ts";
 import { Id, Num, Null, Str, Bool, Object } from "../frontend/AST/values.ts";
 import { Enviroment } from "./enviroment.ts";
 import * as VT from "./values.ts";
@@ -46,6 +46,8 @@ export function evaluate(node: Stmt, env: Enviroment) : VT.RuntimeVal {
       return expr.eval_assign_expr(node as AssignExpr, env);
     case "MemberExpr":
       return expr.eval_member_expr(node as MemberExpr, env);
+    case "CallExpr":
+      return expr.eval_call_expr(node as CallExpr, env);
     default:
      error("unknown error please report this ", `AT_UNKNOWN_30:${node.type}`, node);
      console.log(node);

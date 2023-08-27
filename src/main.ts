@@ -1,6 +1,6 @@
 import {Ionizer} from "./frontend/ionizer.ts";
 import { Parser } from "./frontend/parser.ts";
-import { Enviroment } from "./runtime/enviroment.ts";
+import { Enviroment, createEnv } from "./runtime/enviroment.ts";
 import { evaluate } from "./runtime/evaluate.ts";
 import { isError, setTest } from "./etc.ts";
 import { rgb24 } from "https://deno.land/std@0.200.0/fmt/colors.ts";
@@ -25,7 +25,7 @@ function main(args: string[]) {
 
 function Repl() {
   console.log();
-  const env: Enviroment = new Enviroment(null);
+  const env: Enviroment = createEnv();
   while(true) {
     console.log("%cAtomic", 'color: #c22147');
     
@@ -51,7 +51,7 @@ function Repl() {
 }
 export function RunTest(atoms: string) {
   setTest();
-  const env = new Enviroment(null);
+  const env = createEnv();
   const ionizer = new Ionizer(atoms);
   const ionized = ionizer.ionize();
   console.log("%c*******IONIZED:*******", 'font-size: larger; color: red');
@@ -74,7 +74,7 @@ export function RunTest(atoms: string) {
   console.log(run);
 }
 export function Run(atoms: string) {
-  const env = new Enviroment(null);
+  const env = createEnv();
 
   const ionizer = new Ionizer(atoms);
   const ionized = ionizer.ionize();

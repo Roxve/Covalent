@@ -2,15 +2,35 @@ import { RuntimeVal, ObjVal } from "./values.ts";
 import { Stmt } from "../frontend/AST/stmts.ts";
 import { Id } from "../frontend/AST/values.ts";
 import { MemberExpr } from "../frontend/AST/exprs.ts";
-import { MK_NULL } from "./values.ts";
+import { MK_NULL, MK_NATIVE_FUNC} from "./values.ts";
 import { createError } from "../etc.ts";
+import * as color from "https://deno.land/std@0.200.0/fmt/colors.ts";
+//import { writeAllSync } from "https://deno.land/std/streams/conversion.ts";
+
+export function createEnv() {
+  let env: Enviroment = new Enviroment(null);
+  env.declareVar("write", MK_NATIVE_FUNC(function(args, scope) {
+    args.forEach(function(arg) {
+      //toDo move this to its own function
+      switch(arg.color) {
+        default:
+          Deno.writeAllSync(Deno.stdout, new TextEncoder().encode(color.green(arg.value.toString())));
+          break;
+      }
+    });
+    console.log();
+    return MK_NULL();
+  }), true, null);
+
+  return env;
+}
 export class Enviroment {
   locked_vars: Set<string>
   vars: Map<string, RuntimeVal>
   parent: Enviroment | null;
   
-  private error(msg: string, code: string, stmt: Stmt) : void {
-    createError(`Runtime: ${msg}\nat => line:${stmt.line}, colmun:${stmt.colmun},error code:${code}`);
+  private error(msg: string, code: string, stmt: Stmt | null) : void {
+    createError(`Runtime: ${msg}\nat => line:${stmt?.line}, colmun:${stmt?.colmun},error code:${code}`);
   }
   public constructor(parent: Enviroment | null) {
     this.vars = new Map();
@@ -29,7 +49,7 @@ export class Enviroment {
   }
 
   
-  public declareVar(name: string,value: RuntimeVal,isLocked: boolean, stmt: Stmt) : RuntimeVal {
+  public declareVar(name: string,value: RuntimeVal,isLocked: boolean, stmt: Stmt | null) : RuntimeVal {
     if(this.vars.has(name)) {
       this.error(`var:${name} is already declared`, "AT2001", stmt);
       return MK_NULL();

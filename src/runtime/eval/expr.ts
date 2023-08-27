@@ -141,6 +141,30 @@ export function eval_divide_binary_expr(lhs: RuntimeVal, rhs: RuntimeVal, expr: 
   }
 }
 
+
+
+
+export function eval_call_expr(expr: AST.CallExpr, env: Enviroment) : RuntimeVal {
+  let args: RuntimeVal[] = [];
+  for(let arg of expr.args) {
+    args.push(evaluate(arg, env));
+  }
+
+  let fn = evaluate(expr.caller, env);
+
+  if(fn.type != "native-func") {
+    error("cannot call a value that is not a function","AT3010", expr);
+
+    return MK_NULL();
+  }
+
+  let results = (fn as VT.NativeFnVal).call(args, env);
+  return results;
+}
+
+
+
+
 export function eval_member_expr(expr: AST.MemberExpr, env: Enviroment) : RuntimeVal {
    let obj = evaluate(expr.obj, env);
 

@@ -23,6 +23,6 @@ user[0] >> 3 # 3
 user.two.pass >> 7777 # 7777
 user[1].pass >> 7777 # 7777
 
-user[0]
-user.two.pass
-user[1].pass
+write(user[0])
+write(user.two.pass)
+write(user[1].pass)
