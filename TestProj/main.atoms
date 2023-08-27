@@ -1,7 +1,7 @@
-set num >> 0;
+set num: 0;
 
 set createUser(name, pass) : {
-  num >> num + 1;
+  num = num + 1;
   return { name, pass,num };
 }
 
