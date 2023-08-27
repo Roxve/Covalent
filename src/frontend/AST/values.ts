@@ -1,36 +1,35 @@
-import { Expr } from "./stmts.ts"
-
+import { Expr } from "./stmts.ts";
 
 export interface Id extends Expr {
-    type: "Id";
-    symbol: string;
+  type: "Id";
+  symbol: string;
 }
 
 export interface Num extends Expr {
-    type: "Num";
-    value: number;
+  type: "Num";
+  value: number;
 }
 
 export interface Str extends Expr {
-    type: "Str";
-    value: string;
+  type: "Str";
+  value: string;
 }
 export interface Bool extends Expr {
-    type: "Bool";
-    value: boolean;
+  type: "Bool";
+  value: boolean;
 }
 export interface Null extends Expr {
-    type: "Null";
-    value: null;
+  type: "Null";
+  value: null;
 }
 
 export interface Property extends Expr {
-    type: "Property";
-    key: string;
-    value: Expr | null;
+  type: "Property";
+  key: string;
+  value: Expr | null;
 }
 
 export interface Object extends Expr {
-    type: "Obj";
-    properties: Property[];
+  type: "Obj";
+  properties: Property[];
 }

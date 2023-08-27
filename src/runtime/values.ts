@@ -1,20 +1,20 @@
 import { Enviroment } from "./enviroment.ts";
 import { Stmt } from "../frontend/AST/stmts.ts";
 
-export type ValueType = 
-| "null"
-| "str"
-| "num"
-| "bool"
-| "obj"
-| "functionCall"
-| "return"
-| "native-func"
-| "func";
+export type ValueType =
+  | "null"
+  | "str"
+  | "num"
+  | "bool"
+  | "obj"
+  | "functionCall"
+  | "return"
+  | "native-func"
+  | "func";
 
-export type ColorType = 
-  | "red" 
-  | "green" 
+export type ColorType =
+  | "red"
+  | "green"
   | "white"
   | "yellow";
 export interface RuntimeVal {
@@ -28,19 +28,17 @@ export interface NumVal extends RuntimeVal {
   value: number;
 }
 
-
 export interface StrVal extends RuntimeVal {
   type: "str";
   value: string;
 }
-
 
 export interface ObjVal extends RuntimeVal {
   type: "obj";
   value: Map<string, RuntimeVal>;
 }
 
-export interface BoolVal extends RuntimeVal { 
+export interface BoolVal extends RuntimeVal {
   type: "bool";
   value: boolean;
 }
@@ -51,10 +49,8 @@ export interface NullVal extends RuntimeVal {
 }
 
 export type FunctionCall = (
-  
   args: RuntimeVal[],
-  env: Enviroment
-  
+  env: Enviroment,
 ) => RuntimeVal;
 
 export interface ReturnVal extends RuntimeVal {
@@ -62,7 +58,7 @@ export interface ReturnVal extends RuntimeVal {
   value: RuntimeVal;
 }
 
-export interface NativeFnVal extends RuntimeVal{
+export interface NativeFnVal extends RuntimeVal {
   type: "native-func";
   call: FunctionCall;
   value: undefined;
@@ -77,41 +73,40 @@ export interface FnVal extends RuntimeVal {
   value: undefined;
 }
 
-
-export function MK_NULL() : NullVal {
+export function MK_NULL(): NullVal {
   return { type: "null", value: null, color: "red" } as NullVal;
 }
-export function MK_NUM(num: number = 0) : NumVal {
+export function MK_NUM(num: number = 0): NumVal {
   return { type: "num", value: num, color: "yellow" } as NumVal;
 }
-export function MK_STR(str: string = "") : StrVal {
+export function MK_STR(str: string = ""): StrVal {
   return { type: "str", value: str, color: "green" } as StrVal;
 }
-export function MK_BOOL(bool: boolean = false) : BoolVal {
-  return { type: "bool", value: bool, color: bool ? "green" : "red" } as BoolVal;
+export function MK_BOOL(bool: boolean = false): BoolVal {
+  return {
+    type: "bool",
+    value: bool,
+    color: bool ? "green" : "red",
+  } as BoolVal;
 }
 
-export function MK_NATIVE_FUNC(call: FunctionCall) : NativeFnVal {
+export function MK_NATIVE_FUNC(call: FunctionCall): NativeFnVal {
   return {
     type: "native-func",
-    call
+    call,
   } as NativeFnVal;
 }
 
-export function MK_TYPE(t: any) : RuntimeVal {
-  if(t === undefined || t === null) {
+export function MK_TYPE(t: any): RuntimeVal {
+  if (t === undefined || t === null) {
     return MK_NULL();
-  }
-  else if(typeof(t) === "number" || parseInt(t)) {
+  } else if (typeof t === "number" || parseInt(t)) {
     return MK_NUM(t);
-  }
-  else if(typeof(t) === "string") {
+  } else if (typeof t === "string") {
     return MK_STR(t);
-  }
-  else if(typeof(t) === "boolean") {
+  } else if (typeof t === "boolean") {
     return MK_BOOL(t);
-  }
-  else {
+  } else {
     return MK_NULL();
   }
 }
