@@ -102,6 +102,14 @@ export class Ionizer {
            this.add("=", Type.equals);
          }
          continue;
+      case "|":
+        this.take();
+        if(this.atoms[0] == "|") {
+          this.take();
+          this.add("||", Type.ooperator);
+        }
+        this.add("|", Type.ooperator); 
+        continue;
        //symbols
        case "(" :
          this.add(undefined,Type.OpenParen);

@@ -1,7 +1,7 @@
 import { ParserStmt } from "./stmt.ts";
 import { Null, Num, Str, Bool, Id, Property, Object } from "../AST/values.ts";
 import { Expr } from "../AST/stmts.ts";
-import { BinaryExpr, AssignExpr, MemberExpr, CallExpr} from "../AST/exprs.ts";
+import { BinaryExpr, MultyBinaryExpr, AssignExpr, MemberExpr, CallExpr} from "../AST/exprs.ts";
 import { Type, Ion } from "../Ion.ts";
 
 export class ParserExpr extends ParserStmt {
@@ -30,7 +30,7 @@ export class ParserExpr extends ParserStmt {
 
    protected parse_obj_expr() : Expr {
       if(this.at().type != Type.OpenBrace) {
-         return this.parse_mathmatic_expr();
+         return this.parse_compare_expr();
       }
 
       this.take();
@@ -96,7 +96,71 @@ export class ParserExpr extends ParserStmt {
    }
 
 
+   protected parse_compare_expr(): Expr {
+      const main = this;
+      function parse_multy_compare_expr() : Expr { 
+         let left = parse_compare_type2_expr();
+         const expr = left;
+         let exprs: Expr[] = [];
 
+         while(main.at().value === "|") { 
+            const right = parse_compare_type2_expr();
+            
+            exprs.push(right);
+
+            left = { 
+               type: "BinaryExpr",
+               left: expr,
+               right: exprs,
+               line: main.line,
+               colmun: main.colmun
+            } as MultyBinaryExpr;
+         }
+         return left;
+      }
+
+
+      function parse_compare_type2_expr() : Expr { 
+         let left = parse_compare_type1_expr(); 
+
+         while(main.at().value == "||" || main.at().value == "&") { 
+            const right = parse_compare_type1_expr();
+            const ooperator = main.take().value;
+            left = { 
+               type: "BinaryExpr",
+               left,
+               ooperator,
+               right,
+               line: main.line,
+               colmun: main.colmun
+            } as BinaryExpr;
+         }
+         return left;
+      }
+
+      
+      function parse_compare_type1_expr() : Expr { 
+         let left = main.parse_mathmatic_expr();
+
+         while(main.at().value == "==" || main.at().value == "<" || main.at().value == ">") {
+            const right = main.parse_mathmatic_expr();
+
+            let ooperator = main.take().value;
+
+            left = { 
+               type: "BinaryExpr",
+               left,
+               ooperator,
+               right,
+               line: main.line,
+               colmun: main.colmun
+            } as BinaryExpr;
+         }
+         return left;
+      }
+
+      return parse_multy_compare_expr();
+   }
    protected parse_mathmatic_expr() : Expr {
       const main = this;
       function parse_additive_expr() : Expr {
