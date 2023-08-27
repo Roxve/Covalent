@@ -1,28 +1,15 @@
-set user >> { 
-  numbers: 2,
-  one: {
-    name: "aton",
-    pass: 6578
-  },
-  two: { 
-    name: "thomas",
-    pass: 6279
-  }
+set num >> 0;
+
+set createUser(name, pass) : {
+  num >> num + 1;
+  return { name, pass,num };
 }
 
-user[0] # 2
+set user0 >> createUser("ahmed", 777);
 
-user.one # [object map]
+set user1 >> createUser("thomas", 666);
 
-user.two.pass # 6279
 
-user[1].pass # 6578
-
-user[0] >> 3 # 3
-
-user.two.pass >> 7777 # 7777
-user[1].pass >> 7777 # 7777
-
-write(user[0])
-write(user.two.pass)
-write(user[1].pass)
+write(user0.name, " ", user0.pass);
+write(user1.name, " ", user1.pass);
+write("all nums: ", user0.num, ",", user1.num, ",")
