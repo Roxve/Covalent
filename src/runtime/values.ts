@@ -8,6 +8,7 @@ export type ValueType =
 | "bool"
 | "obj"
 | "functionCall"
+| "return"
 | "native-func"
 | "func";
 
@@ -56,6 +57,10 @@ export type FunctionCall = (
   
 ) => RuntimeVal;
 
+export interface ReturnVal extends RuntimeVal {
+  type: "return";
+  value: RuntimeVal;
+}
 
 export interface NativeFnVal extends RuntimeVal{
   type: "native-func";

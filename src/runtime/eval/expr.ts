@@ -165,9 +165,14 @@ export function eval_call_expr(expr: AST.CallExpr, env: Enviroment) : RuntimeVal
       for(let x = 0; func.parameters.length > x; x++) {
         funcEnv.declareVar(func.parameters[x], args[x], false, expr);
       }
-
+      
+      let last: RuntimeVal;
       for(let stmt of func.body) { 
-        evaluate(stmt, funcEnv);
+        last = evaluate(stmt, funcEnv);
+        if(last.type === "return") {
+          results = (last as VT.ReturnVal).value;
+          break;
+        }
       }
       return results;
     case "native-func": 

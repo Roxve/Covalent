@@ -1,5 +1,5 @@
 import { ParserMain } from "./main.ts";
-import { Stmt, Expr, VarCreation, FuncCreation } from "../AST/stmts.ts";
+import { Stmt, Expr, VarCreation, FuncCreation , ReturnStmt} from "../AST/stmts.ts";
 import { Null, Id } from "../AST/values.ts";
 import { Type } from "../Ion.ts";
 
@@ -80,5 +80,19 @@ export class ParserStmt extends ParserMain {
       line: this.line,
       colmun: this.colmun
      } as FuncCreation;
+   }
+
+
+   parse_return_stmt() : Stmt {
+      this.take();
+
+      let value = this.parse_expr();
+
+      return {
+         type: "ReturnStmt",
+         value,
+         line: this.line,
+         colmun: this.colmun
+      } as ReturnStmt;
    }
 }

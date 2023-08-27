@@ -21,7 +21,9 @@ export class Parser extends ParserExpr {
    protected parse_stmt() : Stmt {
      switch(this.at().type) {
        case Type.set_kw:
-         return this.parse_creation();
+         return this.parse_creation(); 
+       case Type.return_kw: 
+         return this.parse_return_stmt();
        default:
          return this.parse_expr();
      }

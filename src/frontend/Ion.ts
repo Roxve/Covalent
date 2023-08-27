@@ -7,7 +7,8 @@ export interface Ion {
 export enum Type {
   //keywords
   set_kw,
-  locked_kw,
+  locked_kw, 
+  return_kw,
   use_kw,
   if_kw,
   else_kw,

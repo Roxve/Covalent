@@ -24,6 +24,7 @@ export class Ionizer {
   private KEYWORDS: Record<string, Type> = {
       set: Type.set_kw,
       locked: Type.locked_kw,
+      return: Type.return_kw,
       true: Type.bool_type,
       false: Type.bool_type,
       null: Type.null_type
