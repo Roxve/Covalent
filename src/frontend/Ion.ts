@@ -22,7 +22,7 @@ export enum Type {
   //
   ooperator,
   id,
-  setter,
+  equals,
 
   //symbols
   Dot,

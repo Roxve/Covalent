@@ -9,7 +9,7 @@ export class ParserExpr extends ParserStmt {
    protected parse_assign_expr() : Expr {
       const left = this.parse_obj_expr();
 
-      if(this.at().type === Type.setter) {
+      if(this.at().type === Type.equals) {
          this.take();
 
          const value = this.parse_expr();

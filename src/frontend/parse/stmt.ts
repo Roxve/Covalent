@@ -29,7 +29,7 @@ export class ParserStmt extends ParserMain {
 
    parse_var_creation(name: string, isLocked: boolean) : Stmt {
       let value: Expr;
-      if(this.at().type != Type.setter) {
+      if(this.at().type != Type.Colon) {
          if(isLocked) {
             this.error("must assinge value to locked var", "AT1006");
             return { type: "Null", value: null, line: this.line, colmun: this.colmun } as Null;

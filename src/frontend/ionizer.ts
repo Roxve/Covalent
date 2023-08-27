@@ -87,19 +87,19 @@ export class Ionizer {
        case "*":
        case "/":
        case "%":
-       case "=":
        case "&":
+       case ">":
        case "<":
          this.add(this.take(), Type.ooperator);
          continue;
-       case ">":
+       case "=":
          this.take();
-         if(this.atoms[0] == ">") {
-           this.take();
-           this.add(">>", Type.setter);
+         if(this.atoms[0] == "=") {
+            this.take();
+            this.add("==", Type.ooperator);
          }
          else {
-           this.add(">", Type.ooperator);
+           this.add("=", Type.equals);
          }
          continue;
        //symbols
