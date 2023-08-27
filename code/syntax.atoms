@@ -1,0 +1,64 @@
+# comments
+
+#* 
+   long comments
+                 *#
+##* doc comments *##
+
+
+# if-else expr
+
+if true: {
+  # do magic
+}
+else if true: { 
+  # do magic
+} 
+else { 
+  # do magic
+} 
+
+
+set varname: value
+set varname: (type) value
+
+varname = value
+
+set locked varname: value;
+
+# list 
+["value", value];
+
+
+set func(args) : { 
+  # do stuff
+  # return stuff
+}
+
+set object: (obj) { 
+  name: value,
+  anothername: value
+}
+
+set object: (obj) {
+  varname,
+  onthervarname
+}
+
+#* ooperators: 
+  +: plus,
+  -: minus,
+  *: multyply,
+  /: divide,
+  %: module,
+
+  ==: equals,
+  &: and,
+  ||: or,
+  |: listed_or;
+
+  listed_or: varname == value | value | value;
+  set func() : type | type {
+    # do stuff
+  }
+*#
