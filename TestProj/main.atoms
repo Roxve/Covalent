@@ -5,9 +5,9 @@ set createUser(name, pass) : {
   return { name, pass,num };
 }
 
-set user0 >> createUser("ahmed", 777);
+set user0: createUser("ahmed", 777);
 
-set user1 >> createUser("thomas", 666);
+set user1: createUser("thomas", 666);
 
 
 write(user0.name, " ", user0.pass);
