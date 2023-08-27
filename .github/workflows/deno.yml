@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  test_and_compile:
     runs-on: ubuntu-latest
 
     steps:
