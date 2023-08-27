@@ -4,23 +4,11 @@ import { Id } from "../frontend/AST/values.ts";
 import { MemberExpr } from "../frontend/AST/exprs.ts";
 import { MK_NULL, MK_NATIVE_FUNC} from "./values.ts";
 import { createError } from "../etc.ts";
-import * as color from "https://deno.land/std@0.200.0/fmt/colors.ts";
-//import { writeAllSync } from "https://deno.land/std/streams/conversion.ts";
+import { native } from "../etc/NativeFuncs.ts";
 
 export function createEnv() {
   let env: Enviroment = new Enviroment(null);
-  env.declareVar("write", MK_NATIVE_FUNC(function(args, scope) {
-    args.forEach(function(arg) {
-      //toDo move this to its own function
-      switch(arg.color) {
-        default:
-          Deno.writeAllSync(Deno.stdout, new TextEncoder().encode(color.green(arg.value.toString())));
-          break;
-      }
-    });
-    console.log();
-    return MK_NULL();
-  }), true, null);
+  env.declareVar("write", MK_NATIVE_FUNC(native.write), true, null);
 
   return env;
 }
