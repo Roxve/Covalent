@@ -9,7 +9,8 @@ import { native } from "../etc/NativeFuncs.ts";
 export function createEnv() {
   let env: Enviroment = new Enviroment(null);
   env.declareVar("write", MK_NATIVE_FUNC(native.write), true, null);
-
+  
+  env.declareVar("prompt", MK_NATIVE_FUNC(native.promptFunc), true, null);
   return env;
 }
 export class Enviroment {

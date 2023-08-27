@@ -1,4 +1,4 @@
-import { RuntimeVal, MK_NULL } from "../runtime/values.ts";
+import { RuntimeVal, MK_NULL, MK_TYPE } from "../runtime/values.ts";
 import { Enviroment } from "../runtime/enviroment.ts";
 import * as Color from "https://deno.land/std@0.200.0/fmt/colors.ts";
 import { writeAllSync } from "https://deno.land/std@0.200.0/streams/write_all.ts";
@@ -33,5 +33,13 @@ export namespace native {
     console.log();
     
     return MK_NULL();
+  }
+  export function promptFunc(args: RuntimeVal[], env: Enviroment) {
+    print(args);
+    let results = prompt("");
+
+    
+
+    return MK_TYPE(results);
   }
 }

@@ -81,3 +81,21 @@ export function MK_NATIVE_FUNC(call: FunctionCall) : NativeFnVal {
     call
   } as NativeFnVal;
 }
+
+export function MK_TYPE(t: any) : RuntimeVal {
+  if(t === undefined || t === null) {
+    return MK_NULL();
+  }
+  else if(typeof(t) === "number" || parseInt(t)) {
+    return MK_NUM(t);
+  }
+  else if(typeof(t) === "string") {
+    return MK_STR(t);
+  }
+  else if(typeof(t) === "boolean") {
+    return MK_BOOL(t);
+  }
+  else {
+    return MK_NULL();
+  }
+}
