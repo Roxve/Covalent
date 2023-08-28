@@ -1,15 +1,18 @@
-set num: 0;
+set name: "Ahmed" # prompt("enter your name:") 
 
-set createUser(name, pass) : {
-  num = num + 1;
-  return { name, pass,num };
+if name == "Thomas" | "Admin878" | "whiwhiwhiM": {
+  write("You are an admin!");
 }
+else if name == "Ahmed" | "NahH7H" | "Non8829": {
+  write("you are an admins frined");
+}
+else {
+  write("nah huh");
+} 
 
-set user0: createUser("ahmed", 777);
-
-set user1: createUser("thomas", 666);
-set user2num: createUser(null, null).num;
-
-write(user0.name, " ", user0.pass);
-write(user1.name, " ", user1.pass);
-write("all nums: ", user0.num, ",", user1.num, ",", user2num)
+if "duck" > "ducks" & 88 * 88 == 88 * 88: {
+  write("duck");
+}
+else {
+  write("nah h7h");
+}

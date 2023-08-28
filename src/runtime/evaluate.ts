@@ -11,6 +11,7 @@ import {
   BinaryExpr,
   CallExpr,
   MemberExpr,
+  IfExpr
 } from "../frontend/AST/exprs.ts";
 import { Bool, Id, Null, Num, Object, Str } from "../frontend/AST/values.ts";
 import { Enviroment } from "./enviroment.ts";
@@ -66,6 +67,8 @@ export function evaluate(node: Stmt, env: Enviroment): VT.RuntimeVal {
       return expr.eval_member_expr(node as MemberExpr, env);
     case "CallExpr":
       return expr.eval_call_expr(node as CallExpr, env);
+    case "IfExpr": 
+      return expr.eval_if_expr(node as IfExpr, env);
     case "ListedOR":
       error(
         "listed or can only be used with '>' & '<' & '==' ooperators only",

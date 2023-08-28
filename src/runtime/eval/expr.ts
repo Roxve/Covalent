@@ -82,6 +82,52 @@ export function eval_object(expr: ASTV.Object, env: Enviroment): RuntimeVal {
   } as VT.ObjVal;
 }
 
+
+export function eval_if_expr(
+  expr: AST.IfExpr,
+  env: Enviroment
+): RuntimeVal {
+  let test = evaluate(expr.test, env);
+
+  //this should not happen at runtime later i will make another phase for type-checking
+  if(test.type != "bool") {
+    error("can only test type of bool in if-else expr got => " + test.type, "AT3015", expr)
+    return MK_NULL();
+  }
+  
+
+  let results: RuntimeVal = MK_NULL();
+  
+  switch((test as VT.BoolVal).value) {
+    case true: 
+      for(let stmt of expr.body) {
+        results = evaluate(stmt, env);
+        if(results.type === "return") {
+          break;
+        }
+      }
+      break;
+    case false:
+      if(expr.alt?.type === "IfExpr") {
+        results = eval_if_expr(expr.alt as AST.IfExpr,  env); 
+      }
+      else {
+        let EElse = expr.alt as AST.ElseExpr;
+
+        for(let stmt of EElse.body) {
+          results = evaluate(stmt, env);
+          if(results.type === "return") {
+            break;
+          }
+        }
+      }
+      break;
+  }
+
+  return results;
+}
+
+
 export function eval_binary_expr(
   expr: AST.BinaryExpr,
   env: Enviroment,

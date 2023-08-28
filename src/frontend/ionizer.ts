@@ -8,7 +8,12 @@ export class Ionizer {
   colmun: number = 1;
 
   constructor(atoms: string) {
-    this.atoms = atoms.split("");
+    try {
+      this.atoms = atoms.split("");
+    }
+    catch {
+      this.atoms = [""];
+    }
     this.ions = new Array<Ion>();
   }
 

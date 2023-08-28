@@ -149,6 +149,7 @@ export class ParserExpr extends ParserStmt {
       return {
         type: "IfExpr",
         test,
+        body,
         alt,
         line: this.line,
         colmun: this.colmun
