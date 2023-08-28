@@ -14,7 +14,10 @@ export type Node =
   | "BinaryExpr"
   | "AssignExpr"
   | "CallExpr"
-  | "MemberExpr";
+  | "MemberExpr"
+  | "DashExpr"
+  | "IfExpr"
+  | "ElseExpr";
 
 export interface Stmt {
   type: Node;

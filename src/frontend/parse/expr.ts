@@ -9,12 +9,14 @@ import {
   Property,
   Str,
 } from "../AST/values.ts";
-import { Expr } from "../AST/stmts.ts";
+import { Expr, Stmt } from "../AST/stmts.ts";
 import {
   AssignExpr,
   BinaryExpr,
   CallExpr,
-  MemberExpr
+  MemberExpr,
+  IfExpr,
+  ElseExpr
 } from "../AST/exprs.ts";
 import { Ion, Type } from "../Ion.ts";
 
@@ -41,7 +43,7 @@ export class ParserExpr extends ParserStmt {
 
   protected parse_obj_expr(): Expr {
     if (this.at().type != Type.OpenBrace) {
-      return this.parse_compare_expr();
+      return this.parse_if_expr();
     }
 
     this.take();
@@ -103,6 +105,61 @@ export class ParserExpr extends ParserStmt {
     };
     return obj;
   }
+
+
+  protected parse_if_expr(): Expr {
+    if(this.at().type === Type.if_kw) { 
+      this.take();
+
+      let test = this.parse_compare_expr();
+      this.except(Type.Colon);
+      this.except(Type.OpenBrace);
+
+      let body: Stmt[] = [];
+
+
+      while(this.notEOF() && this.at().type != Type.CloseBrace) {
+        body.push(this.parse_stmt());
+      }
+      this.except(Type.CloseBrace);
+      
+      let alt: Expr | undefined;
+      while(this.notEOF() && this.at().type === Type.else_kw) {
+        this.take();
+        if(this.at().type === Type.if_kw) {
+          alt = this.parse_if_expr();
+        }
+        else {
+          this.except(Type.OpenBrace); 
+          let body: Stmt[] = [];
+
+          while(this.notEOF() && this.at().type != Type.CloseBrace) { 
+            body.push(this.parse_stmt());
+          }
+
+          this.except(Type.CloseBrace);
+          alt = { 
+            type: "ElseExpr",
+            body, 
+            line: this.line,
+            colmun: this.colmun
+          } as ElseExpr;
+        }
+      }
+      return {
+        type: "IfExpr",
+        test,
+        alt,
+        line: this.line,
+        colmun: this.colmun
+      } as IfExpr;
+    }
+    else {
+      return this.parse_compare_expr();
+    }
+  }
+
+
 
   protected parse_compare_expr(): Expr {
     const main = this;

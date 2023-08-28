@@ -1,4 +1,4 @@
-import { Expr } from "./stmts.ts";
+import { Expr, Stmt} from "./stmts.ts";
 
 export interface BinaryExpr extends Expr {
   type: "BinaryExpr";
@@ -23,4 +23,15 @@ export interface CallExpr extends Expr {
   type: "CallExpr";
   args: Expr[];
   caller: Expr;
+}
+
+export interface IfExpr extends Expr {
+  type: "IfExpr";
+  test: Expr;
+  body: Stmt[];
+  alt?: Expr;
+}
+export interface ElseExpr extends Expr {
+  type: "ElseExpr";
+  body: Stmt[];
 }

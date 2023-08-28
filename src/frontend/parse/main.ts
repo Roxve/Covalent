@@ -14,9 +14,9 @@ export class ParserMain {
   protected getTypeName(T: Type): string {
     let name: string = Type[T];
 
-    if (name.includes("_kw")) {
+    if (name && name.includes("_kw")) {
       return name.replace("_kw", " keyword");
-    } else if (name.includes("_type")) {
+    } else if (name && name.includes("_type")) {
       return name.replace("_type", "");
     } else {
       return name;
