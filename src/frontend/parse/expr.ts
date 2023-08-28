@@ -14,8 +14,7 @@ import {
   AssignExpr,
   BinaryExpr,
   CallExpr,
-  MemberExpr,
-  MultyBinaryExpr,
+  MemberExpr
 } from "../AST/exprs.ts";
 import { Ion, Type } from "../Ion.ts";
 
