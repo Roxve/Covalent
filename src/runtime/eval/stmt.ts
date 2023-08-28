@@ -6,6 +6,7 @@ import {
   VarCreation,
 } from "../../frontend/AST/stmts.ts";
 import { Enviroment } from "../enviroment.ts";
+import { green } from "https://deno.land/std@0.200.0/fmt/colors.ts";
 export function eval_var_creation(
   stmt: VarCreation,
   env: Enviroment,
@@ -19,16 +20,19 @@ export function eval_func_creation(
   stmt: FuncCreation,
   env: Enviroment,
 ): RuntimeVal {
+  let func = {
+    type: "func",
+    name: stmt.name,
+    parameters: stmt.parameters,
+    body: stmt.body,
+    env,
+  } as FnVal;
+  func.value = green(JSON.stringify(func));
+
+
   return env.declareVar(
     stmt.name,
-    {
-      type: "func",
-      name: stmt.name,
-      parameters: stmt.parameters,
-      body: stmt.body,
-      env,
-      value: MK_NULL(),
-    } as FnVal,
+    func,
     true,
     stmt,
   );
