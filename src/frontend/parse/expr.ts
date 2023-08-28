@@ -1,5 +1,14 @@
 import { ParserStmt } from "./stmt.ts";
-import { Bool, Id, Null, Num, Object, Property, Str, listedORExpr } from "../AST/values.ts";
+import {
+  Bool,
+  Id,
+  listedORExpr,
+  Null,
+  Num,
+  Object,
+  Property,
+  Str,
+} from "../AST/values.ts";
 import { Expr } from "../AST/stmts.ts";
 import {
   AssignExpr,
@@ -105,7 +114,7 @@ export class ParserExpr extends ParserStmt {
       while (main.at().value === "||" || main.at().value === "&") {
         const ooperator = main.take().value;
         const right = parse_compare_type1_expr();
-        
+
         left = {
           type: "BinaryExpr",
           left,
@@ -128,8 +137,6 @@ export class ParserExpr extends ParserStmt {
         let ooperator = main.take().value;
         const right = main.parse_listed_or_expr();
 
-        
-
         left = {
           type: "BinaryExpr",
           left,
@@ -151,18 +158,17 @@ export class ParserExpr extends ParserStmt {
     let exprs: Expr[] = [];
     exprs.push(left);
 
-    while(this.at().value === "|") {
-      this.take(); 
+    while (this.at().value === "|") {
+      this.take();
       exprs.push(this.parse_mathmatic_expr());
 
-      left = { 
+      left = {
         type: "ListedOR",
         exprs,
         line: this.line,
-        colmun: this.colmun
+        colmun: this.colmun,
       } as listedORExpr;
     }
-
 
     return left;
   }

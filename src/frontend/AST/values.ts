@@ -34,7 +34,6 @@ export interface Object extends Expr {
   properties: Property[];
 }
 
-
 export interface listedORExpr extends Expr {
   type: "ListedOR";
 
