@@ -86,10 +86,13 @@ export function eval_binary_expr(
   expr: AST.BinaryExpr,
   env: Enviroment,
 ): VT.RuntimeVal {
-  if (expr.ooperator === "|") {
-    return eval_litsted_or_binary(expr as AST.MultyBinaryExpr, env);
-  }
   const lhs: RuntimeVal = evaluate(expr.left, env);
+  if(expr.ooperator == "==") {
+    return eval_equals_binary_expr(lhs, expr.right, env);
+  }
+  else if(expr.ooperator == "<" || expr.ooperator == ">"){
+    return eval_bigger_smaller_binary_expr(lhs, expr.right, expr.ooperator, env);
+  }
   const rhs: RuntimeVal = evaluate(expr.right, env);
   if (lhs.type === "bool" && rhs.type === "bool") {
     return eval_bool_binary(
@@ -110,11 +113,84 @@ export function eval_binary_expr(
         return eval_divide_binary_expr(lhs, rhs, expr);
       case "%":
         return eval_module_binary(lhs, rhs, expr);
+      
       default:
         return MK_NULL();
     }
   }
 }
+
+
+export function eval_equals_binary_expr(lhs: RuntimeVal, rhs: Expr, env: Enviroment){
+ let results: RuntimeVal = VT.MK_BOOL(false);
+  if(rhs.type === "ListedOR") {
+    for(let expr of (rhs as ASTV.listedORExpr).exprs) {
+      if(evaluate(expr, env).value === lhs.value) {
+        results = VT.MK_BOOL(true);
+        break;
+      }
+    }
+  }
+  else {
+    results = VT.MK_BOOL(lhs.value === evaluate(rhs, env).value);
+  }
+
+  return results;
+}
+
+export function eval_bigger_smaller_binary_expr(lhs: RuntimeVal, right: Expr, ooperator: string, env: Enviroment) : RuntimeVal {
+  let results: RuntimeVal = MK_NULL();
+  
+
+  if(right.type === "ListedOR") {
+    for(let expr of (right as ASTV.listedORExpr).exprs) {
+      let rhs = evaluate(expr, env);
+
+      results = eval_bigger_smaller_then(lhs, rhs, ooperator, right);
+
+      if(results.value === true) {
+        break;
+      }
+    }
+  }
+  else {
+    let rhs = evaluate(right, env);
+    results = eval_bigger_smaller_then(lhs, rhs, ooperator, right);
+  }
+  return results;
+}
+
+export function eval_bigger_smaller_then(lhs: RuntimeVal, rhs: RuntimeVal,ooperator: string, expr: Expr) : RuntimeVal {
+  let results: RuntimeVal = MK_NULL();
+
+  if(lhs.type === "str" && rhs.type === "str") {
+    switch (ooperator) { 
+      case "<":
+        results = VT.MK_BOOL(lhs.value.length < rhs.value.length);
+        break;
+      case ">": 
+        results = VT.MK_BOOL(lhs.value.length > rhs.value.length);
+        break;
+    }
+  }
+  else if(lhs.type === "num" && rhs.type === "num") {
+    switch(ooperator) {
+      case "<":
+        results = VT.MK_BOOL(lhs.value < rhs.value);
+        break;
+      case ">": 
+        results = VT.MK_BOOL(lhs.value > rhs.value); 
+        break;
+    }
+  }
+
+  else {
+    error(`bigger than and smaller than cannot be used on left hand of type ${lhs.type} & on right hand of type ${rhs.type}`,"AT3003", expr)
+  }
+
+  return results;
+}
+
 export function eval_plus_binary_expr(
   lhs: VT.RuntimeVal,
   rhs: RuntimeVal,
@@ -133,6 +209,7 @@ export function eval_plus_binary_expr(
     return MK_NULL();
   }
 }
+
 
 export function eval_minus_binary_expr(
   lhs: RuntimeVal,
@@ -206,44 +283,7 @@ export function eval_module_binary(
     return MK_NULL();
   }
 }
-export function eval_litsted_or_binary(expr: AST.MultyBinaryExpr, env: Enviroment) {
-  let results: RuntimeVal = VT.MK_BOOL(false);
 
-  if (
-    expr.left.type === "BinaryExpr" &&
-    (expr.left as AST.BinaryExpr).ooperator === "=="
-  ) {
-    let left = expr.left as AST.BinaryExpr;
-    let lhs = evaluate(left.left, env);
-
-    for (let val of expr.right) {
-      let rhs = evaluate(val, env);
-      if (lhs.value == rhs.value) {
-        results = VT.MK_BOOL(true);
-        break;
-      }
-    }
-  } else if (
-    expr.left.type === "BinaryExpr" &&
-    (expr.left as AST.BinaryExpr).ooperator === ">"
-  ) {
-    let left = expr.left as AST.BinaryExpr;
-    let lhs = evaluate(left.left, env);
-
-    for (let val of expr.right) {
-      let rhs = evaluate(val, env);
-      if (lhs.value > rhs.value) {
-        results = VT.MK_BOOL(true);
-        break;
-      }
-    }
-  } else {
-    results = MK_NULL();
-    error("cannot list or in this type of expr", "AT3003", expr);
-  }
-
-  return results;
-}
 export function eval_bool_binary(
   lhs: VT.BoolVal,
   rhs: VT.BoolVal,

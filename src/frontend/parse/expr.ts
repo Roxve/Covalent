@@ -1,5 +1,5 @@
 import { ParserStmt } from "./stmt.ts";
-import { Bool, Id, Null, Num, Object, Property, Str } from "../AST/values.ts";
+import { Bool, Id, Null, Num, Object, Property, Str, listedORExpr } from "../AST/values.ts";
 import { Expr } from "../AST/stmts.ts";
 import {
   AssignExpr,
@@ -98,27 +98,6 @@ export class ParserExpr extends ParserStmt {
 
   protected parse_compare_expr(): Expr {
     const main = this;
-    /*function parse_multy_compare_expr(): Expr {
-      let left = main.parse_mathmatic_expr();
-      const expr = left;
-      let exprs: Expr[] = [];
-
-      while (main.at().value === "|") {
-        const right = main.parse_mathmatic_expr();
-
-        exprs.push(right);
-
-        left = {
-          type: "BinaryExpr",
-          left: expr,
-          ooperator: "|",
-          right: exprs,
-          line: main.line,
-          colmun: main.colmun,
-        } as MultyBinaryExpr;
-      }
-      return left;
-    }*/
 
     function parse_compare_type2_expr(): Expr {
       let left = parse_compare_type1_expr();
@@ -140,14 +119,14 @@ export class ParserExpr extends ParserStmt {
     }
 
     function parse_compare_type1_expr(): Expr {
-      let left = main.parse_mathmatic_expr();
+      let left = main.parse_listed_or_expr();
 
       while (
         main.at().value === "==" || main.at().value === "<" ||
         main.at().value === ">"
       ) {
         let ooperator = main.take().value;
-        const right = main.parse_mathmatic_expr();
+        const right = main.parse_listed_or_expr();
 
         
 
@@ -164,6 +143,28 @@ export class ParserExpr extends ParserStmt {
     }
 
     return parse_compare_type2_expr();
+  }
+
+  protected parse_listed_or_expr(): Expr {
+    let left = this.parse_mathmatic_expr();
+
+    let exprs: Expr[] = [];
+    exprs.push(left);
+
+    while(this.at().value === "|") {
+      this.take(); 
+      exprs.push(this.parse_mathmatic_expr());
+
+      left = { 
+        type: "ListedOR",
+        exprs,
+        line: this.line,
+        colmun: this.colmun
+      } as listedORExpr;
+    }
+
+
+    return left;
   }
   protected parse_mathmatic_expr(): Expr {
     const main = this;

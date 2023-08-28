@@ -10,6 +10,7 @@ export type Node =
   | "Id"
   | "Property"
   | "Obj"
+  | "ListedOR"
   | "BinaryExpr"
   | "AssignExpr"
   | "CallExpr"

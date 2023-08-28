@@ -66,6 +66,9 @@ export function evaluate(node: Stmt, env: Enviroment): VT.RuntimeVal {
       return expr.eval_member_expr(node as MemberExpr, env);
     case "CallExpr":
       return expr.eval_call_expr(node as CallExpr, env);
+    case "ListedOR":
+      error("listed or can only be used with '>' & '<' & '==' ooperators only", "AT3013", node);
+      return VT.MK_NULL();
     default:
       error(
         "unknown error please report this ",

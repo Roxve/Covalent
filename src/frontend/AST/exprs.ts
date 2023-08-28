@@ -6,12 +6,7 @@ export interface BinaryExpr extends Expr {
   right: Expr | any;
   ooperator: string;
 }
-export interface MultyBinaryExpr extends BinaryExpr {
-  type: "BinaryExpr";
-  left: Expr;
-  right: Expr[];
-  ooperator: string;
-}
+
 export interface AssignExpr extends Expr {
   type: "AssignExpr";
   assigne: Expr;
