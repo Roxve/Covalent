@@ -11,29 +11,29 @@ export namespace native {
         case "red":
           writeAllSync(
             Deno.stdout,
-            new TextEncoder().encode(Color.red(arg.value.toString())),
+            new TextEncoder().encode(Color.red(String(arg.value))),
           );
           break;
         case "green":
           writeAllSync(
             Deno.stdout,
-            new TextEncoder().encode(Color.green(arg.value.toString())),
+            new TextEncoder().encode(Color.green(String(arg.value))),
           );
           break;
         case "white":
           writeAllSync(
             Deno.stdout,
-            new TextEncoder().encode(Color.white(arg.value.toString())),
+            new TextEncoder().encode(Color.white(String(arg.value))),
           );
           break;
         case "yellow":
           writeAllSync(
             Deno.stdout,
-            new TextEncoder().encode(Color.yellow(arg.value.toString())),
+            new TextEncoder().encode(Color.yellow(String(arg.value))),
           );
           break;
         default:
-          writeAllSync(Deno.stdout, arg.value.toString());
+          writeAllSync(Deno.stdout, new TextEncoder().encode(String(arg.value)));
           break;
       }
     }

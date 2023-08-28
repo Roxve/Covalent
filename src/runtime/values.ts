@@ -61,7 +61,7 @@ export interface ReturnVal extends RuntimeVal {
 export interface NativeFnVal extends RuntimeVal {
   type: "native-func";
   call: FunctionCall;
-  value: undefined;
+  value: NullVal;
 }
 
 export interface FnVal extends RuntimeVal {
@@ -70,7 +70,7 @@ export interface FnVal extends RuntimeVal {
   parameters: string[];
   body: Stmt[];
   env: Enviroment;
-  value: undefined;
+  value: NullVal;
 }
 
 export function MK_NULL(): NullVal {
@@ -94,6 +94,7 @@ export function MK_NATIVE_FUNC(call: FunctionCall): NativeFnVal {
   return {
     type: "native-func",
     call,
+    value: MK_NULL()
   } as NativeFnVal;
 }
 

@@ -27,7 +27,7 @@ export function eval_func_creation(
       parameters: stmt.parameters,
       body: stmt.body,
       env,
-      value: undefined,
+      value: MK_NULL(),
     } as FnVal,
     true,
     stmt,
