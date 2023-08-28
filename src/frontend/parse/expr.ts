@@ -225,7 +225,8 @@ export class ParserExpr extends ParserStmt {
     return member;
   }
 
-  protected parse_call_expr(caller: Expr): Expr {
+  protected parse_call_expr(caller?: Expr): Expr {
+    if(caller) {
     let callExpr: Expr = {
       type: "CallExpr",
       caller,
@@ -238,6 +239,14 @@ export class ParserExpr extends ParserStmt {
       callExpr = this.parse_call_expr(callExpr);
     }
     return callExpr;
+    }
+    else {
+      let left = this.parse_primary_expr();
+      if(this.at().type === Type.OpenParen) {
+        return this.parse_call_expr(left);
+      }
+      return left;
+    }
   }
 
   protected parse_args(): Expr[] {
@@ -265,7 +274,7 @@ export class ParserExpr extends ParserStmt {
   }
 
   protected parse_member_expr(): Expr {
-    let left = this.parse_primary_expr();
+    let left = this.parse_call_expr();
 
     while (
       this.notEOF() &&

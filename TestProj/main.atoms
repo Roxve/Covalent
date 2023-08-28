@@ -8,8 +8,8 @@ set createUser(name, pass) : {
 set user0: createUser("ahmed", 777);
 
 set user1: createUser("thomas", 666);
-
+set user2num: createUser(null, null).num;
 
 write(user0.name, " ", user0.pass);
 write(user1.name, " ", user1.pass);
-write("all nums: ", user0.num, ",", user1.num, ",")
+write("all nums: ", user0.num, ",", user1.num, ",", user2num)
