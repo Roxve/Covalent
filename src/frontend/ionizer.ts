@@ -10,8 +10,7 @@ export class Ionizer {
   constructor(atoms: string) {
     try {
       this.atoms = atoms.split("");
-    }
-    catch {
+    } catch {
       this.atoms = [""];
     }
     this.ions = new Array<Ion>();

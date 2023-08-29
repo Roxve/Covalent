@@ -6,8 +6,8 @@ export var currentPath: string = Deno.cwd();
 export var mainPath: string = Deno.cwd();
 export function setPath(dir: string) {
   currentPath = dir;
-  if(isTest) {
-    console.log("%clog: changing dir to:"+ dir, 'color: yellow');
+  if (isTest) {
+    console.log("%clog: changing dir to:" + dir, "color: yellow");
   }
 }
 export function setMainPath(dir: string) {

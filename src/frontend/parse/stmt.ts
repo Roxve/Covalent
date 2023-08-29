@@ -4,12 +4,12 @@ import {
   FuncCreation,
   ReturnStmt,
   Stmt,
+  UseStmt,
   VarCreation,
-  UseStmt
 } from "../AST/stmts.ts";
 import { Id, Null } from "../AST/values.ts";
 import { Type } from "../Ion.ts";
-import { mainPath, currentPath } from "../../etc.ts";
+import { currentPath, mainPath } from "../../etc.ts";
 
 export class ParserStmt extends ParserMain {
   parse_creation(): Stmt {
@@ -118,21 +118,23 @@ export class ParserStmt extends ParserMain {
     } as ReturnStmt;
   }
   parse_use_stmt(): Stmt {
-    this.take(); 
+    this.take();
     let pathl = "";
-    if(this.at().type === Type.str_type) {
+    let isProton: boolean;
+    if (this.at().type === Type.str_type) {
       pathl = currentPath + "/" + this.take().value;
-    }
-    else if(this.at().type === Type.id) {
-      pathl = mainPath + "/Protons/" + this.take().value.toLowerCase() + ".proton";
-    }
-    else {
+      isProton = false;
+    } else if (this.at().type === Type.id) {
+      isProton = true;
+      pathl = this.take().value.toLowerCase();
+    } else {
       this.error("excepted id for module name or string for file path");
       return { type: "Null", value: null } as Null;
     }
     return {
       type: "UseStmt",
-      path: pathl
+      path: pathl,
+      isProton,
     } as UseStmt;
   }
 }

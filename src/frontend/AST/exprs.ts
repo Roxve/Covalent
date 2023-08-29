@@ -1,4 +1,4 @@
-import { Expr, Stmt} from "./stmts.ts";
+import { Expr, Stmt } from "./stmts.ts";
 
 export interface BinaryExpr extends Expr {
   type: "BinaryExpr";

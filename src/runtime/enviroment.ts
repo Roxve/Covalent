@@ -18,7 +18,7 @@ export class Enviroment {
   vars: Map<string, RuntimeVal>;
   parent: Enviroment | null;
 
-  private error(msg: string, code: string, stmt: Stmt | null): void {
+  public error(msg: string, code: string, stmt: Stmt | null): void {
     createError(
       `Runtime: ${msg}\nat => line:${stmt?.line}, colmun:${stmt?.colmun},error code:${code}`,
     );
@@ -40,20 +40,18 @@ export class Enviroment {
     return this.parent?.resolve(name, stmt);
   }
 
-
   public addEnv(env: Enviroment) {
-    for(let vari of env.vars) {
-      if(this.vars.has(String(vari[0]))) {
+    for (let vari of env.vars) {
+      if (this.vars.has(String(vari[0]))) {
         continue;
       }
-      if(this.parent?.vars.has(String(vari[0]))) {
+      if (this.parent?.vars.has(String(vari[0]))) {
         continue;
       }
-      
-      this.vars.set(vari[0],vari[1]);
+
+      this.vars.set(vari[0], vari[1]);
     }
   }
-
 
   public declareVar(
     name: string,

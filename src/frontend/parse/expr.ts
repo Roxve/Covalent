@@ -14,9 +14,9 @@ import {
   AssignExpr,
   BinaryExpr,
   CallExpr,
-  MemberExpr,
+  ElseExpr,
   IfExpr,
-  ElseExpr
+  MemberExpr,
 } from "../AST/exprs.ts";
 import { Ion, Type } from "../Ion.ts";
 
@@ -106,9 +106,8 @@ export class ParserExpr extends ParserStmt {
     return obj;
   }
 
-
   protected parse_if_expr(): Expr {
-    if(this.at().type === Type.if_kw) { 
+    if (this.at().type === Type.if_kw) {
       this.take();
 
       let test = this.parse_compare_expr();
@@ -117,32 +116,30 @@ export class ParserExpr extends ParserStmt {
 
       let body: Stmt[] = [];
 
-
-      while(this.notEOF() && this.at().type != Type.CloseBrace) {
+      while (this.notEOF() && this.at().type != Type.CloseBrace) {
         body.push(this.parse_stmt());
       }
       this.except(Type.CloseBrace);
-      
+
       let alt: Expr | undefined;
-      while(this.notEOF() && this.at().type === Type.else_kw) {
+      while (this.notEOF() && this.at().type === Type.else_kw) {
         this.take();
-        if(this.at().type === Type.if_kw) {
+        if (this.at().type === Type.if_kw) {
           alt = this.parse_if_expr();
-        }
-        else {
-          this.except(Type.OpenBrace); 
+        } else {
+          this.except(Type.OpenBrace);
           let body: Stmt[] = [];
 
-          while(this.notEOF() && this.at().type != Type.CloseBrace) { 
+          while (this.notEOF() && this.at().type != Type.CloseBrace) {
             body.push(this.parse_stmt());
           }
 
           this.except(Type.CloseBrace);
-          alt = { 
+          alt = {
             type: "ElseExpr",
-            body, 
+            body,
             line: this.line,
-            colmun: this.colmun
+            colmun: this.colmun,
           } as ElseExpr;
         }
       }
@@ -152,15 +149,12 @@ export class ParserExpr extends ParserStmt {
         body,
         alt,
         line: this.line,
-        colmun: this.colmun
+        colmun: this.colmun,
       } as IfExpr;
-    }
-    else {
+    } else {
       return this.parse_compare_expr();
     }
   }
-
-
 
   protected parse_compare_expr(): Expr {
     const main = this;
@@ -284,23 +278,22 @@ export class ParserExpr extends ParserStmt {
   }
 
   protected parse_call_expr(caller?: Expr): Expr {
-    if(caller) {
-    let callExpr: Expr = {
-      type: "CallExpr",
-      caller,
-      args: this.parse_args(),
-      line: this.line,
-      colmun: this.colmun,
-    } as CallExpr;
-    //dont know why i did this? but it doesnt work without it?
-    if (this.at().type === Type.OpenParen) {
-      callExpr = this.parse_call_expr(callExpr);
-    }
-    return callExpr;
-    }
-    else {
+    if (caller) {
+      let callExpr: Expr = {
+        type: "CallExpr",
+        caller,
+        args: this.parse_args(),
+        line: this.line,
+        colmun: this.colmun,
+      } as CallExpr;
+      //dont know why i did this? but it doesnt work without it?
+      if (this.at().type === Type.OpenParen) {
+        callExpr = this.parse_call_expr(callExpr);
+      }
+      return callExpr;
+    } else {
       let left = this.parse_primary_expr();
-      if(this.at().type === Type.OpenParen) {
+      if (this.at().type === Type.OpenParen) {
         return this.parse_call_expr(left);
       }
       return left;

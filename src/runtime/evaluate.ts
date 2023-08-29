@@ -4,15 +4,15 @@ import {
   Program,
   ReturnStmt,
   Stmt,
+  UseStmt,
   VarCreation,
-  UseStmt
 } from "../frontend/AST/stmts.ts";
 import {
   AssignExpr,
   BinaryExpr,
   CallExpr,
+  IfExpr,
   MemberExpr,
-  IfExpr
 } from "../frontend/AST/exprs.ts";
 import { Bool, Id, Null, Num, Object, Str } from "../frontend/AST/values.ts";
 import { Enviroment } from "./enviroment.ts";
@@ -60,7 +60,7 @@ export function evaluate(node: Stmt, env: Enviroment): VT.RuntimeVal {
       return stmt.eval_func_creation(node as FuncCreation, env);
     case "ReturnStmt":
       return stmt.eval_return_stmt(node as ReturnStmt, env);
-    case "UseStmt": 
+    case "UseStmt":
       return stmt.eval_use_stmt(node as UseStmt, env);
     case "BinaryExpr":
       return expr.eval_binary_expr(node as BinaryExpr, env);
@@ -70,7 +70,7 @@ export function evaluate(node: Stmt, env: Enviroment): VT.RuntimeVal {
       return expr.eval_member_expr(node as MemberExpr, env);
     case "CallExpr":
       return expr.eval_call_expr(node as CallExpr, env);
-    case "IfExpr": 
+    case "IfExpr":
       return expr.eval_if_expr(node as IfExpr, env);
     case "ListedOR":
       error(

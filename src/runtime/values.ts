@@ -94,7 +94,7 @@ export function MK_NATIVE_FUNC(call: FunctionCall): NativeFnVal {
   return {
     type: "native-func",
     call,
-    value: MK_NULL()
+    value: MK_NULL(),
   } as NativeFnVal;
 }
 

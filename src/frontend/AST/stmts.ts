@@ -52,6 +52,7 @@ export interface ReturnStmt extends Stmt {
 export interface UseStmt extends Stmt {
   type: "UseStmt";
   path: string;
+  isProton: boolean;
 }
 // because exprs are stmts i guess
 export interface Expr extends Stmt {}

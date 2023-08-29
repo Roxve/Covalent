@@ -33,7 +33,10 @@ export namespace native {
           );
           break;
         default:
-          writeAllSync(Deno.stdout, new TextEncoder().encode(String(arg.value)));
+          writeAllSync(
+            Deno.stdout,
+            new TextEncoder().encode(String(arg.value)),
+          );
           break;
       }
     }

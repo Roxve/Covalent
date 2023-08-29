@@ -3,15 +3,17 @@ import { error, evaluate } from "../evaluate.ts";
 import {
   FuncCreation,
   ReturnStmt,
+  UseStmt,
   VarCreation,
-  UseStmt
 } from "../../frontend/AST/stmts.ts";
 import { Enviroment } from "../enviroment.ts";
 import { green } from "https://deno.land/std@0.200.0/fmt/colors.ts";
 import { eval_env } from "./eval_enviroment.ts";
 import { Ionizer } from "../../frontend/ionizer.ts";
 import { Parser } from "../../frontend/parser.ts";
-import { setPath, currentPath } from "../../etc.ts";
+import { currentPath, setPath, mainPath } from "../../etc.ts";
+import * as env_b from "../../etc/envs.ts";
+
 import * as path from "https://deno.land/std@0.188.0/path/mod.ts";
 
 export function eval_var_creation(
@@ -36,7 +38,6 @@ export function eval_func_creation(
   } as FnVal;
   func.value = green(JSON.stringify(func));
 
-
   return env.declareVar(
     stmt.name,
     func,
@@ -58,16 +59,28 @@ export function eval_return_stmt(
 }
 export function eval_use_stmt(
   stmt: UseStmt,
-  env: Enviroment
-) : RuntimeVal {
-  
+  env: Enviroment,
+): RuntimeVal {
+  if (stmt.isProton) {
+    // check if its a built-in proton to redirect to built-in env(for speed)
+    switch (stmt.path) {
+      case "extra": 
+        env.addEnv(env_b.extra());
+        return MK_NULL();
+      default: 
+        stmt.path = currentPath + "/Protons/" + stmt.path + ".proton";
+        break;
+
+    }
+  }
+
   let atoms = "";
   let prev = currentPath;
 
   atoms = Deno.readTextFileSync(stmt.path);
   Deno.chdir(path.dirname(path.resolve(stmt.path)));
   setPath(path.dirname(path.resolve(stmt.path)));
-  
+
   let envToAdd = eval_env(new Parser(new Ionizer(atoms).ionize()).productAST());
 
   env.addEnv(envToAdd);
