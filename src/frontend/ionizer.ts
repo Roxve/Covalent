@@ -39,6 +39,7 @@ export class Ionizer {
     null: Type.null_type,
     if: Type.if_kw,
     else: Type.else_kw,
+    use: Type.use_kw,
   };
 
   ion(value: any, type: Type): Ion {

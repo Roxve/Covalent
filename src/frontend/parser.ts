@@ -23,6 +23,8 @@ export class Parser extends ParserExpr {
         return this.parse_creation();
       case Type.return_kw:
         return this.parse_return_stmt();
+      case Type.use_kw:
+        return this.parse_use_stmt();
       default:
         return this.parse_expr();
     }

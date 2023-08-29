@@ -3,6 +3,7 @@ export type Node =
   | "VarCreation"
   | "FuncCreation"
   | "ReturnStmt"
+  | "UseStmt"
   | "Num"
   | "Str"
   | "Bool"
@@ -46,6 +47,11 @@ export interface FuncCreation extends Stmt {
 export interface ReturnStmt extends Stmt {
   type: "ReturnStmt";
   value: Expr;
+}
+
+export interface UseStmt extends Stmt {
+  type: "UseStmt";
+  path: string;
 }
 // because exprs are stmts i guess
 export interface Expr extends Stmt {}

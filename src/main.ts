@@ -4,19 +4,39 @@ import { createEnv, Enviroment } from "./runtime/enviroment.ts";
 import { evaluate } from "./runtime/evaluate.ts";
 import { isError, setTest } from "./etc.ts";
 import { rgb24 } from "https://deno.land/std@0.200.0/fmt/colors.ts";
-import boxen from "npm:boxen";
+import { createError } from "./etc.ts";
+import * as path from "https://deno.land/std@0.188.0/path/mod.ts";
+
+
 
 function main(args: string[]) {
   if (args === undefined || args === null || args.length <= 0) {
     Repl();
   }
+  let atoms = "";
 
   switch (args[0]) {
+    case "run":
+      if(args.length < 2) {
+        createError("file to run excepted");
+      }
+      
+      try {
+       atoms = Deno.readTextFileSync(args[1]).toString(); 
+      }
+      catch {
+        createError("file doesnt exit or no read premsision given \nFile => " + args[1])
+      }
+      const file_dir = path.dirname(atoms[1]);
+      Deno.chdir(file_dir);
+
+      Run(atoms);
+      break;
     case "run?":
       if (args.length < 2) {
-        console.log("file to run excepted.");
+        createError("file to run excepted.");
       }
-      const atoms = Deno.readTextFileSync(args[1]).toString();
+      atoms = Deno.readTextFileSync(args[1]).toString();
       console.log(atoms);
       RunTest(atoms);
       break;

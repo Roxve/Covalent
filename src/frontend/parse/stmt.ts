@@ -5,6 +5,7 @@ import {
   ReturnStmt,
   Stmt,
   VarCreation,
+  UseStmt
 } from "../AST/stmts.ts";
 import { Id, Null } from "../AST/values.ts";
 import { Type } from "../Ion.ts";
@@ -114,5 +115,24 @@ export class ParserStmt extends ParserMain {
       line: this.line,
       colmun: this.colmun,
     } as ReturnStmt;
+  }
+  parse_use_stmt(): Stmt {
+    this.take(); 
+    let path = "";
+    if(this.at().type === Type.str_type) {
+      path = this.take().value;
+    }
+    else if(this.at().type === Type.id) {
+      path = Deno.cwd() + "/Protons/" + this.take().value.toLowerCase() + ".proton";
+      console.log(path);
+    }
+    else {
+      this.error("excepted id for module name or string for file path");
+      return { type: "Null", value: null } as Null;
+    }
+    return {
+      type: "UseStmt",
+      path
+    } as UseStmt;
   }
 }
