@@ -9,6 +9,7 @@ import {
 } from "../AST/stmts.ts";
 import { Id, Null } from "../AST/values.ts";
 import { Type } from "../Ion.ts";
+import { mainPath, currentPath } from "../../etc.ts";
 
 export class ParserStmt extends ParserMain {
   parse_creation(): Stmt {
@@ -118,12 +119,12 @@ export class ParserStmt extends ParserMain {
   }
   parse_use_stmt(): Stmt {
     this.take(); 
-    let path = "";
+    let pathl = "";
     if(this.at().type === Type.str_type) {
-      path = this.take().value;
+      pathl = currentPath + "/" + this.take().value;
     }
     else if(this.at().type === Type.id) {
-      path = Deno.cwd() + "/Protons/" + this.take().value.toLowerCase() + ".proton";
+      pathl = mainPath + "/Protons/" + this.take().value.toLowerCase() + ".proton";
     }
     else {
       this.error("excepted id for module name or string for file path");
@@ -131,7 +132,7 @@ export class ParserStmt extends ParserMain {
     }
     return {
       type: "UseStmt",
-      path
+      path: pathl
     } as UseStmt;
   }
 }

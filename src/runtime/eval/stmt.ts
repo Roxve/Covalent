@@ -65,8 +65,8 @@ export function eval_use_stmt(
   let prev = currentPath;
 
   atoms = Deno.readTextFileSync(stmt.path);
-  Deno.chdir(path.dirname(stmt.path));
-  setPath(stmt.path);
+  Deno.chdir(path.dirname(path.resolve(stmt.path)));
+  setPath(path.dirname(path.resolve(stmt.path)));
   
   let envToAdd = eval_env(new Parser(new Ionizer(atoms).ionize()).productAST());
 

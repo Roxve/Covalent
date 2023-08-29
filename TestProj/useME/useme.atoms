@@ -1,5 +1,5 @@
 use Extra;
 
 set useme(): {
-  write(question("did you use this?"));
+  write("you used me");
 }

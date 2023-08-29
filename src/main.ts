@@ -4,7 +4,7 @@ import { createEnv, Enviroment } from "./runtime/enviroment.ts";
 import { evaluate } from "./runtime/evaluate.ts";
 import { isError, setTest } from "./etc.ts";
 import { rgb24 } from "https://deno.land/std@0.200.0/fmt/colors.ts";
-import { createError, setPath } from "./etc.ts";
+import { createError, setPath, setMainPath} from "./etc.ts";
 import * as path from "https://deno.land/std@0.188.0/path/mod.ts";
 
 
@@ -14,7 +14,7 @@ function main(args: string[]) {
     Repl();
   }
   let atoms = "";
-
+  setMainPath(path.dirname(path.fromFileUrl(import.meta.url)));
   switch (args[0]) {
     case "run":
       if(args.length < 2) {
@@ -27,7 +27,7 @@ function main(args: string[]) {
       catch {
         createError("file doesnt exit or no read premsision given \nFile => " + args[1])
       }
-      const file_dir = path.dirname(atoms[1]);
+      const file_dir = path.dirname(path.resolve(args[1]));
       setPath(file_dir);
       Deno.chdir(file_dir);
 
@@ -38,6 +38,9 @@ function main(args: string[]) {
         createError("file to run excepted.");
       }
       atoms = Deno.readTextFileSync(args[1]).toString();
+      const file_dirr = path.dirname(path.resolve(args[1]));
+      setPath(file_dirr);
+      Deno.chdir(file_dirr);
       console.log(atoms);
       RunTest(atoms);
       break;
