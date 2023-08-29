@@ -1,0 +1,5 @@
+use Extra;
+
+set useme(): {
+  write(question("did you use this?"));
+}

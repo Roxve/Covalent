@@ -1,18 +1,3 @@
-set name: "Ahmed" # prompt("enter your name:") 
-
-if name == "Thomas" | "Admin878" | "whiwhiwhiM": {
-  write("You are an admin!");
-}
-else if name == "Ahmed" | "NahH7H" | "Non8829": {
-  write("you are an admins frined");
-}
-else {
-  write("nah huh");
-} 
-
-if "duck" > "ducks" & 88 * 88 == 88 * 88: {
-  write("duck");
-}
-else {
-  write("nah h7h");
-}
+use "./useME/test.atoms";
+test();
+useme();

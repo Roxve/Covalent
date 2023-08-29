@@ -124,7 +124,6 @@ export class ParserStmt extends ParserMain {
     }
     else if(this.at().type === Type.id) {
       path = Deno.cwd() + "/Protons/" + this.take().value.toLowerCase() + ".proton";
-      console.log(path);
     }
     else {
       this.error("excepted id for module name or string for file path");

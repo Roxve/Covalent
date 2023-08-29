@@ -40,6 +40,21 @@ export class Enviroment {
     return this.parent?.resolve(name, stmt);
   }
 
+
+  public addEnv(env: Enviroment) {
+    for(let vari of env.vars) {
+      if(this.vars.has(String(vari[0]))) {
+        continue;
+      }
+      if(this.parent?.vars.has(String(vari[0]))) {
+        continue;
+      }
+      
+      this.vars.set(vari[0],vari[1]);
+    }
+  }
+
+
   public declareVar(
     name: string,
     value: RuntimeVal,

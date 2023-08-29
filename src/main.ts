@@ -4,7 +4,7 @@ import { createEnv, Enviroment } from "./runtime/enviroment.ts";
 import { evaluate } from "./runtime/evaluate.ts";
 import { isError, setTest } from "./etc.ts";
 import { rgb24 } from "https://deno.land/std@0.200.0/fmt/colors.ts";
-import { createError } from "./etc.ts";
+import { createError, setPath } from "./etc.ts";
 import * as path from "https://deno.land/std@0.188.0/path/mod.ts";
 
 
@@ -28,6 +28,7 @@ function main(args: string[]) {
         createError("file doesnt exit or no read premsision given \nFile => " + args[1])
       }
       const file_dir = path.dirname(atoms[1]);
+      setPath(file_dir);
       Deno.chdir(file_dir);
 
       Run(atoms);

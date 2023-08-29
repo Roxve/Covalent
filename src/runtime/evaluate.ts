@@ -5,6 +5,7 @@ import {
   ReturnStmt,
   Stmt,
   VarCreation,
+  UseStmt
 } from "../frontend/AST/stmts.ts";
 import {
   AssignExpr,
@@ -59,6 +60,8 @@ export function evaluate(node: Stmt, env: Enviroment): VT.RuntimeVal {
       return stmt.eval_func_creation(node as FuncCreation, env);
     case "ReturnStmt":
       return stmt.eval_return_stmt(node as ReturnStmt, env);
+    case "UseStmt": 
+      return stmt.eval_use_stmt(node as UseStmt, env);
     case "BinaryExpr":
       return expr.eval_binary_expr(node as BinaryExpr, env);
     case "AssignExpr":
