@@ -4,7 +4,7 @@ import * as ASTV from "../../frontend/AST/values.ts";
 import { evaluate } from "../evaluate.ts";
 import { Expr, Stmt } from "../../frontend/AST/stmts.ts";
 import { Enviroment } from "../enviroment.ts";
-import { MK_NULL, RuntimeVal } from "../values.ts";
+import { MK_NULL, RuntimeVal} from "../values.ts";
 import { error } from "../evaluate.ts";
 
 export function eval_assign_expr(expr: AST.AssignExpr, env: Enviroment) {
@@ -19,24 +19,33 @@ export function eval_assign_expr(expr: AST.AssignExpr, env: Enviroment) {
       expr: AST.MemberExpr,
       value: Expr,
     ): RuntimeVal {
-      if (obj.type != "obj") {
-        error(`excepted an obj in MemberExpr`, "AT3007", expr);
-        return MK_NULL();
-      }
+      
       if (expr.isIndexed) {
         if (expr.property.type != "Num") {
           error("excepted index of num in indexed MemberExpr", "AT3008", expr);
           return MK_NULL();
         }
-        return env.setObjProperty(
-          obj as VT.ObjVal,
-          "null",
-          evaluate(value, env),
-          expr,
-          (expr.property as ASTV.Num).value,
-        );
-      }
+        
+        if(obj.type != "list") {
+          error(`${obj.type} doesnt contain defention of index`, "AT3020", expr);
+          return MK_NULL();
+        } 
 
+        let index = evaluate(expr.property, env).value; 
+        obj = obj as VT.ListVal;
+
+        if(!obj.value[index]) {
+          error(`list doesnt contain index ${index}`, "AT3021", expr)
+          return MK_NULL();
+        }
+
+        obj.value[index] = evaluate(value, env);
+        return obj.value[index];
+      }
+      if(obj.type != "obj") {
+        error("excepted obj in MemberExpr", "AT3007", expr);
+        return MK_NULL();
+      }
       if (expr.property.type == "MemberExpr") {
         return eval_assigne_member_expr(evaluate(expr.obj, env), expr, value);
       }
@@ -81,7 +90,20 @@ export function eval_object(expr: ASTV.Object, env: Enviroment): RuntimeVal {
     color: "yellow",
   } as VT.ObjVal;
 }
-
+export function eval_list(
+  expr: ASTV.List,
+  env: Enviroment
+): RuntimeVal { 
+  let value: RuntimeVal[] = [];
+  for(let val of expr.values) {
+    value.push(evaluate(val,env));
+  } 
+  return {
+    type: "list",
+    value,
+    color: "yellow"
+  } as VT.ListVal;
+}
 export function eval_if_expr(
   expr: AST.IfExpr,
   env: Enviroment,
@@ -418,21 +440,28 @@ export function eval_member_expr(
 ): RuntimeVal {
   let obj = evaluate(expr.obj, env);
 
-  if (obj.type != "obj") {
+  if (obj.type != "obj" && obj.type != "list") {
     error(`excepted an obj in MemberExpr`, "AT3007", expr);
     return MK_NULL();
   }
+
+  //list[index]
   if (expr.isIndexed) {
     if (expr.property.type != "Num") {
       error("excepted index of num in indexed MemberExpr", "AT3007", expr);
       return MK_NULL();
     }
-    return env.getObjProperty(
-      obj as VT.ObjVal,
-      "null",
-      expr,
-      (expr.property as ASTV.Num).value,
-    );
+    if (obj.type != "list") {
+      error(`${obj.type} cannot be used in indexed MemberExpr`,"AT3020", expr)
+      return MK_NULL();
+    }
+    obj = obj as VT.ListVal;
+    let index = evaluate(expr.property, env).value;
+    if(!obj.value[index]) {
+      error(`list doesnt contains index ${index}`, "AT3021", expr);
+      return MK_NULL();
+    }
+    return obj.value[index] || MK_NULL();
   }
 
   if (expr.property.type == "MemberExpr") {

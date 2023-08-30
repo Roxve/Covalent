@@ -6,6 +6,8 @@ import { isError, setTest } from "./etc.ts";
 import { rgb24 } from "https://deno.land/std@0.200.0/fmt/colors.ts";
 import { createError, setMainPath, setPath } from "./etc.ts";
 import * as path from "https://deno.land/std@0.188.0/path/mod.ts";
+import * as VT from "./runtime/values.ts";
+import { RuntimeToStr } from "./etc.ts";
 
 function main(args: string[]) {
   if (args === undefined || args === null || args.length <= 0) {
@@ -67,8 +69,9 @@ function Repl() {
     const parsed = parser.productAST();
 
     const run = evaluate(parsed, env);
-
-    console.log(`%c${run.value}`, `color: ${run.color}`);
+    let value: string = RuntimeToStr(run);
+    
+    console.log(`%c${value}`, `color: ${run.color}`);
   }
 }
 export function RunTest(atoms: string) {

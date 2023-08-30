@@ -7,6 +7,7 @@ import {
   Num,
   Object,
   Property,
+  List,
   Str,
 } from "../AST/values.ts";
 import { Expr, Stmt } from "../AST/stmts.ts";
@@ -43,7 +44,7 @@ export class ParserExpr extends ParserStmt {
 
   protected parse_obj_expr(): Expr {
     if (this.at().type != Type.OpenBrace) {
-      return this.parse_if_expr();
+      return this.parse_list();
     }
 
     this.take();
@@ -105,7 +106,26 @@ export class ParserExpr extends ParserStmt {
     };
     return obj;
   }
+  protected parse_list() : Expr {
+    if(this.at().type != Type.OpenBracket) {
+      return this.parse_if_expr();
+    } 
+    this.take();
+    let values: Expr[] = []; 
+    while(this.notEOF() && this.at().type != Type.CloseBracket) {
+      values.push(this.parse_expr());
+      if(this.at().type === Type.Comma) {
+        this.take();
+        continue;
+      }
+    }
+    this.except(Type.CloseBracket);
 
+    return {
+      type: "List",
+      values
+    } as List;
+  }
   protected parse_if_expr(): Expr {
     if (this.at().type === Type.if_kw) {
       this.take();

@@ -7,6 +7,7 @@ export type ValueType =
   | "num"
   | "bool"
   | "obj"
+  | "list"
   | "functionCall"
   | "return"
   | "native-func"
@@ -37,7 +38,10 @@ export interface ObjVal extends RuntimeVal {
   type: "obj";
   value: Map<string, RuntimeVal>;
 }
-
+export interface ListVal extends RuntimeVal {
+  type: "list";
+  value: RuntimeVal[]
+}
 export interface BoolVal extends RuntimeVal {
   type: "bool";
   value: boolean;

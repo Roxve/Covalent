@@ -33,7 +33,11 @@ export interface Object extends Expr {
   type: "Obj";
   properties: Property[];
 }
+export interface List extends Expr { 
+  type: "List";
 
+  values: Expr[];
+}
 export interface listedORExpr extends Expr {
   type: "ListedOR";
 

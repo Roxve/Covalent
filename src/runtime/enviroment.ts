@@ -76,15 +76,7 @@ export class Enviroment {
     property: string,
     value: RuntimeVal,
     stmt: Stmt,
-    index?: number,
   ): RuntimeVal {
-    if (index && index !== null || index !== undefined) {
-      let key = Array.from(obj.value.keys())[index];
-
-      obj.value.set(key, value);
-
-      return value;
-    }
     if (!obj.value.has(property)) {
       this.error(
         `object ${
@@ -103,13 +95,7 @@ export class Enviroment {
     obj: ObjVal,
     property: string,
     stmt: Stmt,
-    index?: number,
   ): RuntimeVal {
-    if (index && index !== null || index !== undefined) {
-      let key = Array.from(obj.value.keys())[index];
-
-      return obj.value.get(key) || MK_NULL();
-    }
     if (!obj.value.has(property)) {
       this.error(
         `object ${

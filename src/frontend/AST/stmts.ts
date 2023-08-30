@@ -11,6 +11,7 @@ export type Node =
   | "Id"
   | "Property"
   | "Obj"
+  | "List"
   | "ListedOR"
   | "BinaryExpr"
   | "AssignExpr"
