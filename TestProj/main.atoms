@@ -1,3 +1,18 @@
-use "./useME/test.atoms";
-test();
-useme();
+use Extra;
+
+
+set user: {
+  name: "str",
+  password: 0,
+  id: 0
+}
+
+
+
+user.name = prompt("enter your name:")
+user.password = prompt("enter your password:")
+
+# generates a random id with a min of 0 max of 2889292929
+user.id = random(0,288929)
+
+write("got =>/nname: ",user.name," password: ",user.password, " id: ", user.id)

@@ -86,6 +86,9 @@ export class Ionizer {
     this.colmun++;
     return this.atoms.shift();
   }
+  private at() {
+    return this.atoms[0];
+  }
   ionize(): Ion[] {
     while (this.atoms.length > 0) {
       switch (this.atoms[0]) {
@@ -151,7 +154,24 @@ export class Ionizer {
         case "'":
           let char = this.take();
           let res = "";
+          
           while (this.atoms[0] != char && this.atoms.length > 0) {
+            if(this.at() === "\\") {
+              this.take();
+              switch(this.at()) {
+                case "n": 
+                  this.take();
+                  res += "\n";
+                  continue;
+                case "t": 
+                  this.take();
+                  res += "\t";
+                  continue;
+                default: 
+                  res += this.take();
+                  continue;
+              }
+            }
             res += this.take();
           }
           if (this.atoms[0] != char) {

@@ -1,5 +1,0 @@
-use Extra;
-
-set useme(): {
-  write("you used me");
-}

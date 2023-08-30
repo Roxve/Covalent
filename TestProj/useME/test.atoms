@@ -1,5 +1,0 @@
-use "./useme.atoms"
-
-set test(): {
-  write(true)
-}
