@@ -7,7 +7,7 @@ using namespace std;
 int main() {
   cout << ">> ";
   string code;
-  cin >> code;
+  getline(cin, code);
   Tokenizer tokenizer = Tokenizer(code);
   vector<Token> tokens = tokenizer.tokenize();
 

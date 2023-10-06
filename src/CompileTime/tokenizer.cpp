@@ -44,6 +44,9 @@ vector<Token> Tokenizer::tokenize() {
   vector<Token> tokens;
   while(code.size() > 0) {
     switch(this->at()) {
+      default:
+        cout << "invaild char" << endl;
+        continue;
       //skippable chars
       case ' ':
       case '\t':
