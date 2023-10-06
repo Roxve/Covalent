@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include <vector>
 
 enum TokenType {
   ooperator,
@@ -21,7 +21,10 @@ class Tokenizer {
   private:
     int line;
     int colmun;
-    Token tokenize();
+    char take();
+    bool isNum();
+    bool isOp();
+    std::vector<Token> tokenize();
   public: 
     std::string code;
     Tokenizer(std::string code);
