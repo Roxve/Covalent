@@ -21,21 +21,33 @@ char Tokenizer::take() {
   if(code.size() <= 0) {
     return ' ';
   }
-  code.pop_back();
+  char prev = code[0];
+  code.erase(0, 1);
+  return prev;
+}
+
+char Tokenizer::at() {
+  if(code.size() <= 0) {
+    return ' ';
+  }
   return code[0];
 }
+
 bool Tokenizer::isNum() {
-  return false;
+  string nums = "0123456789";
+  // find() returns npos if not found
+  return nums.find(this->at()) != string::npos;
 }
+
 
 vector<Token> Tokenizer::tokenize() {
   vector<Token> tokens;
   while(code.size() > 0) {
-    switch(code[0]) {
+    switch(this->at()) {
       //skippable chars
       case ' ':
       case '\t':
-        take();
+        this->take();
         continue;
       case '0':
       case '1':
@@ -47,7 +59,11 @@ vector<Token> Tokenizer::tokenize() {
       case '7':
       case '8':
       case '9':
-        
+        string res;
+        while(isNum()) {
+          res += this->take();
+        }
+        tokens.push_back(Token(res, TokenType::number, line, colmun));
         continue;
     }
   }

@@ -22,10 +22,11 @@ class Tokenizer {
     int line;
     int colmun;
     char take();
+    char at();
     bool isNum();
     bool isOp();
-    std::vector<Token> tokenize();
   public: 
+    std::vector<Token> tokenize();
     std::string code;
     Tokenizer(std::string code);
 };
