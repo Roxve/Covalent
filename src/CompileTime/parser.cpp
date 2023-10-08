@@ -3,8 +3,9 @@
 #include <vector>
 using namespace std;
 
-Parser::Parser(string code) : tokenizer(code) {
+Parser::Parser(string code) : tokenizer(code){
   this->code = code;
+  this->tokenizer = Tokenizer(code);
   this->tokenizer.tokenize();
 }
 
@@ -14,15 +15,15 @@ void Parser::update() {
 }
 
 Token Parser::take() {
-  Token* prev = tokenizer.current_token;
+  Token prev = tokenizer.current_token;
   this->tokenizer.tokenize();
   this->update();
-  return *prev;
+  return prev;
 }
 
 Token Parser::at() {
   this->update();
-  return *tokenizer.current_token;
+  return tokenizer.current_token;
 }
 
 bool Parser::notEOF() {

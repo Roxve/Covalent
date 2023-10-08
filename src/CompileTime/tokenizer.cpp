@@ -6,7 +6,8 @@ using namespace std;
 Tokenizer::Tokenizer(string code)
   :code(code),
   line(1),
-  colmun(0)
+  colmun(0),
+  current_token("NULL", TokenType::null, line, colmun)
 {}
 
 Token::Token(string value, TokenType type, int line, int colmun) 
@@ -40,11 +41,10 @@ bool Tokenizer::isNum() {
 }
 
 Token Tokenizer::set(string value, TokenType type) {
-  Token tok = Token(value, type, line, colmun);
+  current_token = Token(value, type, line, colmun);
 
-  this->current_token = &tok;
   colmun++;
-  return tok;
+  return current_token;
 }
 
 Token Tokenizer::tokenize() {
