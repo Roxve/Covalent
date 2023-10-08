@@ -9,14 +9,14 @@ class Parser {
   private:
     Tokenizer tokenizer;
     Token take();
-
-    Expr parse_expr();
-    Expr parse_primary_expr();
+    
+    Expr* parse_expr();
+    Expr* parse_primary_expr();
   public:
     string code;
     int line;
     int colmun;
-
+    bool notEOF();
     void update();
     Token at();
     Program productAST();

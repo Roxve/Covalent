@@ -1,5 +1,5 @@
 #include <iostream>
-#include "CompileTime/Tokenizer.hpp"
+#include "CompileTime/parser.hpp"
 #include <vector>
 using namespace std;
 
@@ -8,8 +8,8 @@ int main() {
   cout << ">> ";
   string code;
   getline(cin, code);
-  Tokenizer tokenizer = Tokenizer(code);
-  vector<Token> tokens = tokenizer.tokenize();
+  Parser parser(code);
+  Program AST = parser.productAST();
 
   cout << endl;
   return 0;

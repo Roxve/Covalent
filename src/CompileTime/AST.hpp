@@ -1,4 +1,5 @@
-#include <iostream>>
+#include <iostream>
+#include <vector>
 using namespace std;
 
 enum NodeType {
@@ -17,19 +18,19 @@ class Expr {
 };
 
 
-class Program : Expr {
+class Program :public Expr {
   public:
-    Expr* body;
+    vector<Expr*> body;
     Program(int line, int colmun);
 };
 
-class Num : Expr {
+class Num :public Expr {
   public:
     float value;
     Num(float value, int line, int colmun);
 };
 
-class BinaryExpr : Expr {
+class BinaryExpr :public Expr {
   public:
     Expr left_hand;
     Expr right_hand;
