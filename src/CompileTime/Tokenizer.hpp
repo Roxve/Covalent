@@ -18,15 +18,19 @@ struct Token {
 };
 
 class Tokenizer {
-  private:
-    int line;
-    int colmun;
+  private: 
+    Token set(std::string value, TokenType type);
     char take();
     char at();
     bool isNum();
     bool isOp();
   public: 
-    std::vector<Token> tokenize();
+    int line;
+    int colmun;
+
+    Token tokenize();
     std::string code;
+    Token current_token;
+
     Tokenizer(std::string code);
 };

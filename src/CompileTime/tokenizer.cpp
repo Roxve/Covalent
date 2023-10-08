@@ -39,19 +39,22 @@ bool Tokenizer::isNum() {
   return nums.find(this->at()) != string::npos;
 }
 
+Token Tokenizer::set(string value, TokenType type) {
+  Token tok = Token(value, type, line, colmun);
 
-vector<Token> Tokenizer::tokenize() {
-  vector<Token> tokens;
-  while(code.size() > 0) {
-    switch(this->at()) {
+  this->current_token = tok;
+  return tok;
+}
+
+Token Tokenizer::tokenize() {
+  //take skippable chars && throws them
+  while(this->at() == ' ' || this->at() == '\t') this->take();
+
+  if(code.size() <= 0) return set("END", TokenType::eof);
+  switch(this->at()) {
       default:
         cout << "invaild char" << endl;
-        continue;
-      //skippable chars
-      case ' ':
-      case '\t':
-        this->take();
-        continue;
+        break;
       case '0':
       case '1':
       case '2':
@@ -66,10 +69,7 @@ vector<Token> Tokenizer::tokenize() {
         while(isNum()) {
           res += this->take();
         }
-        tokens.push_back(Token(res, TokenType::number, line, colmun));
-        continue;
+        return this->set(res, TokenType::number);
     }
-  }
-  tokens.push_back(Token("EOF", TokenType::eof,line, colmun));
-  return tokens;
+  return set("END", TokenType::eof); 
 }
