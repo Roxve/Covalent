@@ -9,24 +9,26 @@ Parser::Parser(string code) : tokenizer(code) {
 }
 
 void Parser::update() {
-  this->line = this->tokenizer.line;
-  this->colmun = this->tokenizer.colmun;
+  line = this->tokenizer.line;
+  colmun = this->tokenizer.colmun;
 }
 
 Token Parser::take() {
-  Token prev = this->tokenizer.current_token;
+  Token* prev = tokenizer.current_token;
   this->tokenizer.tokenize();
   this->update();
-  return prev;
+  return *prev;
 }
 
 Token Parser::at() {
   this->update();
-  return this->tokenizer.current_token;
+  return *tokenizer.current_token;
 }
 
 bool Parser::notEOF() {
-  return at().type != TokenType::eof;
+  cout << "trying.." << endl;
+  cout << "line: " << this->at().line << "colmun: " << this->at().colmun << " type: " << this->at().type << " val: " << this->at().value;
+  return this->at().type != TokenType::eof;
 }
 
 Program Parser::productAST() {
@@ -45,7 +47,8 @@ Expr* Parser::parse_primary_expr() {
   Expr *expr;
   switch(at().type) {
     case TokenType::number :
-      Num num(stof(at().value), line, colmun);
+      string val = this->take().value;
+      Num num(stof(val), line, colmun);
       expr = &num;
       return expr;
   }

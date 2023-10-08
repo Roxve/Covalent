@@ -5,6 +5,7 @@ enum TokenType {
   ooperator,
   id,
   number,
+  null,
   eof
 };
 
@@ -30,7 +31,7 @@ class Tokenizer {
 
     Token tokenize();
     std::string code;
-    Token current_token;
+    Token* current_token;
 
     Tokenizer(std::string code);
 };

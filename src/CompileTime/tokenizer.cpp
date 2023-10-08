@@ -42,15 +42,20 @@ bool Tokenizer::isNum() {
 Token Tokenizer::set(string value, TokenType type) {
   Token tok = Token(value, type, line, colmun);
 
-  this->current_token = tok;
+  this->current_token = &tok;
+  colmun++;
   return tok;
 }
 
 Token Tokenizer::tokenize() {
   //take skippable chars && throws them
-  while(this->at() == ' ' || this->at() == '\t') this->take();
+  while(code.size() > 0 && (this->at() == ' ' || this->at() == '\t')) this->take();
+  while(code.size() > 0 && this->at() == '\n') line++; colmun = 0; this->take();
+  while(code.size() > 0 && (this->at() == ' ' || this->at() == '\t')) this->take();
 
   if(code.size() <= 0) return set("END", TokenType::eof);
+
+
   switch(this->at()) {
       default:
         cout << "invaild char" << endl;
