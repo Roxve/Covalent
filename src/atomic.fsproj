@@ -6,9 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="*.fs" />
     <Compile Include="CompileTime/*.fs" />
-
+    <Compile Include="main.fs" />
   </ItemGroup>
 
 </Project>

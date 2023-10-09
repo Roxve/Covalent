@@ -1,5 +1,9 @@
-﻿// For more information see https://aka.ms/fsharp-console-apps
-module AtomicLang
+﻿open System;
+open AtomicLang.lexer
 
-printfn "Hello from F#"
+printf ">> "
+let code = Console.ReadLine();
+let tokenizer = new Tokenizer(code);
+let tokens = tokenizer.tokenize();
 
+printfn "%A" tokens
