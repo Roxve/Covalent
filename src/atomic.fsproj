@@ -6,7 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="CompileTime/*.fs" />
+    <Compile Include="CompileTime/tokenizer.fs" />
+    <Compile Include="CompileTime/AST.fs" />
+    <Compile Include="CompileTime/parser.fs" />
     <Compile Include="main.fs" />
   </ItemGroup>
 
