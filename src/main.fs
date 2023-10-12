@@ -1,9 +1,9 @@
 ﻿open System;
-open AtomicLang.lexer
+open AtomicLang.Parser
 
 printf ">> "
 let code = Console.ReadLine();
-let tokenizer = new Tokenizer(code);
-let tokens = tokenizer.tokenize();
+let parser = new Parser(code);
+let AST = parser.productAST();
 
-printfn "%A" tokens
+printfn "%A" AST
