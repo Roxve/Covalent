@@ -2,13 +2,17 @@
   "version": 3,
   "targets": {
     "net7.0": {
-      "FSharp.Core/7.0.300": {
+      "FSharp.Core/7.0.400": {
         "type": "package",
         "compile": {
-          "lib/netstandard2.1/FSharp.Core.dll": {}
+          "lib/netstandard2.1/FSharp.Core.dll": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/netstandard2.1/FSharp.Core.dll": {}
+          "lib/netstandard2.1/FSharp.Core.dll": {
+            "related": ".xml"
+          }
         },
         "resource": {
           "lib/netstandard2.1/cs/FSharp.Core.resources.dll": {
@@ -55,17 +59,18 @@
     }
   },
   "libraries": {
-    "FSharp.Core/7.0.300": {
-      "sha512": "8vvItREJ1l5lcp3vBCSJ1mFevVAhR48I34DuF/EoUa7o1KlFpQpagyuZkVYMAsHPIjdp47ZxM9sI4eqeXaeWkA==",
+    "FSharp.Core/7.0.400": {
+      "sha512": "kJQ7TBQqd1d2VoODSgwFSAaApaBN0Fuu8mZt2XExmd3UzUxLjUsMn5Y5XhpsUWdnxOL8amp7VFg7cwhPllR4Qw==",
       "type": "package",
-      "path": "fsharp.core/7.0.300",
+      "path": "fsharp.core/7.0.400",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
-        "fsharp.core.7.0.300.nupkg.sha512",
+        "fsharp.core.7.0.400.nupkg.sha512",
         "fsharp.core.nuspec",
         "lib/netstandard2.0/FSharp.Core.dll",
+        "lib/netstandard2.0/FSharp.Core.xml",
         "lib/netstandard2.0/cs/FSharp.Core.resources.dll",
         "lib/netstandard2.0/de/FSharp.Core.resources.dll",
         "lib/netstandard2.0/es/FSharp.Core.resources.dll",
@@ -80,6 +85,7 @@
         "lib/netstandard2.0/zh-Hans/FSharp.Core.resources.dll",
         "lib/netstandard2.0/zh-Hant/FSharp.Core.resources.dll",
         "lib/netstandard2.1/FSharp.Core.dll",
+        "lib/netstandard2.1/FSharp.Core.xml",
         "lib/netstandard2.1/cs/FSharp.Core.resources.dll",
         "lib/netstandard2.1/de/FSharp.Core.resources.dll",
         "lib/netstandard2.1/es/FSharp.Core.resources.dll",
@@ -98,29 +104,29 @@
   },
   "projectFileDependencyGroups": {
     "net7.0": [
-      "FSharp.Core >= 7.0.300"
+      "FSharp.Core >= 7.0.400"
     ]
   },
   "packageFolders": {
-    "/home/codespace/.nuget/packages/": {}
+    "/home/usr/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/codespace/Atomic-Script-WIP/src/atomic.fsproj",
+      "projectUniqueName": "/home/usr/projects/Atomic-Script-WIP/src/atomic.fsproj",
       "projectName": "atomic",
-      "projectPath": "/home/codespace/Atomic-Script-WIP/src/atomic.fsproj",
-      "packagesPath": "/home/codespace/.nuget/packages/",
-      "outputPath": "/home/codespace/Atomic-Script-WIP/src/obj/",
+      "projectPath": "/home/usr/projects/Atomic-Script-WIP/src/atomic.fsproj",
+      "packagesPath": "/home/usr/.nuget/packages/",
+      "outputPath": "/home/usr/projects/Atomic-Script-WIP/src/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/home/codespace/.nuget/NuGet/NuGet.Config"
+        "/home/usr/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net7.0"
       ],
       "sources": {
-        "/usr/local/dotnet/7.0.306/sdk/7.0.306/FSharp/library-packs": {},
+        "/usr/share/dotnet/sdk/7.0.401/FSharp/library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -137,7 +143,7 @@
           "FSharp.Core": {
             "include": "Runtime, Compile, Build, Native, Analyzers, BuildTransitive",
             "target": "Package",
-            "version": "[7.0.300, )",
+            "version": "[7.0.400, )",
             "generatePathProperty": true
           }
         },
@@ -152,12 +158,18 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
+        "downloadDependencies": [
+          {
+            "name": "Microsoft.AspNetCore.App.Ref",
+            "version": "[7.0.11, 7.0.11]"
+          }
+        ],
         "frameworkReferences": {
           "Microsoft.NETCore.App": {
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/local/dotnet/7.0.306/sdk/7.0.306/RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/7.0.401/RuntimeIdentifierGraph.json"
       }
     }
   }

@@ -24,7 +24,7 @@ type Program(aline : int, acolmun : int)  as self =
   member val body : Expr list = [] with get, set
 
 [<StructuredFormatDisplay("got num => value: {value}, line: {getLine}, colmun: {getColmun}")>]
-type Num(aline : int, acolmun : int, value : float) as self= 
+type Num<'a>(aline : int, acolmun : int, value : 'a) as self= 
   interface Expr with
     member this.line = aline
     member this.colmun = acolmun
@@ -34,4 +34,32 @@ type Num(aline : int, acolmun : int, value : float) as self=
   member x.getLine = (self :> Expr).line;
   member x.getColmun = (self :> Expr).colmun;
 
-  member val value : float = value with get, set
+  member val value : 'a = value with get, set
+
+[<StructuredFormatDisplay("got operator => value: {value}, line: {getLine}, colmun: {getColmun}")>]
+type operator(aline : int, acolmun : int, value : string) as self= 
+  interface Expr with
+    member this.line = aline
+    member this.colmun = acolmun
+
+    member this.Type : NodeType = NodeType.Num
+  end
+  member x.getLine = (self :> Expr).line;
+  member x.getColmun = (self :> Expr).colmun;
+
+  member val value : string = value with get, set
+
+[<StructuredFormatDisplay("got binary expression => value: {value}, line: {getLine}, colmun: {getColmun}")>]
+type BinaryExpr(aline : int, acolmun : int, left : Expr, right : Expr, operator : operator) as self= 
+  interface Expr with
+    member this.line = aline
+    member this.colmun = acolmun
+
+    member this.Type : NodeType = NodeType.Num
+  end
+  member x.getLine = (self :> Expr).line;
+  member x.getColmun = (self :> Expr).colmun;
+  
+  member val left : Expr = left with get, set
+  member val right : Expr = right with get, set
+  member val operator : operator = operator with get, set

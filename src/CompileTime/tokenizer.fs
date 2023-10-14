@@ -4,6 +4,7 @@ module lexer =
   type TokenType =
   | Num
   | Null
+  | Operator
   | EOF
   [<StructuredFormatDisplay("line: {line}, colmun: {colmun}, type: {ttype}, value: {value}")>]
   type Token(value : string, ttype : TokenType, line : int, colmun : int) =
@@ -24,7 +25,6 @@ module lexer =
       else
         colmun <- colmun + 1;
         let prev = code[0];
-        printfn "%c"prev
         code <- code.Substring(1);
         prev;
 
@@ -44,7 +44,6 @@ module lexer =
 
     member x.set(value : string, ttype : TokenType) = 
       ccurrent_token <- new Token(value, ttype, line, colmun); 
-      printfn "%A" (x.current_token())
       ignore
 
     member this.tokenize() : Token =
@@ -60,8 +59,9 @@ module lexer =
           let mutable res = "";
           while code.Length > 0 && isNum() do
             res <- res + string(take())
-            printfn "%s"res
           this.set(res, TokenType.Num) |> ignore
+        | '+' | '-' | '*' | '/' | '%' | '&' | '|' ->
+          this.set(string(take()), TokenType.Operator) |> ignore
         | _ ->
           if at() = ' ' || at() = '\n' || at() = '\t' then
             this.tokenize() |> ignore

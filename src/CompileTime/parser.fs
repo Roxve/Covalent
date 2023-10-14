@@ -23,12 +23,17 @@ module Parser =
         update |> ignore
         prev
       member private this.notEOF() : bool =
-        printfn "%A" (this.at())
         not (this.at().ttype = TokenType.EOF)
 
       member private this.parse_primary_expr() : AtomicLang.Expr =
         match this.at().ttype with
-        | TokenType.Num -> new AtomicLang.Num(line,colmun, float(this.take().value))
+        | TokenType.Num -> 
+          let num = float(this.take().value);
+          //check if not convertable to int
+          if (num - float(int(num))) > 0 then
+            new AtomicLang.Num<float>(line,colmun, num)
+          else
+            new AtomicLang.Num<int>(line,colmun, int(num))
 
       member private this.parse_expr : AtomicLang.Expr =
         this.parse_primary_expr()

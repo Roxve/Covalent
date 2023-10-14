@@ -1,26 +1,26 @@
 {
   "format": 1,
   "restore": {
-    "/home/codespace/Atomic-Script-WIP/src/atomic.fsproj": {}
+    "/home/usr/projects/Atomic-Script-WIP/src/atomic.fsproj": {}
   },
   "projects": {
-    "/home/codespace/Atomic-Script-WIP/src/atomic.fsproj": {
+    "/home/usr/projects/Atomic-Script-WIP/src/atomic.fsproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/codespace/Atomic-Script-WIP/src/atomic.fsproj",
+        "projectUniqueName": "/home/usr/projects/Atomic-Script-WIP/src/atomic.fsproj",
         "projectName": "atomic",
-        "projectPath": "/home/codespace/Atomic-Script-WIP/src/atomic.fsproj",
-        "packagesPath": "/home/codespace/.nuget/packages/",
-        "outputPath": "/home/codespace/Atomic-Script-WIP/src/obj/",
+        "projectPath": "/home/usr/projects/Atomic-Script-WIP/src/atomic.fsproj",
+        "packagesPath": "/home/usr/.nuget/packages/",
+        "outputPath": "/home/usr/projects/Atomic-Script-WIP/src/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/codespace/.nuget/NuGet/NuGet.Config"
+          "/home/usr/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net7.0"
         ],
         "sources": {
-          "/usr/local/dotnet/7.0.306/sdk/7.0.306/FSharp/library-packs": {},
+          "/usr/share/dotnet/sdk/7.0.401/FSharp/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -37,7 +37,7 @@
             "FSharp.Core": {
               "include": "Runtime, Compile, Build, Native, Analyzers, BuildTransitive",
               "target": "Package",
-              "version": "[7.0.300, )",
+              "version": "[7.0.400, )",
               "generatePathProperty": true
             }
           },
@@ -52,12 +52,18 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[7.0.11, 7.0.11]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/dotnet/7.0.306/sdk/7.0.306/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/7.0.401/RuntimeIdentifierGraph.json"
         }
       }
     }
