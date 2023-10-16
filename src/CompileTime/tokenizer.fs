@@ -13,7 +13,7 @@ module lexer =
     member this.line = line;
     member this.colmun = colmun;
 
-  type Tokenizer(code : string) as self = 
+  type Tokenizer(code : string) = 
     let mutable line = 1;
     let mutable colmun = 0;
 
