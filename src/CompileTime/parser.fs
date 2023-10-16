@@ -1,6 +1,6 @@
 namespace AtomicLang
 open AtomicLang.lexer
-open AtomicLang
+open AtomicLang.AST
 module Parser =
     type Parser(code : string) = 
       let tokenizer : Tokenizer = new Tokenizer(code);
@@ -24,25 +24,49 @@ module Parser =
         prev
       member private this.notEOF() : bool =
         not (this.at().ttype = TokenType.EOF)
-      member private this.parse_operator() : AtomicLang.operator =
-        new AtomicLang.operator(line, colmun, this.take().value)
-      member private this.parse_primary_expr() : AtomicLang.Expr =
+
+
+      member this.productAST() : Program =
+        let prog = new Program(line, colmun)
+        while this.notEOF() do
+          prog.body <- [this.parse_expr] |> List.append prog.body
+        prog;
+
+      member private this.parse_operator : operator =
+        new operator(line, colmun, this.take().value)
+      member private this.parse_expr : Expr =
+        this.parse_additive_binary_expr
+
+
+      member private this.parse_additive_binary_expr =
+        let mutable left = this.parse_multipictive_binary_expr
+        while this.at().value = "+" || this.at().value = "-" do
+          let op = this.parse_operator
+          let right = this.parse_multipictive_binary_expr 
+          left <- new BinaryExpr(line,colmun, left, right, op) :> Expr
+        left
+      
+
+      member private this.parse_multipictive_binary_expr =
+        let mutable left = this.parse_primary_expr
+        while this.at().value = "*" || this.at().value = "/" || this.at().value = "%" do
+          let op = this.parse_operator
+          let right = this.parse_primary_expr 
+          left <- new BinaryExpr(line,colmun, left, right, op) :> Expr
+        left
+ 
+
+
+      member private this.parse_primary_expr : Expr =
         match this.at().ttype with
         | TokenType.Num -> 
           let num = float(this.take().value);
           //check if not convertable to int
           if (num - float(int(num))) > 0 then
-            new AtomicLang.Num<float>(line,colmun, num)
+            new Num<float>(line,colmun, num)
           else
-            new AtomicLang.Num<int>(line,colmun, int(num))
-
-      member private this.parse_expr : AtomicLang.Expr =
-        this.parse_primary_expr()
-
-       
-      member this.productAST() : AtomicLang.Program =
-        let prog = new AtomicLang.Program(line, colmun)
-        while this.notEOF() do
-          prog.body <- [this.parse_expr] |> List.append prog.body
-        prog;
-      
+            new Num<int>(line,colmun, int(num))
+        | _ ->
+          let tok = this.take().value 
+          printfn "unexcepted Token %s" tok
+          new Error(line, colmun, "unexcepted token " + tok)

@@ -1,11 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "UXsaDGSLJdpWKA9SSOPnwc/MWQGQ0XGmzDMQLi1AJts4sRLn/Mn2GOc2G+wmiRxLVYooMHInQwkz1jVT2a6Swg==",
+  "dgSpecHash": "BWONtvY0q0TQU1cupEIOYIDdigvMAb4hruzSf2/JVQd4PMDxJauw9S97y30FD+3hhgbZNV9J9XAvEDvFctivlg==",
   "success": true,
-  "projectFilePath": "/home/usr/projects/Atomic-Script-WIP/src/atomic.fsproj",
+  "projectFilePath": "/home/codespace/Atomic-Script-WIP/src/atomic.fsproj",
   "expectedPackageFiles": [
-    "/home/usr/.nuget/packages/fsharp.core/7.0.400/fsharp.core.7.0.400.nupkg.sha512",
-    "/home/usr/.nuget/packages/microsoft.aspnetcore.app.ref/7.0.11/microsoft.aspnetcore.app.ref.7.0.11.nupkg.sha512"
+    "/home/codespace/.nuget/packages/fsharp.core/7.0.300/fsharp.core.7.0.300.nupkg.sha512"
   ],
   "logs": []
 }

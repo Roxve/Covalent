@@ -8,17 +8,17 @@
     ".NETCoreApp,Version=v7.0": {
       "atomic/1.0.0": {
         "dependencies": {
-          "FSharp.Core": "7.0.400"
+          "FSharp.Core": "7.0.300"
         },
         "runtime": {
           "atomic.dll": {}
         }
       },
-      "FSharp.Core/7.0.400": {
+      "FSharp.Core/7.0.300": {
         "runtime": {
           "lib/netstandard2.1/FSharp.Core.dll": {
             "assemblyVersion": "7.0.0.0",
-            "fileVersion": "7.4.23.36405"
+            "fileVersion": "7.3.23.20307"
           }
         },
         "resources": {
@@ -71,12 +71,12 @@
       "serviceable": false,
       "sha512": ""
     },
-    "FSharp.Core/7.0.400": {
+    "FSharp.Core/7.0.300": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-kJQ7TBQqd1d2VoODSgwFSAaApaBN0Fuu8mZt2XExmd3UzUxLjUsMn5Y5XhpsUWdnxOL8amp7VFg7cwhPllR4Qw==",
-      "path": "fsharp.core/7.0.400",
-      "hashPath": "fsharp.core.7.0.400.nupkg.sha512"
+      "sha512": "sha512-8vvItREJ1l5lcp3vBCSJ1mFevVAhR48I34DuF/EoUa7o1KlFpQpagyuZkVYMAsHPIjdp47ZxM9sI4eqeXaeWkA==",
+      "path": "fsharp.core/7.0.300",
+      "hashPath": "fsharp.core.7.0.300.nupkg.sha512"
     }
   }
 }

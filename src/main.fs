@@ -6,4 +6,6 @@ let code = Console.ReadLine();
 let parser = new Parser(code);
 let AST = parser.productAST();
 
-printfn "%A" AST
+
+for expr in AST.body do
+  printfn "%A" expr
