@@ -24,7 +24,8 @@ module Parser =
         prev
       member private this.notEOF() : bool =
         not (this.at().ttype = TokenType.EOF)
-
+      member private this.parse_operator() : AtomicLang.operator =
+        new AtomicLang.operator(line, colmun, this.take().value)
       member private this.parse_primary_expr() : AtomicLang.Expr =
         match this.at().ttype with
         | TokenType.Num -> 
