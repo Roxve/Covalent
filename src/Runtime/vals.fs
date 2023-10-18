@@ -2,13 +2,20 @@ namespace AtomicLang
 module Vals =
   type ValType =
     | Num
+    | Null
     | Error
 
-  type RuntimeVal<'a> =
+  type RuntimeVal =
     abstract member Type : ValType with get
-    abstract member value : 'a with get, set
   type NumVal<'a>(value : 'a) =
-    interface RuntimeVal<'a> with
+    interface RuntimeVal with
       member val Type = ValType.Num with get
-      member val value = value with get, set
     end
+    member val value : 'a = value with get, set
+
+  type NullVal() =
+    interface RuntimeVal with
+      member val Type = ValType.Null with get
+    end
+    member val value = null with get, set
+

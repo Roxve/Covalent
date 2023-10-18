@@ -5,10 +5,9 @@ module AST =
   | Num
   | Error
   | Null
-  | EOP
   | Operator
   | BinaryExpr
-  | EOF
+  | EOP
 
   [<StructuredFormatDisplay("line: {line}, colmun: {colmun}")>]
   type Expr =
@@ -49,7 +48,7 @@ module AST =
       member this.line = aline
       member this.colmun = acolmun
 
-      member this.Type : NodeType = NodeType.Num
+      member this.Type : NodeType = NodeType.Null
     end
     member x.getLine = (self :> Expr).line;
     member x.getColmun = (self :> Expr).colmun;
@@ -59,14 +58,14 @@ module AST =
       member this.line = aline
       member this.colmun = acolmun
 
-      member this.Type : NodeType = NodeType.Num
+      member this.Type : NodeType = NodeType.EOP
     end
     member x.getLine = (self :> Expr).line;
     member x.getColmun = (self :> Expr).colmun;
 
 
   [<StructuredFormatDisplay("got num => value: {value}, line: {getLine}, colmun: {getColmun}")>]
-  type Num<'a>(aline : int, acolmun : int, value : 'a) as self = 
+  type Num(aline : int, acolmun : int, value : float) as self = 
     interface Expr with
       member this.line = aline
       member this.colmun = acolmun
@@ -76,7 +75,7 @@ module AST =
     member x.getLine = (self :> Expr).line;
     member x.getColmun = (self :> Expr).colmun;
 
-    member val value : 'a = value with get, set
+    member val value : float = value with get, set
 
   [<StructuredFormatDisplay("got operator => value: {value}, line: {getLine}, colmun: {getColmun}")>]
   type operator(aline : int, acolmun : int, value : string) as self= 

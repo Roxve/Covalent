@@ -1,11 +1,12 @@
 ﻿open System;
-open AtomicLang.Parser
-
+open AtomicLang.Interpreter
+open AtomicLang.Vals
 printf ">> "
 let code = Console.ReadLine();
-let parser = new Parser(code);
-let AST = parser.productAST();
+let interpreter = new Interpreter(code);
+let run : RuntimeVal = interpreter.run();
 
-
-for expr in AST.body do
-  printfn "%A" expr
+match run.Type with
+| ValType.Num -> 
+  let num = run :?> NumVal<float>
+  printfn "%f" num.value

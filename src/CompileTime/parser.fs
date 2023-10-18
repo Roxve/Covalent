@@ -71,10 +71,7 @@ module Parser =
         | TokenType.Num -> 
           let num = float(this.take().value);
           //check if not convertable to int
-          if (num - float(int(num))) > 0 then
-            new Num<float>(line,colmun, num)
-          else
-            new Num<int>(line,colmun, int(num))
+          new Num(line,colmun, num)
         | _ ->
           let tok = this.take().value 
           printfn "unexcepted Token %s" tok
