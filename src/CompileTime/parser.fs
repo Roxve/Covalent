@@ -8,10 +8,12 @@ module Parser =
 
       let mutable line = 1
       let mutable colmun = 0
-
+      let mutable pcurrent_node : Expr = new Null(-1,-1)
       let update() =
         line <- tokenizer.getLine
         colmun <- tokenizer.getColmun
+
+      member this.current_node = pcurrent_node
 
       member private this.at() : Token =
         update |> ignore
@@ -25,12 +27,19 @@ module Parser =
       member private this.notEOF() : bool =
         not (this.at().ttype = TokenType.EOF)
 
-
-      member this.productAST() : Program =
+      member this.productProgram() : Program =
         let prog = new Program(line, colmun)
         while this.notEOF() do
           prog.body <- [this.parse_expr] |> List.append prog.body
         prog;
+
+
+      member this.productAST() : Expr =
+        if this.notEOF() then
+          pcurrent_node <- this.parse_expr
+          pcurrent_node;
+        else
+          new EOP(line, colmun);
 
       member private this.parse_operator : operator =
         new operator(line, colmun, this.take().value)

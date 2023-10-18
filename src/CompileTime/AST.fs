@@ -4,6 +4,8 @@ module AST =
   | Program
   | Num
   | Error
+  | Null
+  | EOP
   | Operator
   | BinaryExpr
   | EOF
@@ -40,6 +42,28 @@ module AST =
     member x.getColmun = (self :> Expr).colmun;
 
     member val value : string = value with get, set
+
+  [<StructuredFormatDisplay("got null? => line: {getLine}, colmun: {getColmun}")>]
+  type Null(aline : int, acolmun : int) as self = 
+    interface Expr with
+      member this.line = aline
+      member this.colmun = acolmun
+
+      member this.Type : NodeType = NodeType.Num
+    end
+    member x.getLine = (self :> Expr).line;
+    member x.getColmun = (self :> Expr).colmun;
+  [<StructuredFormatDisplay("got END => line: {getLine}, colmun: {getColmun}")>]
+  type EOP(aline : int, acolmun : int) as self = 
+    interface Expr with
+      member this.line = aline
+      member this.colmun = acolmun
+
+      member this.Type : NodeType = NodeType.Num
+    end
+    member x.getLine = (self :> Expr).line;
+    member x.getColmun = (self :> Expr).colmun;
+
 
   [<StructuredFormatDisplay("got num => value: {value}, line: {getLine}, colmun: {getColmun}")>]
   type Num<'a>(aline : int, acolmun : int, value : 'a) as self = 
