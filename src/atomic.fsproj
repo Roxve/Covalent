@@ -10,6 +10,7 @@
     <Compile Include="CompileTime/AST.fs" />
     <Compile Include="CompileTime/parser.fs" />
     <Compile Include="Runtime/vals.fs" />
+    <Compile Include="Runtime/interpreter_main.fs" />
     <Compile Include="Runtime/interpreter_binary_expr.fs" />
     <Compile Include="Runtime/interpreter.fs" />
     <Compile Include="main.fs" />
