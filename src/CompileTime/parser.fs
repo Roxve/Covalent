@@ -39,7 +39,8 @@ module Parser =
           pcurrent_node <- this.parse_expr
           pcurrent_node;
         else
-          new EOP(line, colmun);
+          pcurrent_node <- new EOP(line, colmun)
+          pcurrent_node;
 
       member private this.parse_operator : operator =
         new operator(line, colmun, this.take().value)

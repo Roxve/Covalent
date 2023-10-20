@@ -7,6 +7,7 @@ module Vals =
 
   type RuntimeVal =
     abstract member Type : ValType with get
+  [<StructuredFormatDisplay("got num => {value}")>]
   type NumVal<'a>(value : 'a) =
     interface RuntimeVal with
       member val Type = ValType.Num with get
