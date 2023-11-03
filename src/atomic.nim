@@ -1,5 +1,11 @@
-# This is just an example to get you started. A typical binary package
-# uses this file as the main entry point of the application.
+import compile/tokenize
 
 when isMainModule:
-  echo("Hello, World!")
+  stdout.write(">> ")
+  stdout.flushFile
+
+  var src = stdin.readLine()
+  echo src
+  var tokenizer = make_tokenizer(src)
+  while(tokenizer.current_token.tok != TType.EOF):
+    echo tokenizer.next

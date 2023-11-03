@@ -1,9 +1,9 @@
-
 type
   TType* = enum
     num,
     str,
-    null, 
+    null,
+    exception,
     EOF
   Token* = object
     line*, colmun*: int
@@ -25,7 +25,7 @@ proc make(self: var Tokenizer, value: string, tok: TType): Token =
 
 
 proc take(self: var Tokenizer): char = 
-  let prev = self.src[self.src.len - 1]
+  let prev = self.src[0]
   
   self.src = self.src[1 .. self.src.len - 1] 
   self.colmun += 1
@@ -35,6 +35,7 @@ proc take(self: var Tokenizer): char =
 proc isNum*(x: char): bool =
   return "01234.56789".contains(x);
 
+
 proc at(self: var Tokenizer): char =
   if self.src.len > 0:
     return self.src[0]
@@ -42,6 +43,17 @@ proc at(self: var Tokenizer): char =
     return '?'
 
 proc next*(self: var Tokenizer): Token =
+  if self.at() == ' ' or self.at() == ' ':
+    while self.at() == ' ' or self.at() == '\t':
+      discard self.take()
+
+  if self.at() == '\n':
+    self.line += 1
+    self.colmun = 0
+
+  if self.src.len <= 0: 
+    return self.make("<EOF>", TType.EOF)
+
   case self.src[0]:
     of '0','1', '2', '3', '4', '5', '6', '7', '8', '9':
       var res = ""
@@ -49,3 +61,18 @@ proc next*(self: var Tokenizer): Token =
         res &= self.take()
       return self.make(res, TType.num)
 
+    of '"', "'"[0]:
+      var op = self.take()
+      var res = ""
+      while self.src.len > 0 and self.at() != op:
+        res &= self.take()
+
+      if self.src.len <= 0 and self.at() != op:
+        echo "error: reached end of file string didnt finish execepting " & op
+        return self.make("unfinished_string", TType.exception)
+      else:
+        discard self.take
+        return self.make(res,TType.str)
+    else:
+      echo "error unknown char " & self.take()
+      return self.make("unknown_char", TType.exception)
