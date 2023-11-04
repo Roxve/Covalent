@@ -1,9 +1,17 @@
 type
   TType* = enum
+    id,
+    operator,
     num,
     str,
     null,
     exception,
+    # keywords
+    set_kw = "set", 
+    # new keywords should be put here dont replace set and null location
+    true_kw = "true", false_kw = "false"
+    null_kw = "null"
+    # end
     EOF
   Token* = object
     line*, colmun*: int
@@ -35,6 +43,19 @@ proc take(self: var Tokenizer): char =
 proc isNum*(x: char): bool =
   return "01234.56789".contains(x);
 
+proc isOperator(x: char): bool =
+  return "+-*/=%|&<>^".contains(x)
+
+proc isAllowedID(x: char): bool =
+  return not "¿? \t".contains(x) and not x.isOperator # every char is vaild except <=
+
+  
+proc getKeywordID(x: string): TType =
+  for keyword in ord(TType.set_kw) .. ord(TType.null_kw):
+    if $TType(keyword) == x:
+      return TType(keyword)
+  return TType.id
+
 
 proc at(self: var Tokenizer): char =
   if self.src.len > 0:
@@ -43,6 +64,7 @@ proc at(self: var Tokenizer): char =
     return '?'
 
 proc next*(self: var Tokenizer): Token =
+  # skip spaces and check if end of file
   if self.at() == ' ' or self.at() == ' ':
     while self.at() == ' ' or self.at() == '\t':
       discard self.take()
@@ -54,15 +76,24 @@ proc next*(self: var Tokenizer): Token =
   if self.src.len <= 0: 
     return self.make("<EOF>", TType.EOF)
 
+
+  # check char by char
   case self.src[0]:
+    # number
     of '0','1', '2', '3', '4', '5', '6', '7', '8', '9':
       var res = ""
       while self.src.len > 0 and isNum(self.at()):
         res &= self.take()
       return self.make(res, TType.num)
-
+    # operators
+    of '+', '-', '*', '/','=', '%', '<', '>', '&', '|', '^':
+      var op: string = ""
+      while self.src.len > 0 and self.at().isOperator:
+        op &= self.take
+      return self.make(op, TType.operator)
+    # string
     of '"', "'"[0]:
-      var op = self.take()
+      var op = self.take
       var res = ""
       while self.src.len > 0 and self.at() != op:
         res &= self.take()
@@ -74,5 +105,11 @@ proc next*(self: var Tokenizer): Token =
         discard self.take
         return self.make(res,TType.str)
     else:
+      if self.at().isAllowedID:
+        var res = ""
+        while self.src.len > 0 and self.at().isAllowedID:
+          res &= self.take()
+        return self.make(res, getKeywordID(res))
+      # unknown
       echo "error unknown char " & self.take()
       return self.make("unknown_char", TType.exception)
