@@ -20,8 +20,8 @@ type
   Tokenizer* = object
     current_token*: Token
     src: string
-    line: int = 1
-    colmun: int = 0
+    line*: int = 1
+    colmun*: int = 0
 
 proc make_tokenizer*(src: string): Tokenizer =
   return Tokenizer(src: src)
