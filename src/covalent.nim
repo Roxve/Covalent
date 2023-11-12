@@ -10,8 +10,8 @@ when isMainModule:
   var src = stdin.readLine()
   echo src
   var Parser = make_parser(src)
-  var prog = Parser.productAST() 
-  print prog
-  for item in prog.body: 
-    echo "try"
-    print cast[Expr](item)
+  var program = Parser.productAST()
+  print program.prog
+ # for item in prog.body:
+  #  echo "try"
+   # print item

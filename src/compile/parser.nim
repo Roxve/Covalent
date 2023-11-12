@@ -2,7 +2,7 @@ import AST
 import parser_def
 import parse_expr
 import tokenize
-import options
+import print
 
 #proc mk_scope*(Type: ScopeType, parent: Option[Scope]): Scope =
  # return Scope(parent: parent, Type: Type)
@@ -13,9 +13,9 @@ proc make_parser*(src: string): Parser =
   #parser.current_scope = mk_scope(ScopeType.top, none(Scope))
   return parser
 
-proc productAST*(this: var Parser): Prog =
-  var body: seq[Expr] = @[]
+proc productAST*(this: var Parser): Node =
+  var body: seq[Node] = @[]
   while this.at().tok != TType.EOF: 
-    echo "get at", this.at()
-    body.add(this.parse_expr())
+    var expr = this.parse_expr()
+    body.add(expr)
   return Make_Prog(body, this.line, this.colmun)

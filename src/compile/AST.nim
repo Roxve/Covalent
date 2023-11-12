@@ -7,51 +7,61 @@ type
     Bool,
     binaryExpr,
     Operator,
-
-  Expr* = ref object of RootObj
-    node*: NodeType
+    
+  Expr* = object of RootObj
     line*, colmun*: int
-  Prog* = ref object of Expr
-    body*: seq[Expr]
+  Prog* = object of Expr
+    body*: seq[Node]
 
-  IDVal* = ref object of Expr
+  IDVal* = object of Expr
     symbol*: string
-  OperatorVal* = ref object of Expr
+  OperatorVal* = object of Expr
     symbol*: string
 
-  NumVal* = ref object of Expr
+  NumVal* = object of Expr
     value*: float
-  StrVal* = ref object of Expr
+  StrVal* = object of Expr
     value: string
 
-  BinaryExpr* = ref object of Expr
-    left: Expr
-    right: Expr
-    operator: OperatorVal
+  BinaryExpr* = object of Expr
+    left: Node
+    right: Node
+    operator: Node
+  Node* = ref object
+    case node*: NodeType
+    of Program: prog*: Prog
+    of ID: ID*: IDVal
+    of Operator: OP*: OperatorVal
+    of Num: num*: NumVal
+    of Str: str*: StrVal
+    of binaryExpr: BinaryExpr*: BinaryExpr
+    else:
+      discard
 
-proc Make_Prog*(body: seq[Expr], line: int, colmun: int): Prog =
-  return Prog(node: NodeType.Program, line: line, colmun: colmun)
-
-
-proc Make_ID*(symbol: string, line: int, colmun: int): IDVal =
-  return IDVal(node: NodeType.ID, symbol: symbol, line: line, colmun: colmun)
-
-
-
-proc Make_Operator*(symbol: string, line: int, colmun: int): OperatorVal =
-  return OperatorVal(node: NodeType.ID, symbol: symbol, line: line, colmun: colmun)
-
-
-
-proc Make_Num*(value: float, line: int, colmun: int):  NumVal =
-  return NumVal(node: NodeType.ID, value: value, line: line, colmun: colmun)
+proc Make_Prog*(body: seq[Node], line: int, colmun: int): Node =
+  
+  return Node(node: NodeType.Program, prog: Prog( line: line, colmun: colmun, body: body))
 
 
-
-proc Make_Str*(value: string, line: int, colmun: int): StrVal =
-  return StrVal(node: NodeType.ID, value: value, line: line, colmun: colmun)
+proc Make_ID*(symbol: string, line: int, colmun: int): Node =
+  return Node(node: NodeType.ID, ID:IDVal(symbol: symbol, line: line, colmun: colmun))
 
 
 
-proc Make_BinaryExpr*(left: Expr, right: Expr, operator: OperatorVal, line: int, colmun: int): BinaryExpr =
-  return BinaryExpr(node: NodeType.ID, left: left,right: right, operator: operator, line: line, colmun: colmun)
+proc Make_Operator*(symbol: string, line: int, colmun: int): Node =
+  return Node(node: NodeType.Operator, OP: OperatorVal(symbol: symbol, line: line, colmun: colmun))
+
+
+
+proc Make_Num*(value: float, line: int, colmun: int):  Node =
+  return Node(node: NodeType.Num, num: NumVal(value: value, line: line, colmun: colmun))
+
+
+
+proc Make_Str*(value: string, line: int, colmun: int): Node =
+  return Node(node: NodeType.Str, str: StrVal(value: value, line: line, colmun: colmun))
+
+
+
+proc Make_BinaryExpr*(left: Node, right: Node, operator: Node, line: int, colmun: int): Node =
+  return Node(node: NodeType.binaryExpr, BinaryExpr: BinaryExpr(left: left,right: right, operator: operator, line: line, colmun: colmun))
