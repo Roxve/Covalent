@@ -24,9 +24,9 @@ type
     value: string
 
   BinaryExpr* = object of Expr
-    left: Node
-    right: Node
-    operator: Node
+    left*: Node
+    right*: Node
+    operator*: Node
   Node* = ref object
     case node*: NodeType
     of Program: prog*: Prog
