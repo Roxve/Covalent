@@ -24,25 +24,40 @@ func `<>`(a: seq[byte], b: seq[byte]): int =
       return -1
   return 0
 
-func `---`(a: var seq[byte], b: var seq[byte]): seq[byte] =
-  # redefine +++ because its needed to peform --- probaly a bad act
+
+template defineBinAdd() =
   func `+++`(a: var seq[byte], b: var seq[byte]): seq[byte] =
     var res: seq[byte] = @[]
-
+  
     # negative
     if a.len != 0 and b.len != 0 and a[0] == 45 and b[0] == 45:
       a.del(0) 
       b.del(0)
       res = @[byte(45)] & a --- b
     # a is negative
-    elif b.len != 0 and b[0] == 45:
-      b.del(0)
+    elif a.len != 0 and a[0] == 45:
+      a.del(0)
       if a <> b == -1: 
         res = a --- b
       elif a <> b == 0:
         res = @[byte(0)]
       else:
-        res = @[byte(45)] & a --- b  
+        res = @[byte(45)] & a --- b
+  
+    elif b.len != 0 and b[0] == 45:
+      a.del(0)
+      if a <> b == -1: 
+        res = a --- b
+      elif a <> b == 0:
+        res = @[byte(0)]
+      else:
+        res = @[byte(45)] & a --- b
+    
+    return res
+
+func `---`(a: var seq[byte], b: var seq[byte]): seq[byte] =
+  # redefine +++ because its needed to peform --- probaly a bad act
+  defineBinAdd()
   
   var res: seq[byte] = @[]
   # negative
@@ -58,45 +73,19 @@ func `---`(a: var seq[byte], b: var seq[byte]): seq[byte] =
     elif a <> b == 0:
       res = @[byte(0)]
     else:
-      res = @[byte(45)] & a --- b
+      res = @[byte(45)] & a +++ b
   
   elif b.len != 0 and b[0] == 45:
     a.del(0)
     if a <> b == -1: 
-      res = a --- b
+      res = @[byte(45)] & a +++ b
     elif a <> b == 0:
       res = @[byte(0)]
     else:
-      res = @[byte(45)] & a --- b
+      res = @[byte(45)] & a +++ b
   return res
-func `+++`(a: var seq[byte], b: var seq[byte]): seq[byte] =
-  var res: seq[byte] = @[]
-  
-  # negative
-  if a.len != 0 and b.len != 0 and a[0] == 45 and b[0] == 45:
-    a.del(0) 
-    b.del(0)
-    res = @[byte(45)] & a --- b
-  # a is negative
-  elif a.len != 0 and a[0] == 45:
-    a.del(0)
-    if a <> b == -1: 
-      res = a --- b
-    elif a <> b == 0:
-      res = @[byte(0)]
-    else:
-      res = @[byte(45)] & a --- b
-  
-  elif b.len != 0 and b[0] == 45:
-    a.del(0)
-    if a <> b == -1: 
-      res = a --- b
-    elif a <> b == 0:
-      res = @[byte(0)]
-    else:
-      res = @[byte(45)] & a --- b
-    
-  return res
+
+defineBinAdd()
 
 proc interpret*(bytecode: seq[byte]): VM =
   var vm = VM()
