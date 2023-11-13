@@ -3,7 +3,7 @@ import compile/parser
 import print 
 import compile/AST 
 import compile/codegen
-
+import runtime/vm
 when isMainModule:
   stdout.write(">> ")
   stdout.flushFile
@@ -12,7 +12,7 @@ when isMainModule:
   echo src
   var Parser = make_parser(src)
   var bytes = Parser.productBytes()
-  print bytes
+  print interpret(bytes)
  # for item in prog.body:
   #  echo "try"
    # print item

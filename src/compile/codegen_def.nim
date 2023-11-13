@@ -1,5 +1,5 @@
 type
   OP*  = enum
-    OP_LOAD
-    OP_ADD = 1
+    OP_LOAD = byte(0)
+    OP_ADD
 
