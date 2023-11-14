@@ -87,6 +87,17 @@ proc next*(self: var Tokenizer): Token =
       return self.make(res, TType.num)
     # operators
     of '+', '-', '*', '/','=', '%', '<', '>', '&', '|', '^':
+      
+  
+      if self.src[0] == '-':
+        if self.src.len > 1 and isNum(self.src[1]): 
+          var res = "-"
+          discard self.take()
+          while self.src.len > 0 and isNum(self.at()):
+            res &= self.take()
+          return self.make(res, TType.num)      
+      
+  
       var op: string = ""
       while self.src.len > 0 and self.at().isOperator:
         op &= self.take

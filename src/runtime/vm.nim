@@ -52,7 +52,24 @@ template defineBinAdd() =
         res = @[byte(0)]
       else:
         res = @[byte(45)] & a --- b
-    
+    else:
+      var carry: byte = 0
+      var i: int = a.len - 1
+      var j: int = a.len - 1
+
+      while i >= 0 or j >= 0 or carry > 0:
+        var sum: int = int(carry)
+
+        if i >= 0:
+          sum += int(a[i])
+          i -= 1
+
+        if j >= 0:
+          sum += int(b[j])
+          j -= 1
+        res.insert(byte(sum and 255) , 0)
+        carry = byte(sum div 256) and 255
+        
     return res
 
 func `---`(a: var seq[byte], b: var seq[byte]): seq[byte] =
@@ -110,7 +127,7 @@ proc interpret*(bytecode: seq[byte]): VM =
         
         if vm.reg.len - 1 < int(reg0): 
           vm.reg.add(@[byte(0)])     
-        vm.reg[reg0] = cast[seq[byte]](cast[int](vm.reg[reg1]) + cast[int](vm.reg[reg2]))
+        vm.reg[reg0] = vm.reg[reg1] +++ vm.reg[reg2]
         vm.ip += 3 
         vm.results = success 
         vm.results_eval = $vm.reg[reg0]
