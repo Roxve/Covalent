@@ -55,7 +55,7 @@ template defineBinAdd() =
     else:
       var carry: byte = 0
       var i: int = a.len - 1
-      var j: int = a.len - 1
+      var j: int = b.len - 1
 
       while i >= 0 or j >= 0 or carry > 0:
         var sum: int = int(carry)
@@ -68,8 +68,7 @@ template defineBinAdd() =
           sum += int(b[j])
           j -= 1
         res.insert(byte(sum and 255) , 0)
-        carry = byte(sum div 256) and 255
-        
+        carry = byte(sum shr 8)
     return res
 
 func `---`(a: var seq[byte], b: var seq[byte]): seq[byte] =
