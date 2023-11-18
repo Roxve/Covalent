@@ -32,15 +32,15 @@ proc signExtend*(x: uint8): uint32 =
 
 proc makeInt*(x: seq[byte]): uint32 =
   if x.len == 2:
-    return uint32(0) or
-           uint32(x[0] shl 8) or
-           uint32(x[1])
+    return
+           signExtend(x[0] shl 8) or
+           signExtend(x[1])
   else:
-    return uint32(0) or 
-         uint32(x[0] shl 24) or
-         uint32(x[1] shl 16) or
-         uint32(x[2] shl 8) or
-         uint32(x[3])
+    return
+         signExtend(x[0] shl 24) or
+         signExtend(x[1] shl 16) or
+         signExtend(x[2] shl 8) or
+         signExtend(x[3])
 
 proc changeCond*(vm: var VM, reg: int) = 
   var val = makeInt(vm.reg[reg].bytes)

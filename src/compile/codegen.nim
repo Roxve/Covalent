@@ -35,7 +35,7 @@ proc generate(this: var Codegen, expr: Node): seq[byte] =
     of NodeType.Num:
       var num = expr.num
       if num.value == round(num.value):
-        var number = int(num.value)
+        var number = uint32(num.value)
         # TODO IMPLENTE A FUNCTION TO DO THI    
         constant_bytes.emit(TAG_INT, number.to4Bytes())
       inc this.consants_count 
