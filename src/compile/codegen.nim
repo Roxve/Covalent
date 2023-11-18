@@ -4,31 +4,18 @@ import AST
 import parser_def
 import tokenize
 import parse_expr
+import math
 
 
 
-
-var reg* = 0
-
-proc emit(bytes: var seq[byte],op: OP, reg0: int, reg1: int, reg2: int) =
-  bytes.add(byte(op))
-  bytes.add(byte(reg0))
-  bytes.add(byte(reg1))
-  bytes.add(byte(reg2))
-
-
-proc emit(bytes: var seq[byte],op: OP, reg0: int, imm: int | float) =
-  bytes.add(byte(op))
-  bytes.add(byte(reg0))
-  bytes.add(byte(imm))
-
-proc generate(expr: Node): seq[byte] = 
+proc generate(this: var Codegen, expr: Node): seq[byte] = 
   var bytes: seq[byte] = @[]
+  var constant_bytes: seq[byte] = @[]
   case expr.node:
     of NodeType.binaryExpr:
       var binaryExpr = expr.BinaryExpr
-      bytes.add(generate(binaryExpr.left))
-      bytes.add(generate(binaryExpr.right))
+      discard this.generate(binaryExpr.left)
+      discard this.generate(binaryExpr.right)
       var op: OP
       case binaryExpr.operator.OP.symbol        
         of "+":
@@ -39,25 +26,36 @@ proc generate(expr: Node): seq[byte] =
           op = OP.OP_MUL
         of "/":
           op = OP.OP_DIV
-      # MATH R0 R0 R1
-      bytes.emit(op, reg - 2, reg - 2, reg - 1)
+      # MATH R0 R1
+      bytes.emit(op, reg - 2, reg - 1)
       # optimization to prevent using too many regs we instead
       # store results of math into reg - 2 ex (8 + 8 + 8) ADD R0 R0 R1 then ADD R0 R0 R1
       reg -= 1
  
     of NodeType.Num:
       var num = expr.num
+      if num.value == round(num.value):
+        var number = int(num.value)
+        # TODO IMPLENTE A FUNCTION TO DO THI    
+        constant_bytes.emit(TAG_INT, number.to4Bytes())
+      inc this.consants_count 
       # LOAD dist imm
-      bytes.emit(OP_LOAD, reg, num.value)
+      bytes.emit(OP_LOAD_CONST, reg, byte((this.consants_count shr 8) and 0xFF), byte(this.consants_count and 0xFF))
       reg += 1
     else:
       discard
-  return bytes
+  this.consants.add(constant_bytes)
+  this.body.add(bytes)
+  return constant_bytes & bytes
 
 proc productBytes*(this: var Parser): seq[byte] =
   var res_bytes: seq[byte] = @[]  
+  var generator = Codegen(consants: @[], body: @[])
   while this.at().tok != TType.EOF:
     var expr = this.parse_expr()
-    res_bytes.add(generate(expr))
+    discard generator.generate(expr)
+
+  var head = @[byte(OP_CONSANTS)] & (generator.consants_count - 1).to2Bytes()
+  res_bytes = head & generator.consants & generator.body
   return res_bytes
   
