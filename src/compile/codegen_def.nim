@@ -71,3 +71,14 @@ proc to2Bytes*(val: int16): seq[byte] =
     bytes.add(byte((val shr 8) and 0xFF))
     bytes.add(byte(val and 0xFF))
     return bytes
+
+proc addConst*(this: var Codegen, tag: OP,ctype: const_type ,bytes: seq[byte]): int16 =
+  var aConsant = consant(ctype: ctype,bytes: bytes)    
+  for key, val in this.consant_objs.items():
+    if key == aConsant:
+      return val
+  
+  this.consants.emit(tag, bytes)
+  inc this.consants_count 
+  this.consant_objs.add((aConsant, this.consants_count))
+  return this.consants_count

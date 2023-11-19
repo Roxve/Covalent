@@ -50,19 +50,8 @@ proc generate(this: var Codegen, expr: Node): StaticType =
       var count = this.consants_count
       if num.value == round(num.value):
         btype = static_int
-        var number = consant(ctype: cint,bytes:uint32(num.value).to4Bytes())    
-        var found = false
-        for key, val in this.consant_objs.items():
-          if key == number:
-            count = val
-            found = true
-            break; 
-        if not found:
-          constant_bytes.emit(TAG_INT, number.bytes)
-          btype = static_int
-          inc this.consants_count 
-          count = this.consants_count
-          this.consant_objs.add((number, count))
+        
+        count = this.addConst(TAG_INT, const_type.cint, uint32(num.value).to4Bytes())
       # LOAD dist imm
       bytes.emit(OP_LOAD_CONST, reg, byte((count shr 8) and 0xFF), byte(count and 0xFF))
       reg += 1
