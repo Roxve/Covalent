@@ -8,26 +8,25 @@ import math
 import ../runtime/vm_def
 
 
-proc generate(this: var Codegen, expr: Node): StaticType = 
+proc generate(this: var Codegen, expr: Expr): StaticType = 
   var bytes: seq[byte] = @[]
   var constant_bytes: seq[byte] = @[]
   var btype: StaticType = dynamic
 
-  case expr.node:
+  case expr.kind:
     of NodeType.binaryExpr:
-      var binaryExpr = expr.BinaryExpr
-      var left_node = binaryExpr.left.node
-      var right_node = binaryExpr.right.node
-      var binop = binaryExpr.operator.OP.symbol
+      var left_node = expr.left
+      var right_node = expr.right
+      var binop = expr.operator.op
   
-      var left = this.generate(binaryExpr.left)
-      var right = this.generate(binaryExpr.right)
+      var left = this.generate(left_node)
+      var right = this.generate(right_node)
 
       if left == error or right == error:
         return error
   
       if left != right and (left != static_str or right != static_str):
-        return this.TypeMissmatchE($left_node, $right_node, $left_node & binop & $right_node)
+        return error #this.TypeMissmatchE($left_node, $right_node, $left_node & binop & $right_node)
       btype = right
       var op: OP
       case binop        
@@ -46,12 +45,11 @@ proc generate(this: var Codegen, expr: Node): StaticType =
       reg -= 1
  
     of NodeType.Num:
-      var num = expr.num
       var count = this.consants_count
-      if num.value == round(num.value):
+      if expr.num_value == round(expr.num_value):
         btype = static_int
         
-        count = this.addConst(TAG_INT, const_type.cint, uint32(num.value).to4Bytes())
+        count = this.addConst(TAG_INT, const_type.cint, uint32(expr.num_value).to4Bytes())
       # LOAD dist imm
       bytes.emit(OP_LOAD_CONST, reg, byte((count shr 8) and 0xFF), byte(count and 0xFF))
       reg += 1

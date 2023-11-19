@@ -13,8 +13,8 @@ proc make_parser*(src: string): Parser =
   #parser.current_scope = mk_scope(ScopeType.top, none(Scope))
   return parser
 
-proc productAST*(this: var Parser): Node =
-  var body: seq[Node] = @[]
+proc productAST*(this: var Parser): Expr =
+  var body: seq[Expr] = @[]
   while this.at().tok != TType.EOF: 
     var expr = this.parse_expr()
     body.add(expr)
