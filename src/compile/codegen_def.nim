@@ -1,3 +1,5 @@
+import ../runtime/vm_def
+
 type
   OP*  = enum
     OP_CONSANTS = byte(0)
@@ -10,11 +12,26 @@ type
     OP_SUB
     OP_MUL
     OP_DIV
+  StaticType* = enum
+    static_int
+    static_str
+    error
+    dynamic
+  Error = RootObj
+  TypeMissmatch = object of Error
+    left, right, expr: string
+    
   Codegen* = object
     consants_count*: int16
-    consants*: seq[byte]
+    line*, colmun*: int
+    consants*: seq[byte] 
+    consant_objs*: seq[(consant, int16)]
     body*: seq[byte]
 
+
+proc TypeMissmatchE*(this: Codegen,left, right, expr: string): StaticType =
+  echo "type missmatch got left: " & left & " right: " & " in expr " & expr & "\n at " & $this.line & ":" & $this.colmun
+  return error
 var reg* = 0
 
 proc emit*(bytes: var seq[byte],op: OP, reg0: int, reg1: int, reg2: int) =

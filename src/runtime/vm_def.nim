@@ -1,7 +1,8 @@
 type
   Interpreter_results* = enum
     success,
-    error_division_by_zero
+    error_division_by_zero,
+    UNKNOWN_OP
   COND* = enum
     FL_POS,
     FL_NEG,

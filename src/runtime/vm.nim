@@ -1,4 +1,3 @@
-import ../compile/codegen
 import ../compile/codegen_def
 import print
 import vm_def
@@ -29,8 +28,10 @@ proc interpret*(bytecode: seq[byte]): VM =
               vm.consants.add(int_val)
               vm.ip += 4
             else:
-              discard
-
+              echo "ERROR while loading consts unknown type " & $tag & " please report this!"
+              vm.results = UNKNOWN_OP
+              vm.results_eval = "INVAILD TAG " & $tag
+              return vm
 
       of OP_LOAD_CONST:
         var reg0 = bytecode[vm.ip]
@@ -65,6 +66,9 @@ proc interpret*(bytecode: seq[byte]): VM =
         
         vm.ip += 2       
       else:
-        discard
+        echo "ERROR while executing: invaild insturaction please report this! " & $op
+        vm.results = UNKNOWN_OP
+        vm.results_eval = "INVAILD " & $op 
+        return vm
   
   return vm
