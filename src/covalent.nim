@@ -4,6 +4,8 @@ import print
 import compile/AST 
 import compile/codegen
 import runtime/vm
+import etc/box
+
 when isMainModule:
   stdout.write(">> ")
   stdout.flushFile
