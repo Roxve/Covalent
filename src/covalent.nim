@@ -4,12 +4,14 @@ import print
 import compile/AST 
 import compile/codegen
 import runtime/vm
-import etc/box
+import noxen
 
 when isMainModule:
-  stdout.write(">> ")
+  
+  echo makeBox("welcome to the covalent repl!", "repl", full_style=noxen.green)  
+  stdout.write(">> ".green)
   stdout.flushFile
-
+  
   var src = stdin.readLine()
   echo src
   var Parser = make_parser(src)
