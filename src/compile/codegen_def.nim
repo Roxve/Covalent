@@ -38,6 +38,25 @@ proc error(this: Codegen, msg: string) =
   echo makeBox(msg & &"\nat line:{this.line}, colmun:{this.colmun}", "error", full_style=red)
 
 
+proc isVaildBinaryExpr*(expr: Expr): bool =
+  var left = expr.left.kind
+  var right = expr.right.kind
+  var expr_left = expr.left
+  var expr_right = expr.right
+
+  while left == binaryExpr:
+    if not expr.left.isVaildBinaryExpr() :  return false
+    expr_left = expr_left.left
+    left = expr_left.kind
+  
+  while right == binaryExpr: 
+    if not expr.right.isVaildBinaryExpr(): return false 
+    expr_right = expr_right.right
+    right = expr_right.kind
+  
+  return (left == Str and (expr.operator.op == "-" or expr.operator.op == "+")) or
+         (left == Num and right == Num)
+ 
 proc TypeMissmatchE*(this: Codegen, expr: Expr, left: StaticType, right: StaticType): StaticType =
   this.error(&"""
 type missmatch got 

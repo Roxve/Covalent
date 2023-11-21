@@ -25,7 +25,7 @@ proc generate(this: var Codegen, expr: Expr): StaticType =
       if left == error or right == error:
         return error
   
-      if left != right and (left != static_str or right != static_str):
+      if not expr.isVaildBinaryExpr():
         return this.TypeMissmatchE(expr, left, right)
       btype = right
       var op: OP
