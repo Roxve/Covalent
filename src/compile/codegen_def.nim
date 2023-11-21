@@ -1,4 +1,8 @@
 import ../runtime/vm_def
+import AST
+import strformat
+import noxen
+import ../etc/utils
 
 type
   OP*  = enum
@@ -29,9 +33,21 @@ type
     body*: seq[byte]
 
 
-proc TypeMissmatchE*(this: Codegen,left, right, expr: string): StaticType =
-  echo "type missmatch got left: " & left & " right: " & " in expr " & expr & "\n at " & $this.line & ":" & $this.colmun
+
+proc error(this: Codegen, msg: string) =
+  echo makeBox(msg & &"\nat line:{this.line}, colmun:{this.colmun}", "error", full_style=red)
+
+
+proc TypeMissmatchE*(this: Codegen, expr: Expr, left: StaticType, right: StaticType): StaticType =
+  this.error(&"""
+type missmatch got 
+left => {$$expr.left}:{$left}
+right => {$$expr.right}:{$right} in expr {$$expr}""")
   return error
+
+
+
+
 var reg* = 0
 
 proc emit*(bytes: var seq[byte],op: OP, reg0: int, reg1: int, reg2: int) =
@@ -58,19 +74,6 @@ proc emit*(bytes: var seq[byte],tag: OP, value: seq[byte]) =
   
 
 
-proc to4Bytes*(val: int | uint32 | int32): seq[byte] =
-    var bytes: seq[byte] = @[]
-    bytes.add(byte((val shr 24) and 0xFF))
-    bytes.add(byte((val shr 16) and 0xFF))
-    bytes.add(byte((val shr 8) and 0xFF))
-    bytes.add(byte(val and 0xFF))
-    return bytes
-
-proc to2Bytes*(val: int16): seq[byte] =
-    var bytes: seq[byte] = @[]
-    bytes.add(byte((val shr 8) and 0xFF))
-    bytes.add(byte(val and 0xFF))
-    return bytes
 
 proc addConst*(this: var Codegen, tag: OP,ctype: const_type ,bytes: seq[byte]): int16 =
   var aConsant = consant(ctype: ctype,bytes: bytes)    

@@ -6,7 +6,7 @@ import tokenize
 import parse_expr
 import math
 import ../runtime/vm_def
-
+import ../etc/utils
 
 proc generate(this: var Codegen, expr: Expr): StaticType = 
   var bytes: seq[byte] = @[]
@@ -26,7 +26,7 @@ proc generate(this: var Codegen, expr: Expr): StaticType =
         return error
   
       if left != right and (left != static_str or right != static_str):
-        return error #this.TypeMissmatchE($left_node, $right_node, $left_node & binop & $right_node)
+        return this.TypeMissmatchE(expr, left, right)
       btype = right
       var op: OP
       case binop        
@@ -64,7 +64,8 @@ proc productBytes*(this: var Parser): seq[byte] =
   var generator = Codegen(consants: @[], body: @[])
   while this.at().tok != TType.EOF:
     var expr = this.parse_expr()
-
+    if expr.kind == Error:
+      quit(1)
     var res = generator.generate(expr)
     if res == error:
       quit(1)

@@ -7,6 +7,7 @@ type
     Bool,
     binaryExpr,
     Operator,
+    Error
 
   Expr* = ref object 
     line*, colmun*:int
@@ -21,12 +22,17 @@ type
       num_value*: float
     of Str: 
       str_value*: string
+    of Error:
+      msg: string 
     of binaryExpr: 
       left*: Expr 
       right*: Expr 
       operator*: Expr
     else:
       discard
+
+proc MakeError*(msg: string, line, colmun: int): Expr=
+  return Expr(kind: Error, msg: msg,line: line, colmun: colmun)
 
 proc Make_Prog*(body: seq[Expr], line: int, colmun: int): Expr =
   

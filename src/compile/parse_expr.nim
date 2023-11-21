@@ -9,9 +9,9 @@ proc parse_primary_expr(this: var Parser): Expr =
     of TType.num:
       return Make_Num(parseFloat(this.take().value), this.line, this.colmun) 
     else: 
+      var e = this.UnexceptedTokenE()
       discard this.take()
-      return 0.Make_Num(this.line, this.colmun)
-
+      return e
 proc parse_multipictive_expr(this: var Parser): Expr =
   var left = this.parse_primary_expr()
   while this.at().value == "*" or this.at().value == "/" or this.at().value == "%":

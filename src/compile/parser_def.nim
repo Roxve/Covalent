@@ -1,8 +1,8 @@
 import tokenize
 import AST
 import options
-
-
+import noxen
+import strformat
 type
   ScopeType* = enum
     top,
@@ -34,3 +34,12 @@ proc take*(this: var Parser): Token =
   this.last_token = prev
   discard this.tokenizer.next()
   return prev
+
+
+proc error(this: var Parser, msg: string) = 
+  echo makeBox(msg & &"\nat line:{this.line}, colmun:{this.colmun}", "error", full_style=red)
+
+proc UnexceptedTokenE*(this: var Parser): Expr =
+  var msg = &"unexcepted token '{this.at().value}' of type {this.at().tok}"
+  this.error(msg) 
+  return MakeError(msg, this.line, this.colmun)

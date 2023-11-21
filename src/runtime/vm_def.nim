@@ -1,3 +1,5 @@
+import ../etc/utils
+
 type
   Interpreter_results* = enum
     success,
@@ -25,23 +27,7 @@ type
     vtype*: const_type
     bytes*: seq[byte]
 
-proc signExtend*(x: uint8): uint32 = 
-    var res: uint32 = uint32(x)
-    if (x shr (8 - 1) and 1) != 0:
-        res = uint32(x or (0xFFFFFF shl 8))
-    result = res
 
-proc makeInt*(x: seq[byte]): uint32 =
-  if x.len == 2:
-    return
-           signExtend(x[0] shl 8) or
-           signExtend(x[1])
-  else:
-    return
-         signExtend(x[0] shl 24) or
-         signExtend(x[1] shl 16) or
-         signExtend(x[2] shl 8) or
-         signExtend(x[3])
 
 proc changeCond*(vm: var VM, reg: int) = 
   var val = makeInt(vm.reg[reg].bytes)

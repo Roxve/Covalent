@@ -1,7 +1,20 @@
 import ../compile/codegen_def
 import print
 import vm_def
+import ../etc/utils
 
+# template to quickly add binary operations
+template BIN_OP(tasks: untyped): untyped =
+  var reg0_addr {.inject.} = int(bytecode[vm.ip])
+  var reg1_addr {.inject.} = bytecode[vm.ip + 1] 
+  vm.checkRegs(reg1_addr)
+  var kind {.inject.}:const_type = vm.reg[reg0_addr].vtype
+  var reg0 {.inject.}: ptr REG = addr vm.reg[reg0_addr]
+  var reg1 {.inject.}: ptr REG = addr vm.reg[reg1_addr]
+  tasks
+  vm.changeCond(reg0_addr) 
+  vm.ip += 2
+      
 proc interpret*(bytecode: seq[byte]): VM =
   var vm = VM()
   vm.ip = 0
@@ -56,16 +69,26 @@ proc interpret*(bytecode: seq[byte]): VM =
         print vm.reg
         
       of OP_ADD:
-        var dist = int(bytecode[vm.ip])
-        var reg1 = bytecode[vm.ip + 1] 
-        vm.checkRegs(reg1)
-        case vm.reg[dist].vtype:
-          of cint:
-            vm.reg[dist].bytes = (makeInt(vm.reg[dist].bytes) + makeInt(vm.reg[reg1].bytes)).to4Bytes()    
-        vm.changeCond(dist) 
-        
-        vm.ip += 2       
-      else:
+        BIN_OP:
+          case kind:
+            of cint:
+              reg0.bytes = (makeInt(reg0.bytes) + makeInt(reg1.bytes)).to4Bytes()   
+      of OP_SUB:
+        BIN_OP:
+          case kind:
+            of cint:
+              reg0.bytes = (makeInt(reg0.bytes) - makeInt(reg1.bytes)).to4Bytes()           
+      of OP_MUL:
+        BIN_OP:
+          case kind:
+            of cint:
+              reg0.bytes = (makeInt(reg0.bytes) * makeInt(reg1.bytes)).to4Bytes
+      of OP_DIV:
+        BIN_OP:
+          case kind:
+            of cint:
+              reg0.bytes = uint32(int(makeInt(reg0.bytes)) / int(makeInt(reg1.bytes))).to4Bytes     
+      else: 
         echo "ERROR while executing: invaild insturaction please report this! " & $op
         vm.results = UNKNOWN_OP
         vm.results_eval = "INVAILD " & $op 
