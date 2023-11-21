@@ -2,6 +2,7 @@ import ../compile/codegen_def
 import print
 import vm_def
 import ../etc/utils
+import strutils
 
 # template to quickly add binary operations
 template BIN_OP(tasks: untyped): untyped =
@@ -40,6 +41,12 @@ proc interpret*(bytecode: seq[byte]): VM =
               print bytes
               vm.consants.add(int_val)
               vm.ip += 4
+            of TAG_STR:
+              var count = int(bytecode[vm.ip..vm.ip + 1].makeInt())
+              var bytes = bytecode[(vm.ip)..(vm.ip + count + 1)]
+              vm.ip += 2 + count
+              var str_val = consant(ctype: cstr, bytes: bytes)
+              vm.consants.add(str_val)
             else:
               echo "ERROR while loading consts unknown type " & $tag & " please report this!"
               vm.results = UNKNOWN_OP
@@ -72,22 +79,31 @@ proc interpret*(bytecode: seq[byte]): VM =
         BIN_OP:
           case kind:
             of cint:
-              reg0.bytes = (makeInt(reg0.bytes) + makeInt(reg1.bytes)).to4Bytes()   
+              reg0.bytes = (makeInt(reg0.bytes) + makeInt(reg1.bytes)).to4Bytes()  
+            of cstr:  
+              reg0.bytes = (BytesToStr(reg0.bytes) & BytesToStr(reg1.bytes)).StrToBytes
+              print reg0.bytes.BytesToStr
       of OP_SUB:
         BIN_OP:
           case kind:
             of cint:
-              reg0.bytes = (makeInt(reg0.bytes) - makeInt(reg1.bytes)).to4Bytes()           
+              reg0.bytes = (makeInt(reg0.bytes) - makeInt(reg1.bytes)).to4Bytes()          
+            of cstr:
+              reg0.bytes = (BytesToStr(reg0.bytes).replace(BytesToStr(reg1.bytes), "")).StrToBytes
       of OP_MUL:
         BIN_OP:
           case kind:
             of cint:
               reg0.bytes = (makeInt(reg0.bytes) * makeInt(reg1.bytes)).to4Bytes
+            else:
+              discard
       of OP_DIV:
         BIN_OP:
           case kind:
             of cint:
-              reg0.bytes = uint32(int(makeInt(reg0.bytes)) / int(makeInt(reg1.bytes))).to4Bytes     
+              reg0.bytes = uint32(int(makeInt(reg0.bytes)) / int(makeInt(reg1.bytes))).to4Bytes    
+            else:
+              discard 
       else: 
         echo "ERROR while executing: invaild insturaction please report this! " & $op
         vm.results = UNKNOWN_OP

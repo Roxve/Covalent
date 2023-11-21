@@ -57,11 +57,17 @@ proc emit*(bytes: var seq[byte],op: OP, reg0: int, reg1: int, reg2: int) =
   bytes.add(byte(reg2))
 
 
+
 proc emit*(bytes: var seq[byte],op: OP, reg0: int, byte0: byte, byte1: byte) =
   bytes.add(byte(op))
   bytes.add(byte(reg0))
   bytes.add(byte0)
   bytes.add(byte1)
+
+proc emit*(bytes: var seq[byte],op: OP, reg0: int, bytesTo: seq[byte]) =
+  bytes.add(byte(op))
+  bytes.add(byte(reg0))
+  bytes.add(bytesTo)
 
 proc emit*(bytes: var seq[byte],op: OP, reg0: int, imm: int | float) =
   bytes.add(byte(op))
@@ -71,8 +77,11 @@ proc emit*(bytes: var seq[byte],op: OP, reg0: int, imm: int | float) =
 proc emit*(bytes: var seq[byte],tag: OP, value: seq[byte]) =
   bytes.add(byte(tag))
   bytes.add(value)
-  
 
+proc emit*(bytes: var seq[byte],tag: OP, byteCount: int16,value: seq[byte]) =
+  bytes.add(byte(tag))
+  bytes.add(byteCount.to2Bytes)
+  bytes.add(value)
 
 
 proc addConst*(this: var Codegen, tag: OP,ctype: const_type ,bytes: seq[byte]): int16 =
@@ -82,6 +91,17 @@ proc addConst*(this: var Codegen, tag: OP,ctype: const_type ,bytes: seq[byte]): 
       return val
   
   this.consants.emit(tag, bytes)
+  inc this.consants_count 
+  this.consant_objs.add((aConsant, this.consants_count))
+  return this.consants_count
+
+proc addConst*(this: var Codegen, tag: OP,ctype: const_type, byteCount: int16 ,bytes: seq[byte]): int16 =
+  var aConsant = consant(ctype: ctype,bytes: bytes)    
+  for key, val in this.consant_objs.items():
+    if key == aConsant:
+      return val
+  
+  this.consants.emit(tag, byteCount ,bytes)
   inc this.consants_count 
   this.consant_objs.add((aConsant, this.consants_count))
   return this.consants_count

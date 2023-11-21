@@ -18,4 +18,4 @@ proc productAST*(this: var Parser): Expr =
   while this.at().tok != TType.EOF: 
     var expr = this.parse_expr()
     body.add(expr)
-  return Make_Prog(body, this.line, this.colmun)
+  return MakeProg(body, this.line, this.colmun)

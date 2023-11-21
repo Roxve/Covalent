@@ -11,6 +11,7 @@ type
     Zero
   const_type* = enum
     cint
+    cstr
   
   consant* = object
     ctype*: const_type

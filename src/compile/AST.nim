@@ -34,30 +34,30 @@ type
 proc MakeError*(msg: string, line, colmun: int): Expr=
   return Expr(kind: Error, msg: msg,line: line, colmun: colmun)
 
-proc Make_Prog*(body: seq[Expr], line: int, colmun: int): Expr =
+proc MakeProg*(body: seq[Expr], line: int, colmun: int): Expr =
   
   return Expr(kind: NodeType.Program, body: @[], line: line, colmun: colmun)
 
 
-proc Make_ID*(symbol: string, line: int, colmun: int): Expr =
+proc MakeID*(symbol: string, line: int, colmun: int): Expr =
   return Expr(kind:  NodeType.ID, symbol: symbol, line: line, colmun: colmun)
 
 
 
-proc Make_Operator*(symbol: string, line: int, colmun: int): Expr =
+proc MakeOperator*(symbol: string, line: int, colmun: int): Expr =
   return Expr(kind:  NodeType.Operator, op: symbol, line: line, colmun: colmun)
 
 
 
-proc Make_Num*(value: float, line: int, colmun: int):  Expr =
+proc MakeNum*(value: float, line: int, colmun: int):  Expr =
   return Expr(kind:  NodeType.Num, num_value: value, line: line, colmun: colmun)
 
 
 
-proc Make_Str*(value: string, line: int, colmun: int): Expr =
+proc MakeStr*(value: string, line: int, colmun: int): Expr =
   return Expr(kind:  NodeType.Str, str_value: value, line: line, colmun: colmun)
 
 
 
-proc Make_BinaryExpr*(left: Expr, right: Expr, operator: Expr, line: int, colmun: int): Expr =
+proc MakeBinaryExpr*(left: Expr, right: Expr, operator: Expr, line: int, colmun: int): Expr =
   return Expr(kind:  NodeType.binaryExpr, left: left,right: right, operator: operator, line: line, colmun: colmun)

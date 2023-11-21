@@ -51,7 +51,13 @@ proc generate(this: var Codegen, expr: Expr): StaticType =
         
         count = this.addConst(TAG_INT, const_type.cint, uint32(expr.num_value).to4Bytes())
       # LOAD dist imm
-      bytes.emit(OP_LOAD_CONST, reg, byte((count shr 8) and 0xFF), byte(count and 0xFF))
+      bytes.emit(OP_LOAD_CONST, reg, count.to2Bytes)
+      reg += 1
+    of NodeType.Str:
+      btype = static_str
+      var count = this.addConst(TAG_STR, const_type.cstr,int16(expr.str_value.len), expr.str_value.StrToBytes)
+
+      bytes.emit(OP_LOAD_CONST, reg, count.to2Bytes)
       reg += 1
     else:
       discard
