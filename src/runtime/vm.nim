@@ -86,7 +86,7 @@ proc interpret*(bytecode: seq[byte]): VM =
               if right == const_type.cint:
                  print reg1.bytes
                  right_bytes = ($makeInt(reg1.bytes)).StrToBytes 
-              reg0.bytes = (BytesToStr(reg0.bytes) & BytesToStr(right_bytes)).StrToBytes
+              reg0.bytes = reg0.bytes & right_bytes
       of OP_SUB:
         BIN_OP:
           case left:
