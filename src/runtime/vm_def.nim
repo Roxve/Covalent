@@ -42,9 +42,10 @@ proc changeCond*(vm: var VM, reg: int) =
       vm.R_COND = FL_POS
     vm.results = success
     vm.results_eval = $vm.reg[reg]
-  vm.R_COND = FL_STR
-  vm.results = success
-  vm.results_eval = vm.reg[reg].bytes.BytesToStr
+  else:
+    vm.R_COND = FL_STR
+    vm.results = success
+    vm.results_eval = vm.reg[reg].bytes.BytesToStr
 
 
 proc checkRegs*(vm: var VM, num: byte | int)  =
