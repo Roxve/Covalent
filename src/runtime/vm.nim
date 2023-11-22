@@ -9,7 +9,8 @@ template BIN_OP(tasks: untyped): untyped =
   var reg0_addr {.inject.} = int(bytecode[vm.ip])
   var reg1_addr {.inject.} = bytecode[vm.ip + 1] 
   vm.checkRegs(reg1_addr)
-  var kind {.inject.}:const_type = vm.reg[reg0_addr].vtype
+  var left {.inject.}:const_type = vm.reg[reg0_addr].vtype
+  var right {.inject.}: const_type = vm.reg[reg1_addr].vtype
   var reg0 {.inject.}: ptr REG = addr vm.reg[reg0_addr]
   var reg1 {.inject.}: ptr REG = addr vm.reg[reg1_addr]
   tasks
@@ -77,29 +78,32 @@ proc interpret*(bytecode: seq[byte]): VM =
         
       of OP_ADD:
         BIN_OP:
-          case kind:
+          case left:
             of cint:
               reg0.bytes = (makeInt(reg0.bytes) + makeInt(reg1.bytes)).to4Bytes()  
-            of cstr:  
-              reg0.bytes = (BytesToStr(reg0.bytes) & BytesToStr(reg1.bytes)).StrToBytes
-              print reg0.bytes.BytesToStr
+            of cstr: 
+              var right_bytes = reg1.bytes
+              if right == const_type.cint:
+                 print reg1.bytes
+                 right_bytes = ($makeInt(reg1.bytes)).StrToBytes 
+              reg0.bytes = (BytesToStr(reg0.bytes) & BytesToStr(right_bytes)).StrToBytes
       of OP_SUB:
         BIN_OP:
-          case kind:
+          case left:
             of cint:
               reg0.bytes = (makeInt(reg0.bytes) - makeInt(reg1.bytes)).to4Bytes()          
             of cstr:
               reg0.bytes = (BytesToStr(reg0.bytes).replace(BytesToStr(reg1.bytes), "")).StrToBytes
       of OP_MUL:
         BIN_OP:
-          case kind:
+          case left:
             of cint:
               reg0.bytes = (makeInt(reg0.bytes) * makeInt(reg1.bytes)).to4Bytes
             else:
               discard
       of OP_DIV:
         BIN_OP:
-          case kind:
+          case left:
             of cint:
               reg0.bytes = uint32(int(makeInt(reg0.bytes)) / int(makeInt(reg1.bytes))).to4Bytes    
             else:
