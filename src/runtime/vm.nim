@@ -3,7 +3,8 @@ import print
 import vm_def
 import ../etc/utils
 import strutils
-
+import ../etc/enviroments
+import tables
 # template to quickly add binary operations
 template BIN_OP(tasks: untyped): untyped =
   var reg0_addr {.inject.} = int(bytecode[vm.ip])
@@ -16,11 +17,13 @@ template BIN_OP(tasks: untyped): untyped =
   tasks
   vm.changeCond(reg0_addr) 
   vm.ip += 2
-      
+  
 proc interpret*(bytecode: seq[byte]): VM =
   var vm = VM()
   vm.ip = 0
   print bytecode
+
+  var env = Enviroment(varibles: Table[uint16, RuntimeValue]()) 
   while vm.ip < bytecode.len:
     var op = OP(bytecode[vm.ip])    
     print op
@@ -53,7 +56,21 @@ proc interpret*(bytecode: seq[byte]): VM =
               vm.results = UNKNOWN_OP
               vm.results_eval = "INVAILD TAG " & $tag
               return vm
+      of OP_STRNAME:
+        var count = makeInt(bytecode[vm.ip..vm.ip + 1])
+        var reg = vm.reg[bytecode[vm.ip + 2]]
+        vm.ip += 3
 
+        env.setVar(uint16(count), RuntimeValue(kind: reg.vtype, bytes: reg.bytes))
+      of OP_LOADNAME:
+        var reg = addr vm.reg[bytecode[vm.ip]]
+        var index = uint16(makeInt(bytecode[vm.ip + 1..vm.ip + 2]))
+        vm.ip += 3
+        
+        var val = env.getVarVal(index)
+        reg.bytes = val.bytes
+        reg.vtype = val.kind
+    
       of OP_LOAD_CONST:
         var reg0 = bytecode[vm.ip]
         var imm = makeInt(bytecode[vm.ip + 1..vm.ip + 2])

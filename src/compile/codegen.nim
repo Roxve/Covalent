@@ -65,6 +65,7 @@ proc generate(this: var Codegen, expr: Expr): StaticType =
         return
       btype = static_int
       bytes.emit(OP_LOADNAME, reg, int16(index).to2Bytes)
+      reg += 1
     of NodeType.Num:
       var count = this.consants_count
       if expr.num_value == round(expr.num_value):
