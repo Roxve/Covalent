@@ -19,6 +19,7 @@ type
     tokenizer*: Tokenizer
     last_token*: Token
     current_scope*: Scope
+    parse_start*: proc(self: var Parser): Expr
 
 
 proc update*(this: var Parser) =

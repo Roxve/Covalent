@@ -58,12 +58,18 @@ proc interpret*(bytecode: seq[byte]): VM =
               return vm
       of OP_STRNAME:
         var count = makeInt(bytecode[vm.ip..vm.ip + 1])
-        var reg = vm.reg[bytecode[vm.ip + 2]]
+
+        var regip = bytecode[vm.ip]
+        vm.checkRegs(regip)
+        var reg = addr vm.reg[regip]
+
         vm.ip += 3
 
         env.setVar(uint16(count), RuntimeValue(kind: reg.vtype, bytes: reg.bytes))
       of OP_LOADNAME:
-        var reg = addr vm.reg[bytecode[vm.ip]]
+        var regip = bytecode[vm.ip]
+        vm.checkRegs(regip)
+        var reg = addr vm.reg[regip]
         var index = uint16(makeInt(bytecode[vm.ip + 1..vm.ip + 2]))
         vm.ip += 3
         

@@ -50,5 +50,5 @@ proc changeCond*(vm: var VM, reg: int) =
 
 
 proc checkRegs*(vm: var VM, num: byte | int)  =
-  if vm.reg.len - 1 < int(num): 
-    vm.reg.add(REG())
+  while vm.reg.len - 1 < int(num): 
+    vm.reg.add(REG(bytes: @[]))

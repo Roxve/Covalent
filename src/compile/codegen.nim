@@ -58,6 +58,19 @@ proc generate(this: var Codegen, expr: Expr): StaticType =
       # DIST_INDEX <= REG
       bytes.emit(OP_STRNAME, int16(this.env.var_count).to2Bytes(), reg - 1)
       reg -= 1
+
+    of NodeType.varAssign:
+      var name = expr.assign_name
+      
+      
+      var index = this.env.getVarIndex(name)
+      if index == 0:
+        return  
+      var val = expr.assign_value
+      btype = this.generate(val)
+      # DIST_INDEX <= REG
+      bytes.emit(OP_STRNAME, int16(index).to2Bytes(), reg - 1)
+      reg += 1
     of NodeType.ID:
       var name = expr.symbol
       var index = this.env.getVarIndex(name)

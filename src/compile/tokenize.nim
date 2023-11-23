@@ -11,7 +11,11 @@ type
     # new keywords should be put here dont replace set and null location
     to_kw = "to",
     true_kw = "true", false_kw = "false"
-    null_kw = "null"
+    null_kw = "null",
+    colon,
+    assign,
+    openParen,
+    closeParen,
     # end
     EOF
   Token* = object
@@ -116,6 +120,16 @@ proc next*(self: var Tokenizer): Token =
       else:
         discard self.take
         return self.make(res,TType.str)
+    of '(':
+      return self.make($self.take, openParen)
+    of ')':
+      return self.make($self.take, closeParen)
+    of ':':
+      discard self.take
+      if self.at == '=':
+        discard self.take
+        return self.make(":=", assign)
+      return self.make(":", colon)
     else:
       if self.at().isAllowedID:
         var res = ""
