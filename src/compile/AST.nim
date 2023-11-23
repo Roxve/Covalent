@@ -5,6 +5,8 @@ type
     ID,
     Str,
     Bool,
+    varDeclare,
+    varAssign,
     binaryExpr,
     Operator,
     Error
@@ -24,6 +26,12 @@ type
       str_value*: string
     of Error:
       msg: string 
+    of varDeclare:
+      declare_name*: string
+      declare_value*: Expr
+    of varAssign:
+      assign_name*: string
+      assign_value*: Expr
     of binaryExpr: 
       left*: Expr 
       right*: Expr 
@@ -61,3 +69,10 @@ proc MakeStr*(value: string, line: int, colmun: int): Expr =
 
 proc MakeBinaryExpr*(left: Expr, right: Expr, operator: Expr, line: int, colmun: int): Expr =
   return Expr(kind:  NodeType.binaryExpr, left: left,right: right, operator: operator, line: line, colmun: colmun)
+
+proc MakeVarDeclartion*(name: string, value: Expr, line, colmun: int): Expr =
+  return Expr(kind: varDeclare, declare_name: name, declare_value: value, line: line, colmun: colmun)
+
+
+proc MakeVarAssignment*(name: string, value: Expr, line, colmun: int): Expr =
+  return Expr(kind: varAssign, assign_name: name, assign_value: value, line: line, colmun: colmun)

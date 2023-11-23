@@ -35,7 +35,6 @@ proc take*(this: var Parser): Token =
   discard this.tokenizer.next()
   return prev
 
-
 proc error(this: var Parser, msg: string) = 
   echo makeBox(msg & &"\nat line:{this.line}, colmun:{this.colmun}", "error", full_style=red)
 
@@ -43,3 +42,14 @@ proc UnexceptedTokenE*(this: var Parser): Expr =
   var msg = &"unexcepted token '{this.at().value}' of type {this.at().tok}"
   this.error(msg) 
   return MakeError(msg, this.line, this.colmun)
+
+proc UnexceptedTokenE*(this: var Parser, excepted: TType): Expr =
+  var msg = &"unexcepted token '{this.at().value}' of type {this.at().tok}\nexcepted token of type '{excepted}'"
+  this.error(msg) 
+  return MakeError(msg, this.line, this.colmun)
+
+proc excep*(this: var Parser, excepted: TType): (bool, Expr) =
+  if this.take().tok != excepted:
+    return (false, this.UnExceptedTokenE(excepted))
+  return (true, Expr())
+

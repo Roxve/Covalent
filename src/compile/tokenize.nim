@@ -9,6 +9,7 @@ type
     # keywords
     set_kw = "set", 
     # new keywords should be put here dont replace set and null location
+    to_kw = "to",
     true_kw = "true", false_kw = "false"
     null_kw = "null"
     # end

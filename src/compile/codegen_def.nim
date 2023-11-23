@@ -3,6 +3,7 @@ import AST
 import strformat
 import noxen
 import ../etc/utils
+import ../etc/enviroments
 
 type
   OP*  = enum
@@ -12,6 +13,8 @@ type
     TAG_STR
     OP_LOAD_CONST
     OP_LOAD
+    OP_STRNAME
+    OP_LOADNAME
     OP_ADD
     OP_SUB
     OP_MUL
@@ -21,14 +24,11 @@ type
     static_str
     error
     dynamic
-  Error = RootObj
-  TypeMissmatch = object of Error
-    left, right, expr: string
-    
   Codegen* = object
     consants_count*: int16
     line*, colmun*: int
     consants*: seq[byte] 
+    env*: Enviroment
     consant_objs*: seq[(consant, int16)]
     body*: seq[byte]
 
@@ -87,6 +87,12 @@ proc emit*(bytes: var seq[byte],op: OP, reg0: int, bytesTo: seq[byte]) =
   bytes.add(byte(op))
   bytes.add(byte(reg0))
   bytes.add(bytesTo)
+# emit str name and load name
+
+proc emit*(bytes: var seq[byte],op: OP,  bytesTo: seq[byte],reg0: int) =
+  bytes.add(byte(op))
+  bytes.add(bytesTo)
+  bytes.add(byte(reg0))
 
 proc emit*(bytes: var seq[byte],op: OP, reg0: int, imm: int | float) =
   bytes.add(byte(op))

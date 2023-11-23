@@ -7,6 +7,10 @@ import parse_expr
 import math
 import ../runtime/vm_def
 import ../etc/utils
+import ../etc/enviroments
+import tables
+import print
+import Options
 
 proc generate(this: var Codegen, expr: Expr): StaticType = 
   var bytes: seq[byte] = @[]
@@ -25,8 +29,8 @@ proc generate(this: var Codegen, expr: Expr): StaticType =
       if left == error or right == error:
         return error
   
-      if not expr.isVaildBinaryExpr():
-        return this.TypeMissmatchE(expr, left, right)
+      #if not expr.isVaildBinaryExpr():
+       # return this.TypeMissmatchE(expr, left, right)
       btype = right
       var op: OP
       case binop        
@@ -43,7 +47,24 @@ proc generate(this: var Codegen, expr: Expr): StaticType =
       # optimization to prevent using too many regs we instead
       # store results of math into reg - 2 ex (8 + 8 + 8) ADD R0 R0 R1 then ADD R0 R0 R1
       reg -= 1
- 
+    of NodeType.varDeclare:
+      var name = expr.declare_name
+      if this.env.resolve(name) != none(Enviroment):
+        return
+      this.env.addVarIndex(name)
+      
+      var val = expr.declare_value
+      btype = this.generate(val)
+      # DIST_INDEX <= REG
+      bytes.emit(OP_STRNAME, int16(this.env.var_count).to2Bytes(), reg - 1)
+      reg -= 1
+    of NodeType.ID:
+      var name = expr.symbol
+      var index = this.env.getVarIndex(name)
+      if index == 0:
+        return
+      btype = static_int
+      bytes.emit(OP_LOADNAME, reg, int16(index).to2Bytes)
     of NodeType.Num:
       var count = this.consants_count
       if expr.num_value == round(expr.num_value):
@@ -60,14 +81,15 @@ proc generate(this: var Codegen, expr: Expr): StaticType =
       bytes.emit(OP_LOAD_CONST, reg, count.to2Bytes)
       reg += 1
     else:
-      discard
+      print expr
   this.consants.add(constant_bytes)
   this.body.add(bytes)
   return btype
 
 proc productBytes*(this: var Parser): seq[byte] =
   var res_bytes: seq[byte] = @[]  
-  var generator = Codegen(consants: @[], body: @[])
+  var generator = Codegen(consants: @[], body: @[], env: Enviroment(varibles: Table[uint16, RuntimeValue]()))
+
   while this.at().tok != TType.EOF:
     var expr = this.parse_expr()
     if expr.kind == Error:

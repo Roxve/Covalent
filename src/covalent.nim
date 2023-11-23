@@ -6,7 +6,7 @@ import compile/codegen
 import runtime/vm
 import noxen
 import std/[times, os]
-
+import etc/enviroments
 
 
 proc main() =

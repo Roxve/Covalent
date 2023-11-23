@@ -13,6 +13,7 @@ type
   const_type* = enum
     cint
     cstr
+    cnull
   
   consant* = object
     ctype*: const_type

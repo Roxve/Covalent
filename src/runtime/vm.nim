@@ -87,6 +87,8 @@ proc interpret*(bytecode: seq[byte]): VM =
                  print reg1.bytes
                  right_bytes = ($makeInt(reg1.bytes)).StrToBytes 
               reg0.bytes = reg0.bytes & right_bytes
+            else:
+              discard
       of OP_SUB:
         BIN_OP:
           case left:
@@ -94,6 +96,8 @@ proc interpret*(bytecode: seq[byte]): VM =
               reg0.bytes = (makeInt(reg0.bytes) - makeInt(reg1.bytes)).to4Bytes()          
             of cstr:
               reg0.bytes = (BytesToStr(reg0.bytes).replace(BytesToStr(reg1.bytes), "")).StrToBytes
+            else:
+              discard
       of OP_MUL:
         BIN_OP:
           case left:
