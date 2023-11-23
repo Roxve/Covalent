@@ -1,9 +1,17 @@
 import tables
-import ../runtime/vm_def
 import Options
+
+
 type
+
+  ValueType* = enum
+    int,
+    float,
+    str,
+    null,
+
   RuntimeValue* = object
-    kind*: const_type
+    kind*: ValueType
     bytes*: seq[byte]
   
   Enviroment* = ref object
@@ -38,7 +46,7 @@ proc addVarIndex*(this: Enviroment, name: string) =
 proc getVarVal*(this: Enviroment, index: uint16): RuntimeValue = 
   var env = this.resolve(index)
   if env.isNone():
-    return RuntimeValue(kind: cnull)
+    return RuntimeValue(kind: null)
   return env.get.varibles[index]
 
 

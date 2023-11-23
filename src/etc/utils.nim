@@ -1,9 +1,6 @@
-import ../compile/AST
-import strutils
 import unicode
 import sequtils
-import encodings
-import sugar
+
 proc to4Bytes*(val: int | uint32 | int32): seq[byte] =
     var bytes: seq[byte] = @[]
     bytes.add(byte((val shr 24) and 0xFF))
@@ -22,7 +19,7 @@ proc to2Bytes*(val: int16): seq[byte] =
 proc signExtend*(x: uint8): uint32 = 
     var res: uint32 = uint32(x)
     if (x shr (8 - 1) and 1) != 0:
-        res = uint32(x or (0xFFFFFF shl 8))
+        res = uint32(int(x) or (0xFFFFFF shl 8))
     result = res
 
 proc makeInt*(x: seq[byte]): uint32 =
@@ -39,18 +36,7 @@ proc makeInt*(x: seq[byte]): uint32 =
          signExtend(x[2] shl 8) or
          signExtend(x[3])
 
-proc `$$`*(this: Expr): string =
-  case this.kind:
-    of Num:
-      return $this.num_value
-    of Str:
-      return $this.str_value
-    of Operator:
-      return $this.op
-    of binaryExpr:
-      return $$this.left & " " & $$this.operator & " " & $$this.right
-    else:
-      return ""
+
 
 proc StrToBytes*(str: string): seq[byte] =
   return cast[seq[byte]](str)

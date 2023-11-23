@@ -13,9 +13,9 @@ proc make_parser*(src: string): Parser =
   #parser.current_scope = mk_scope(ScopeType.top, none(Scope))
   return parser
 
-proc productAST*(this: var Parser): Expr =
+proc productAST*(self: var Parser): Expr =
   var body: seq[Expr] = @[]
-  while this.at().tok != TType.EOF: 
-    var expr = this.parse_expr()
+  while self.at().tok != TType.EOF: 
+    var expr = self.parse_expr()
     body.add(expr)
-  return MakeProg(body, this.line, this.colmun)
+  return MakeProg(body, self.line, self.colmun)

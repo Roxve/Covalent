@@ -1,10 +1,7 @@
-import ../runtime/vm_def
-import AST
 import strformat
 import noxen
-import ../etc/utils
 import ../etc/enviroments
-
+import ../etc/utils
 type
   OP*  = enum
     OP_CONSANTS = byte(0)
@@ -25,44 +22,12 @@ type
     error
     dynamic
   Codegen* = object
-    consants_count*: int16
+    consts_count*: int16
     line*, colmun*: int
-    consants*: seq[byte] 
+    const_bytes*: seq[byte] 
     env*: Enviroment
-    consant_objs*: seq[(consant, int16)]
+    const_objs*: seq[(RuntimeValue, int16)]
     body*: seq[byte]
-
-
-
-proc error(this: Codegen, msg: string) =
-  echo makeBox(msg & &"\nat line:{this.line}, colmun:{this.colmun}", "error", full_style=red)
-
-
-proc isVaildBinaryExpr*(expr: Expr): bool =
-  var left = expr.left.kind
-  var right = expr.right.kind
-  var expr_left = expr.left
-  var expr_right = expr.right
-
-  while left == binaryExpr:
-    if not expr.left.isVaildBinaryExpr() :  return false
-    expr_left = expr_left.left
-    left = expr_left.kind
-  
-  while right == binaryExpr: 
-    if not expr.right.isVaildBinaryExpr(): return false 
-    expr_right = expr_right.right
-    right = expr_right.kind
-  
-  return (left == Str and (expr.operator.op == "-" or expr.operator.op == "+")) or
-         (left == Num and right == Num)
- 
-proc TypeMissmatchE*(this: Codegen, expr: Expr, left: StaticType, right: StaticType): StaticType =
-  this.error(&"""
-type missmatch got 
-left => {$$expr.left}:{$left}
-right => {$$expr.right}:{$right} in expr {$$expr}""")
-  return error
 
 
 
@@ -109,24 +74,24 @@ proc emit*(bytes: var seq[byte],tag: OP, byteCount: int16,value: seq[byte]) =
   bytes.add(value)
 
 
-proc addConst*(this: var Codegen, tag: OP,ctype: const_type ,bytes: seq[byte]): int16 =
-  var aConsant = consant(ctype: ctype,bytes: bytes)    
-  for key, val in this.consant_objs.items():
+proc addConst*(self: var Codegen, tag: OP,kind: ValueType ,bytes: seq[byte]): int16 =
+  var aConsant = RuntimeValue(kind: kind,bytes: bytes)    
+  for key, val in self.const_objs.items():
     if key == aConsant:
       return val
   
-  this.consants.emit(tag, bytes)
-  inc this.consants_count 
-  this.consant_objs.add((aConsant, this.consants_count))
-  return this.consants_count
+  self.const_bytes.emit(tag, bytes)
+  inc self.consts_count
+  self.const_objs.add((aConsant, self.consts_count))
+  return self.consts_count
 
-proc addConst*(this: var Codegen, tag: OP,ctype: const_type, byteCount: int16 ,bytes: seq[byte]): int16 =
-  var aConsant = consant(ctype: ctype,bytes: bytes)    
-  for key, val in this.consant_objs.items():
+proc addConst*(self: var Codegen, tag: OP,kind: ValueType, byteCount: int16 ,bytes: seq[byte]): int16 =
+  var aConsant = RuntimeValue(kind: kind,bytes: bytes)    
+  for key, val in self.const_objs.items():
     if key == aConsant:
       return val
   
-  this.consants.emit(tag, byteCount ,bytes)
-  inc this.consants_count 
-  this.consant_objs.add((aConsant, this.consants_count))
-  return this.consants_count
+  self.const_bytes.emit(tag, byteCount ,bytes)
+  inc self.consts_count 
+  self.const_objs.add((aConsant, self.consts_count))
+  return self.consts_count

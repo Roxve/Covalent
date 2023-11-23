@@ -1,5 +1,6 @@
 import ../etc/utils
-
+import ../etc/enviroments
+  
 type
   Interpreter_results* = enum
     success,
@@ -10,19 +11,12 @@ type
     FL_NEG,
     FL_STR,
     Zero
-  const_type* = enum
-    cint
-    cstr
-    cnull
   
-  consant* = object
-    ctype*: const_type
-    bytes*: seq[byte]
   
   VM* = object
     ip*: int 
     reg*: seq[REG]
-    consants*: seq[consant]    
+    consants*: seq[RuntimeValue]    
     R_COND*: COND
     results*: Interpreter_results
     results_eval*: string 
