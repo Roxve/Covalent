@@ -16,18 +16,18 @@ type
   VM* = object
     ip*: int 
     reg*: seq[REG]
-    consants*: seq[RuntimeValue]    
+    consts*: seq[RuntimeValue]    
     R_COND*: COND
     results*: Interpreter_results
     results_eval*: string 
   REG* = object
-    vtype*: const_type
+    kind*: ValueType
     bytes*: seq[byte]
 
 
 
 proc changeCond*(vm: var VM, reg: int) = 
-  if vm.reg[reg].vtype == cint:
+  if vm.reg[reg].kind == ValueType.int:
     var val = makeInt(vm.reg[reg].bytes)
     if val == 0: 
       vm.R_COND = Zero 

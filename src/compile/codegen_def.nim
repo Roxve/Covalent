@@ -4,7 +4,7 @@ import ../etc/enviroments
 import ../etc/utils
 type
   OP*  = enum
-    OP_CONSANTS = byte(0)
+    OP_CONSTS = byte(0)
     TAG_INT
     TAG_FLOAT
     TAG_STR

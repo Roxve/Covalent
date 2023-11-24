@@ -9,6 +9,7 @@ type
     float,
     str,
     null,
+    error
 
   RuntimeValue* = object
     kind*: ValueType
