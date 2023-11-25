@@ -4,13 +4,9 @@ import AST
 import parser_def
 import tokenize
 import parse_expr
-import math
-import ../runtime/vm_def
-import ../etc/utils
-import ../etc/enviroments
+import ../etc/[utils, enviroments]
 import tables
-import print
-import Options
+
 
 
 proc productBytes*(this: var Parser): seq[byte] =

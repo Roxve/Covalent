@@ -16,6 +16,7 @@ type
   VM* = object
     ip*: int 
     reg*: seq[REG]
+    env*: Enviroment
     consts*: seq[RuntimeValue]    
     R_COND*: COND
     results*: Interpreter_results
@@ -26,7 +27,7 @@ type
 
 
 
-proc changeCond*(vm: var VM, reg: int) = 
+proc changeCond*(vm: var VM, reg: int | byte) = 
   if vm.reg[reg].kind == ValueType.int:
     var val = makeInt(vm.reg[reg].bytes)
     if val == 0: 

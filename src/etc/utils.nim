@@ -1,8 +1,13 @@
 import unicode
 import sequtils
+import print
 type intBytes = array[0..3, byte]
-type intVal = uint32
+type intVal = int
 type int16Bytes = array[0..1, byte]
+
+
+var debug* = false
+
 
 proc to4Bytes*(input: int | uint32 | int32): seq[byte] =
     var bytes: seq[byte] = toSeq(cast[intBytes](input))
@@ -13,7 +18,7 @@ proc seqToIntBytes*(val: seq[byte]): intBytes =
   if val.len > 0:
     for i in 0..(val.len - 1):
       result[i] = val[i]
-  echo result
+
 proc to2Bytes*(val: int16): seq[byte] =
     var bytes: seq[byte] = toSeq(cast[int16Bytes](val))
     return bytes
@@ -23,9 +28,8 @@ proc signExtend*(x: uint8): uint32 =
         res = uint32(int(x) or (0xFFFFFF shl 8))
     result = res
 
-proc makeInt*(x: seq[byte]): uint32 =
-  echo x
-  result = uint32(cast[intVal](x.seqToIntBytes))
+proc makeInt*(x: seq[byte]): int =
+  result = int(cast[intVal](x.seqToIntBytes))
 
 
 
@@ -35,3 +39,8 @@ proc BytesToStr*(bytes: var seq[byte]): string =
   bytes = bytes.filter(proc(b: byte): bool = b != 0)  
   var str = cast[string](bytes)  
   return str  
+
+
+template dprint*(stuff:untyped) =
+  if debug:
+    print stuff

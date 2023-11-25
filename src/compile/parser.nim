@@ -2,7 +2,7 @@ import AST
 import parser_def
 import parse_expr
 import tokenize
-import print
+
 
 #proc mk_scope*(Type: ScopeType, parent: Option[Scope]): Scope =
  # return Scope(parent: parent, Type: Type)

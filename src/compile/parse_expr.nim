@@ -20,7 +20,7 @@ proc parse_primary_expr(this: var Parser): Expr =
       var e = this.UnexceptedTokenE()
       discard this.take()
       quit(1)
-      return e
+
 
 
 proc parse_multipictive_expr(this: var Parser): Expr =

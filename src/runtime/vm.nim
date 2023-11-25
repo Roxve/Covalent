@@ -21,34 +21,38 @@ template BIN_OP(tasks: untyped): untyped =
 proc interpret*(bytecode: seq[byte]): VM =
   var vm = VM()
   vm.ip = 0
-  print bytecode
+  dprint: bytecode
 
   var env = Enviroment(varibles: Table[uint16, RuntimeValue]()) 
   while vm.ip < bytecode.len:
     var op = OP(bytecode[vm.ip])    
-    print op
+    dprint: op
     vm.ip += 1
     case op: 
       of OP_CONSTS:
         var consts_count = makeInt(bytecode[vm.ip..vm.ip + 1])
         vm.ip += 2
-        print consts_count
+        dprint: consts_count
     
         for i in 0 .. consts_count:
-          print i
+          dprint: i
           var tag = OP(bytecode[vm.ip])
           vm.ip += 1
           case tag:
             of TAG_INT:
               var bytes = bytecode[vm.ip .. vm.ip + 3]
               var int_val = RuntimeValue(kind: int, bytes: bytes)
-              print bytes
+
+        
+              dprint: bytes
               vm.consts.add(int_val)
               vm.ip += 4
             of TAG_STR:
-              var count = system.int(bytecode[vm.ip..vm.ip + 1].makeInt())
+              var count = bytecode[vm.ip..vm.ip + 1].makeInt()
               var bytes = bytecode[(vm.ip)..(vm.ip + count + 1)]
               vm.ip += 2 + count
+
+              
               var str_val = RuntimeValue(kind: str, bytes: bytes)
               vm.consts.add(str_val)
             else:
@@ -57,7 +61,7 @@ proc interpret*(bytecode: seq[byte]): VM =
               vm.results_eval = "INVAILD TAG " & $tag
               return vm
       of OP_STRNAME:
-        var count = makeInt(bytecode[vm.ip..vm.ip + 1])
+        var count = uint16(makeInt(bytecode[vm.ip..vm.ip + 1]))
 
         var regip = bytecode[vm.ip]
         vm.checkRegs(regip)
@@ -65,7 +69,7 @@ proc interpret*(bytecode: seq[byte]): VM =
 
         vm.ip += 3
 
-        env.setVar(uint16(count), RuntimeValue(kind: reg.kind, bytes: reg.bytes))
+        env.setVar(count, RuntimeValue(kind: reg.kind, bytes: reg.bytes))
       of OP_LOADNAME:
         var regip = bytecode[vm.ip]
         vm.checkRegs(regip)
@@ -86,28 +90,29 @@ proc interpret*(bytecode: seq[byte]): VM =
         var consts = vm.consts[imm - 1] 
       
         vm.reg[reg0] = REG(kind: consts.kind, bytes: consts.bytes)
-        vm.changeCond(system.int(reg0))
+        vm.changeCond(reg0)
       of OP_LOAD:
         var reg0 = bytecode[vm.ip]
-        print reg0
+      
         var imm = bytecode[vm.ip + 1] 
-        print imm
+      
         vm.ip += 2
         vm.checkRegs(reg0)
         
         vm.reg[reg0].bytes = @[imm]
-        vm.changeCond(system.int(reg0))
-        print vm.reg
+        vm.changeCond(reg0)
+        
         
       of OP_ADD:
         BIN_OP:
           case left:
             of int:
-              reg0.bytes = (makeInt(reg0.bytes) + makeInt(reg1.bytes)).to4Bytes()  
+              var num1 = makeInt(reg0.bytes)           
+              var num2 = makeInt(reg1.bytes)            
+              reg0.bytes = to4Bytes(num1 + num2)  
             of str: 
               var right_bytes = reg1.bytes
               if right == ValueType.int:
-                 print reg1.bytes
                  right_bytes = ($makeInt(reg1.bytes)).StrToBytes 
               reg0.bytes = reg0.bytes & right_bytes
             else:
@@ -116,23 +121,31 @@ proc interpret*(bytecode: seq[byte]): VM =
         BIN_OP:
           case left:
             of int:
-              reg0.bytes = (makeInt(reg0.bytes) - makeInt(reg1.bytes)).to4Bytes()          
+              var num1 = makeInt(reg0.bytes)
+              var num2 = makeInt(reg1.bytes) 
+              reg0.bytes = to4Bytes(num1 - num2)          
             of str:
-              reg0.bytes = (BytesToStr(reg0.bytes).replace(BytesToStr(reg1.bytes), "")).StrToBytes
+              var str1 = BytesToStr(reg0.bytes)
+              var str2 = BytesToStr(reg1.bytes)              
+              reg0.bytes = StrToBytes(str1.replace(str2, ""))
             else:
               discard
       of OP_MUL:
         BIN_OP:
           case left:
             of int:
-              reg0.bytes = (makeInt(reg0.bytes) * makeInt(reg1.bytes)).to4Bytes
+              var num1 = makeInt(reg0.bytes)    
+              var num2 = makeInt(reg1.bytes)     
+              reg0.bytes = to4Bytes(num1 * num2)
             else:
               discard
       of OP_DIV:
         BIN_OP:
           case left:
             of int:
-              reg0.bytes = uint32(system.int(makeInt(reg0.bytes)) / system.int(makeInt(reg1.bytes))).to4Bytes    
+              var num1 = makeInt(reg0.bytes) 
+              var num2 = makeInt(reg1.bytes)
+              reg0.bytes = to4Bytes(system.int(num1 / num2))
             else:
               discard 
       else: 

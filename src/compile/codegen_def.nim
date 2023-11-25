@@ -1,7 +1,5 @@
-import strformat
-import noxen
-import ../etc/enviroments
-import ../etc/utils
+import ../etc/[enviroments, utils]
+
 type
   OP*  = enum
     OP_CONSTS = byte(0)
