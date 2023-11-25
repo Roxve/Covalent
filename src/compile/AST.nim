@@ -49,6 +49,57 @@ type
     else:
       discard
 
+
+proc `$$`*(self: Expr): string =
+  case self.kind:
+    of Num:
+      return $self.num_value
+    of Str:
+      return $self.str_value
+    of Operator:
+      return $self.op
+    of binaryExpr:
+      return $$self.left & " " & $$self.operator & " " & $$self.right
+    of varAssign:
+      return &"{self.assign_name} := {$$self.assign_value}"
+    else:
+      return ""
+
+
+
+proc isVaildBinaryExpr*(expr: Expr): bool =
+  var left = expr.left.kind
+  var right = expr.right.kind
+  var expr_left = expr.left
+  var expr_right = expr.right
+
+  while left == binaryExpr:
+    if not expr.left.isVaildBinaryExpr() :  return false
+    expr_left = expr_left.left
+    left = expr_left.kind
+  
+  while right == binaryExpr: 
+    if not expr.right.isVaildBinaryExpr(): return false 
+    expr_right = expr_right.right
+    right = expr_right.kind
+  
+  return (left == Str and (expr.operator.op == "-" or expr.operator.op == "+")) or
+         (left == Num and right == Num)
+ 
+proc error(self: Codegen, msg: string) =
+  echo makeBox(msg & &"\nat line:{self.line}, colmun:{self.colmun}", "error", full_style=red)
+
+proc TypeMissmatchE*(self: Codegen, expr: Expr, left: ValueType, right: ValueType): ValueType =
+  error(self,&"""
+type missmatch got 
+left => {$$expr.left}:{$left}
+right => {$$expr.right}:{$right} in expr {$$expr}""")
+  return error
+
+
+
+
+
 template NodeCodegen(code: untyped) =
   expr.codegen = proc(self {.inject.}: var Codegen): ValueType =
     code
@@ -65,12 +116,12 @@ proc MakeID*(symbol: string, line: int, colmun: int): Expr =
   var expr = Expr(kind:  NodeType.ID, symbol: symbol, line: line, colmun: colmun)
   NodeCodegen:
       var name = expr.symbol
-      var index = self.env.getVarIndex(name)
+      var (index, val) = self.env.getVarIndex(name)
       dprint: name
 
       if index == 0:
         dprint: "unknown id " & name
-      result = ValueType.int
+      result = val.kind
       self.body.emit(OP_LOADNAME, reg, int16(index).to2Bytes)
       reg += 1
   return expr
@@ -150,11 +201,13 @@ proc MakeVarDeclartion*(name: string, value: Expr, line, colmun: int): Expr =
       if self.env.resolve(name) != none(Enviroment):
         return
       self.env.addVarIndex(name)
-      
+      var index = self.env.var_count      
+
       var val = expr.declare_value
-      result = val.codegen(self)
+      result = val.codegen(self)  
+      self.env.setVar(index, RuntimeValue(kind: result))      
       # DIST_INDEX <= REG
-      self.body.emit(OP_STRNAME, int16(self.env.var_count).to2Bytes(), reg - 1)
+      self.body.emit(OP_STRNAME, int16(index).to2Bytes(), reg - 1)
       reg -= 1
   return expr
 
@@ -164,58 +217,16 @@ proc MakeVarAssignment*(name: string, value: Expr, line, colmun: int): Expr =
   var expr = Expr(kind: varAssign, assign_name: name, assign_value: value, line: line, colmun: colmun)
   NodeCodegen:
       var name = expr.assign_name
-      var index = self.env.getVarIndex(name)
+      var (index, aval) = self.env.getVarIndex(name)
       if index == 0:
         return  
       var val = expr.assign_value
       result = val.codegen(self)
+      if aval.kind != result:
+        return self.TypeMissmatchE(expr, aval.kind, result)
       # DIST_INDEX <= REG
       self.body.emit(OP_STRNAME, int16(index).to2Bytes(), reg - 1)
       reg -= 1
   return expr
-
-proc error(self: Codegen, msg: string) =
-  echo makeBox(msg & &"\nat line:{self.line}, colmun:{self.colmun}", "error", full_style=red)
-
-
-proc `$$`*(self: Expr): string =
-  case self.kind:
-    of Num:
-      return $self.num_value
-    of Str:
-      return $self.str_value
-    of Operator:
-      return $self.op
-    of binaryExpr:
-      return $$self.left & " " & $$self.operator & " " & $$self.right
-    else:
-      return ""
-
-proc isVaildBinaryExpr*(expr: Expr): bool =
-  var left = expr.left.kind
-  var right = expr.right.kind
-  var expr_left = expr.left
-  var expr_right = expr.right
-
-  while left == binaryExpr:
-    if not expr.left.isVaildBinaryExpr() :  return false
-    expr_left = expr_left.left
-    left = expr_left.kind
-  
-  while right == binaryExpr: 
-    if not expr.right.isVaildBinaryExpr(): return false 
-    expr_right = expr_right.right
-    right = expr_right.kind
-  
-  return (left == Str and (expr.operator.op == "-" or expr.operator.op == "+")) or
-         (left == Num and right == Num)
- 
-proc TypeMissmatchE*(self: Codegen, expr: Expr, left: StaticType, right: StaticType): StaticType =
-  self.error(&"""
-type missmatch got 
-left => {$$expr.left}:{$left}
-right => {$$expr.right}:{$right} in expr {$$expr}""")
-  return error
-
 
 

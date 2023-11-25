@@ -14,11 +14,6 @@ type
     OP_SUB
     OP_MUL
     OP_DIV
-  StaticType* = enum
-    static_int
-    static_str
-    error
-    dynamic
   Codegen* = object
     consts_count*: int16
     line*, colmun*: int

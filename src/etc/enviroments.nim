@@ -51,8 +51,10 @@ proc getVarVal*(this: Enviroment, index: uint16): RuntimeValue =
   return env.get.varibles[index]
 
 
-proc getVarIndex*(this: Enviroment, index: string): uint16 =
+proc getVarIndex*(this: Enviroment, index: string): (uint16, RuntimeValue) =
   var env = this.resolve(index)
   if env.isNone():
-    return 0
-  return env.get.varible_names[index]
+    return (0, RuntimeValue(kind: null))
+  var val = env.get.varible_names[index] 
+  echo env.get.varibles
+  return (val, env.get.varibles[val])
