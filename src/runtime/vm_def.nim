@@ -28,7 +28,7 @@ type
 
 
 proc changeCond*(vm: var VM, reg: int | byte) = 
-  if vm.reg[reg].kind == ValueType.int:
+  if vm.reg[reg].kind == ValueType.int or vm.reg[reg].kind == ValueType.float:
     var val = makeInt(vm.reg[reg].bytes)
     if val == 0: 
       vm.R_COND = Zero 
@@ -38,6 +38,7 @@ proc changeCond*(vm: var VM, reg: int | byte) =
       vm.R_COND = FL_POS
     vm.results = success
     vm.results_eval = $vm.reg[reg]
+    dprint: makeFloat(vm.reg[reg].bytes)
   else:
     vm.R_COND = FL_STR
     vm.results = success

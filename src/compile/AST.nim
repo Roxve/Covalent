@@ -85,6 +85,9 @@ proc MakeNum*(value: float, line: int, colmun: int):  Expr =
       if expr.num_value == round(expr.num_value):
         result = ValueType.int        
         count = self.addConst(TAG_INT, ValueType.int, uint32(expr.num_value).to4Bytes())
+      else:
+        result = ValueType.float
+        count = self.addConst(TAG_FLOAT, ValueType.float, system.float32(expr.num_value).to4Bytes)
       # LOAD dist imm
       self.body.emit(OP_LOAD_CONST, reg, count.to2Bytes)
       reg += 1  

@@ -55,6 +55,15 @@ proc interpret*(bytecode: seq[byte]): VM =
               
               var str_val = RuntimeValue(kind: str, bytes: bytes)
               vm.consts.add(str_val)
+            of TAG_FLOAT:
+              var bytes = bytecode[vm.ip .. vm.ip + 3]            
+              dprint: makeFloat(bytes)
+              
+              vm.ip += 4
+
+              var float_val = RuntimeValue(kind: float, bytes: bytes)
+              vm.consts.add(float_val)
+              
             else:
               echo "ERROR while loading consts unknown type " & $tag & " please report this!"
               vm.results = UNKNOWN_OP
@@ -110,10 +119,16 @@ proc interpret*(bytecode: seq[byte]): VM =
               var num1 = makeInt(reg0.bytes)           
               var num2 = makeInt(reg1.bytes)            
               reg0.bytes = to4Bytes(num1 + num2)  
+            of float:
+              var num1 = makeFloat(reg0.bytes)
+              var num2 = makeFloat(reg1.bytes)
+              reg0.bytes = to4Bytes(num1 + num2)
             of str: 
               var right_bytes = reg1.bytes
               if right == ValueType.int:
-                 right_bytes = ($makeInt(reg1.bytes)).StrToBytes 
+                 right_bytes = ($makeInt(reg1.bytes)).StrToBytes
+              elif right == ValueType.float:
+                 right_bytes = ($makeFloat(reg1.bytes)).StrToBytes 
               reg0.bytes = reg0.bytes & right_bytes
             else:
               discard
@@ -123,20 +138,28 @@ proc interpret*(bytecode: seq[byte]): VM =
             of int:
               var num1 = makeInt(reg0.bytes)
               var num2 = makeInt(reg1.bytes) 
-              reg0.bytes = to4Bytes(num1 - num2)          
+              reg0.bytes = to4Bytes(num1 - num2)   
+            of float:
+              var num1 = makeFloat(reg0.bytes)
+              var num2 = makeFloat(reg1.bytes)
+              reg0.bytes = to4Bytes(num1 - num2)      
             of str:
               var str1 = BytesToStr(reg0.bytes)
               var str2 = BytesToStr(reg1.bytes)              
               reg0.bytes = StrToBytes(str1.replace(str2, ""))
             else:
               discard
-      of OP_MUL:
+      of OP_MUL: 
         BIN_OP:
           case left:
             of int:
               var num1 = makeInt(reg0.bytes)    
               var num2 = makeInt(reg1.bytes)     
               reg0.bytes = to4Bytes(num1 * num2)
+            of float:
+              var num1 = makeFloat(reg0.bytes)
+              var num2 = makeFloat(reg1.bytes)
+              reg0.bytes = to4Bytes(num1 * num2)    
             else:
               discard
       of OP_DIV:
@@ -145,7 +168,12 @@ proc interpret*(bytecode: seq[byte]): VM =
             of int:
               var num1 = makeInt(reg0.bytes) 
               var num2 = makeInt(reg1.bytes)
-              reg0.bytes = to4Bytes(system.int(num1 / num2))
+              reg0.bytes = to4Bytes(float32(num1 / num2))
+              reg0.kind = float
+            of float:
+              var num1 = makeFloat(reg0.bytes)
+              var num2 = makeFloat(reg1.bytes)
+              reg0.bytes = to4Bytes(float32(num1 / num2))
             else:
               discard 
       else: 

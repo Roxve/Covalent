@@ -1,15 +1,16 @@
 import unicode
 import sequtils
 import print
+
 type intBytes = array[0..3, byte]
 type intVal = int
 type int16Bytes = array[0..1, byte]
-
+type floatVal = float32
 
 var debug* = false
 
 
-proc to4Bytes*(input: int | uint32 | int32): seq[byte] =
+proc to4Bytes*(input: int | uint32 | int32 | float32): seq[byte] =
     var bytes: seq[byte] = toSeq(cast[intBytes](input))
     return bytes
 
@@ -31,6 +32,9 @@ proc signExtend*(x: uint8): uint32 =
 proc makeInt*(x: seq[byte]): int =
   result = int(cast[intVal](x.seqToIntBytes))
 
+
+proc makeFloat*(x: seq[byte]): float32 =
+  result = float32(cast[floatVal](x.seqToIntBytes))
 
 
 proc StrToBytes*(str: string): seq[byte] =
