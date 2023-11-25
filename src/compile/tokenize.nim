@@ -52,7 +52,7 @@ proc isOperator(x: char): bool =
   return "+-*/=%|&<>^".contains(x)
 
 proc isAllowedID(x: char): bool =
-  return not "¿? \t".contains(x) and not x.isOperator # every char is vaild except <=
+  return not "¿? \t\n".contains(x) and not x.isOperator # every char is vaild except <=
 
   
 proc getKeywordID(x: string): TType =
@@ -74,9 +74,10 @@ proc next*(self: var Tokenizer): Token =
     while self.at() == ' ' or self.at() == '\t':
       discard self.take()
 
-  if self.at() == '\n':
+  while self.at() == '\n':
     self.line += 1
     self.colmun = 0
+    discard self.take
 
   if self.src.len <= 0: 
     return self.make("<EOF>", TType.EOF)

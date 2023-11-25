@@ -5,7 +5,7 @@ import strformat
 import ../etc/utils
 import Options
 import math
-
+import print
 
 type
   NodeType* = enum
@@ -66,8 +66,10 @@ proc MakeID*(symbol: string, line: int, colmun: int): Expr =
   NodeCodegen:
       var name = expr.symbol
       var index = self.env.getVarIndex(name)
+      dprint: name
+
       if index == 0:
-        return
+        dprint: "unknown id " & name
       result = ValueType.int
       self.body.emit(OP_LOADNAME, reg, int16(index).to2Bytes)
       reg += 1
@@ -103,7 +105,7 @@ proc MakeStr*(value: string, line: int, colmun: int): Expr =
 
       self.body.emit(OP_LOAD_CONST, reg, count.to2Bytes)
       reg += 1
-
+  return expr
 
 proc MakeBinaryExpr*(left: Expr, right: Expr, operator: Expr, line: int, colmun: int): Expr =
   var expr = Expr(kind:  NodeType.binaryExpr, left: left,right: right, operator: operator, line: line, colmun: colmun)
@@ -154,7 +156,6 @@ proc MakeVarDeclartion*(name: string, value: Expr, line, colmun: int): Expr =
       # DIST_INDEX <= REG
       self.body.emit(OP_STRNAME, int16(self.env.var_count).to2Bytes(), reg - 1)
       reg -= 1
-
   return expr
 
 
@@ -170,7 +171,7 @@ proc MakeVarAssignment*(name: string, value: Expr, line, colmun: int): Expr =
       result = val.codegen(self)
       # DIST_INDEX <= REG
       self.body.emit(OP_STRNAME, int16(index).to2Bytes(), reg - 1)
-      reg += 1
+      reg -= 1
   return expr
 
 proc error(self: Codegen, msg: string) =

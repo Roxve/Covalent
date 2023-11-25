@@ -72,10 +72,10 @@ proc interpret*(bytecode: seq[byte]): VM =
       of OP_STRNAME:
         var count = uint16(makeInt(bytecode[vm.ip..vm.ip + 1]))
 
-        var regip = bytecode[vm.ip]
+        var regip = bytecode[vm.ip + 2]
         vm.checkRegs(regip)
         var reg = addr vm.reg[regip]
-
+        dprint: reg
         vm.ip += 3
 
         env.setVar(count, RuntimeValue(kind: reg.kind, bytes: reg.bytes))
@@ -89,6 +89,9 @@ proc interpret*(bytecode: seq[byte]): VM =
         var val = env.getVarVal(index)
         reg.bytes = val.bytes
         reg.kind = val.kind
+        dprint: reg
+        dprint: val
+        vm.changeCond(regip)
     
       of OP_LOAD_CONST:
         var reg0 = bytecode[vm.ip]
