@@ -52,10 +52,12 @@ type
 
 proc `$$`*(self: Expr): string =
   case self.kind:
+    of ID:
+      return $self.symbol
     of Num:
       return $self.num_value
     of Str:
-      return $self.str_value
+      return &"'{$self.str_value}'"
     of Operator:
       return $self.op
     of binaryExpr:
@@ -67,24 +69,9 @@ proc `$$`*(self: Expr): string =
 
 
 
-proc isVaildBinaryExpr*(expr: Expr): bool =
-  var left = expr.left.kind
-  var right = expr.right.kind
-  var expr_left = expr.left
-  var expr_right = expr.right
-
-  while left == binaryExpr:
-    if not expr.left.isVaildBinaryExpr() :  return false
-    expr_left = expr_left.left
-    left = expr_left.kind
-  
-  while right == binaryExpr: 
-    if not expr.right.isVaildBinaryExpr(): return false 
-    expr_right = expr_right.right
-    right = expr_right.kind
-  
-  return (left == Str and (expr.operator.op == "-" or expr.operator.op == "+")) or
-         (left == Num and right == Num)
+proc isVaildBinaryExpr*(left: ValueType, right: ValueType, op: string): bool =
+  return (left == str and (op == "-" or op == "+")) or
+         ((left == ValueType.int or left == ValueType.float) and (right == ValueType.int or right == ValueType.float))
  
 proc error(self: Codegen, msg: string) =
   echo makeBox(msg & &"\nat line:{self.line}, colmun:{self.colmun}", "error", full_style=red)
@@ -97,8 +84,18 @@ right => {$$expr.right}:{$right} in expr {$$expr}""")
   return error
 
 
+proc UndeclaredIDE*(self: Codegen, expr: Expr): ValueType =
+  self.error(&"undeclared id '{expr.symbol}'")
+  return error
+
+proc UndeclaredIDE*(self: Codegen, expr: string): ValueType =
+  self.error(&"undeclared id '{expr}'")
+  return error
 
 
+proc DupDeclarationE(self: Codegen, name: string): ValueType = 
+  self.error(&"id '{name}' already declared")
+  return error
 
 template NodeCodegen(code: untyped) =
   expr.codegen = proc(self {.inject.}: var Codegen): ValueType =
@@ -120,7 +117,7 @@ proc MakeID*(symbol: string, line: int, colmun: int): Expr =
       dprint: name
 
       if index == 0:
-        dprint: "unknown id " & name
+        return self.UndeclaredIDE(expr)
       result = val.kind
       self.body.emit(OP_LOADNAME, reg, int16(index).to2Bytes)
       reg += 1
@@ -168,11 +165,11 @@ proc MakeBinaryExpr*(left: Expr, right: Expr, operator: Expr, line: int, colmun:
       var left = L.codegen(self)
       var right = R.codegen(self)
 
-      if left == null or right == null:
-        return null
+      if left == error or right == error:
+        return error
   
-      #if not expr.isVaildBinaryExpr():
-       # return self.TypeMissmatchE(expr, left, right)
+      if not isVaildBinaryExpr(left, right, expr.operator.op):
+        return self.TypeMissmatchE(expr, left, right)
       result = right
       var op: OP
       case binop        
@@ -199,7 +196,7 @@ proc MakeVarDeclartion*(name: string, value: Expr, line, colmun: int): Expr =
   NodeCodegen:
       var name = expr.declare_name
       if self.env.resolve(name) != none(Enviroment):
-        return
+        return self.DupDeclarationE(name)
       self.env.addVarIndex(name)
       var index = self.env.var_count      
 
@@ -219,7 +216,7 @@ proc MakeVarAssignment*(name: string, value: Expr, line, colmun: int): Expr =
       var name = expr.assign_name
       var (index, aval) = self.env.getVarIndex(name)
       if index == 0:
-        return  
+        return self.UndeclaredIDE(expr.assign_name)
       var val = expr.assign_value
       result = val.codegen(self)
       if aval.kind != result:
