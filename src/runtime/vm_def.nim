@@ -1,5 +1,6 @@
 import ../etc/utils
-
+import ../etc/enviroments
+  
 type
   Interpreter_results* = enum
     success,
@@ -10,30 +11,24 @@ type
     FL_NEG,
     FL_STR,
     Zero
-  const_type* = enum
-    cint
-    cstr
-    cnull
   
-  consant* = object
-    ctype*: const_type
-    bytes*: seq[byte]
   
   VM* = object
     ip*: int 
     reg*: seq[REG]
-    consants*: seq[consant]    
+    env*: Enviroment
+    consts*: seq[RuntimeValue]    
     R_COND*: COND
     results*: Interpreter_results
     results_eval*: string 
   REG* = object
-    vtype*: const_type
+    kind*: ValueType
     bytes*: seq[byte]
 
 
 
-proc changeCond*(vm: var VM, reg: int) = 
-  if vm.reg[reg].vtype == cint:
+proc changeCond*(vm: var VM, reg: int | byte) = 
+  if vm.reg[reg].kind == ValueType.int:
     var val = makeInt(vm.reg[reg].bytes)
     if val == 0: 
       vm.R_COND = Zero 

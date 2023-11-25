@@ -22,35 +22,35 @@ type
     parse_start*: proc(self: var Parser): Expr
 
 
-proc update*(this: var Parser) =
-  this.line = this.tokenizer.line
-  this.colmun = this.tokenizer.colmun
+proc update*(self: var Parser) =
+  self.line = self.tokenizer.line
+  self.colmun = self.tokenizer.colmun
 
-proc at*(this: var Parser): Token =
-  this.update
-  return this.tokenizer.current_token
+proc at*(self: var Parser): Token =
+  self.update
+  return self.tokenizer.current_token
 
-proc take*(this: var Parser): Token =
-  var prev = this.at
-  this.last_token = prev
-  discard this.tokenizer.next()
+proc take*(self: var Parser): Token =
+  var prev = self.at
+  self.last_token = prev
+  discard self.tokenizer.next()
   return prev
 
-proc error(this: var Parser, msg: string) = 
-  echo makeBox(msg & &"\nat line:{this.line}, colmun:{this.colmun}", "error", full_style=red)
+proc error(self: var Parser, msg: string) = 
+  echo makeBox(msg & &"\nat line:{self.line}, colmun:{self.colmun}", "error", full_style=red)
 
-proc UnexceptedTokenE*(this: var Parser): Expr =
-  var msg = &"unexcepted token '{this.at().value}' of type {this.at().tok}"
-  this.error(msg) 
-  return MakeError(msg, this.line, this.colmun)
+proc UnexceptedTokenE*(self: var Parser): Expr =
+  var msg = &"unexcepted token '{self.at().value}' of type {self.at().tok}"
+  self.error(msg) 
+  return MakeError(msg, self.line, self.colmun)
 
-proc UnexceptedTokenE*(this: var Parser, excepted: TType): Expr =
-  var msg = &"unexcepted token '{this.at().value}' of type {this.at().tok}\nexcepted token of type '{excepted}'"
-  this.error(msg) 
-  return MakeError(msg, this.line, this.colmun)
+proc UnexceptedTokenE*(self: var Parser, excepted: TType): Expr =
+  var msg = &"unexcepted token '{self.at().value}' of type {self.at().tok}\nexcepted token of type '{excepted}'"
+  self.error(msg) 
+  return MakeError(msg, self.line, self.colmun)
 
-proc excep*(this: var Parser, excepted: TType): (bool, Expr) =
-  if this.take().tok != excepted:
-    return (false, this.UnExceptedTokenE(excepted))
+proc excep*(self: var Parser, excepted: TType): (bool, Expr) =
+  if self.take().tok != excepted:
+    return (false, self.UnExceptedTokenE(excepted))
   return (true, Expr())
 
