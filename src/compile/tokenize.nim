@@ -13,6 +13,7 @@ type
     true_kw = "true", false_kw = "false"
     null_kw = "null",
     colon,
+    comma,
     assign,
     openParen,
     closeParen,
@@ -125,6 +126,8 @@ proc next*(self: var Tokenizer): Token =
       return self.make($self.take, openParen)
     of ')':
       return self.make($self.take, closeParen)
+    of ',':
+      return self.make($self.take, comma)
     of ':':
       discard self.take
       if self.at == '=':
