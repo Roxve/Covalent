@@ -15,6 +15,10 @@ type
     Str,
     Bool,
     varDeclare,
+    funcDeclare,
+    methodDeclare,
+    callExpr,
+    memberExpr,
     varAssign,
     binaryExpr,
     Operator,
@@ -39,9 +43,21 @@ type
     of varDeclare:
       declare_name*: string
       declare_value*: Expr
+      varKind*: Expr
     of varAssign:
       assign_name*: string
       assign_value*: Expr
+    of funcDeclare:
+      name*: string
+      funcBody*: seq[Expr]    
+      parameters*: seq[Expr]
+    of callExpr:
+      calle*: Expr
+      args*: seq[Expr]
+    of memberExpr:
+      computed*: bool
+      obj*: Expr
+      member*: Expr
     of binaryExpr: 
       left*: Expr 
       right*: Expr 
@@ -154,6 +170,15 @@ proc MakeStr*(value: string, line: int, colmun: int): Expr =
       self.body.emit(OP_LOAD_CONST, reg, count.to2Bytes)
       reg += 1
   return expr
+
+proc MakeFuncDeclaration(name: string, parameters: seq[Expr], body: seq[Expr]): Expr =
+  return Expr(kind: NodeType.funcDeclare, name: name, parameters: parameters, funcBody: body)
+
+proc MakeCallExpr(calle: Expr, args: seq[Expr]): Expr =
+  return Expr(kind: NodeType.callExpr, calle: calle, args: args)
+
+proc MakeMemberExpr(computed: bool, obj: Expr, member: Expr): Expr =
+  return Expr(kind: NodeType.memberExpr, computed: computed, obj: obj, member: member)
 
 proc MakeBinaryExpr*(left: Expr, right: Expr, operator: Expr, line: int, colmun: int): Expr =
   var expr = Expr(kind:  NodeType.binaryExpr, left: left,right: right, operator: operator, line: line, colmun: colmun)
