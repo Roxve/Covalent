@@ -70,7 +70,24 @@ proc parse_args(self: var Parser): seq[Expr] =
       return @[exception]
 
 
-proc parse_func_declaration(self: var Parser, name: string): Expr
+proc parse_func_declaration(self: var Parser, name: string): Expr = 
+  var ident = self.at().colmun
+
+  var argsl = self.parse_args
+    
+  if argsl.len > 0 and argsl[0].kind == Error: return argsl[0]    
+  for arg in argsl: 
+    if arg.kind != ID: 
+      return self.UnexceptedTokenE
+  let (found, exception) = self.excep(to_kw)
+  if not found:
+    return exception
+  var body: seq[Expr] = @[]
+  while self.at().colmun > ident: 
+    body.add(self.parse_start(self))
+  return MakeFuncDeclaration(name=name,argsl, body)
+ 
+  
   
 proc parse_var_declaration(self: var Parser): Expr =
   if self.at().tok == set_kw:

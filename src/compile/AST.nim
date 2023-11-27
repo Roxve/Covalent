@@ -26,7 +26,7 @@ type
 
   Expr* = ref object 
     line*, colmun*:int
-    codegen*: proc(self : var Codegen): ValueType
+    codegen*: proc(self : var Codegen): ValueType       
     case kind*: NodeType 
     of Program: 
       body*: seq[Expr] 
@@ -171,13 +171,16 @@ proc MakeStr*(value: string, line: int, colmun: int): Expr =
       reg += 1
   return expr
 
-proc MakeFuncDeclaration(name: string, parameters: seq[Expr], body: seq[Expr]): Expr =
-  return Expr(kind: NodeType.funcDeclare, name: name, parameters: parameters, funcBody: body)
-
-proc MakeCallExpr(calle: Expr, args: seq[Expr]): Expr =
+proc MakeFuncDeclaration*(name: string, parameters: seq[Expr], body: seq[Expr]): Expr =
+  var expr = Expr(kind: NodeType.funcDeclare, name: name, parameters: parameters, funcBody: body)
+  NodeCodegen:
+    dprint: expr 
+    return error
+  return expr
+proc MakeCallExpr*(calle: Expr, args: seq[Expr]): Expr =
   return Expr(kind: NodeType.callExpr, calle: calle, args: args)
 
-proc MakeMemberExpr(computed: bool, obj: Expr, member: Expr): Expr =
+proc MakeMemberExpr*(computed: bool, obj: Expr, member: Expr): Expr =
   return Expr(kind: NodeType.memberExpr, computed: computed, obj: obj, member: member)
 
 proc MakeBinaryExpr*(left: Expr, right: Expr, operator: Expr, line: int, colmun: int): Expr =
