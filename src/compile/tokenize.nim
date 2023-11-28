@@ -53,7 +53,7 @@ proc isOperator(x: char): bool =
   return "+-*/=%|&<>^".contains(x)
 
 proc isAllowedID(x: char): bool =
-  return not "¿? \t\n".contains(x) and not x.isOperator # every char is vaild except <=
+  return not "¿? \t 	\n([{.,}])".contains(x) and not x.isOperator # every char is vaild except <=
 
   
 proc getKeywordID(x: string): TType =
@@ -71,7 +71,7 @@ proc at(self: var Tokenizer): char =
 
 proc next*(self: var Tokenizer): Token =
   # skip spaces and check if end of file
-  if self.at() == ' ' or self.at() == ' ':
+  if self.at() == ' ' or self.at() == '\t':
     while self.at() == ' ' or self.at() == '\t':
       discard self.take()
 
@@ -80,6 +80,9 @@ proc next*(self: var Tokenizer): Token =
     self.colmun = 0
     discard self.take
 
+  if self.at() == ' ' or self.at() == '\t':
+    while self.at() == ' ' or self.at() == '\t':
+      discard self.take()  
   if self.src.len <= 0: 
     return self.make("<EOF>", TType.EOF)
 
@@ -139,7 +142,9 @@ proc next*(self: var Tokenizer): Token =
         var res = ""
         while self.src.len > 0 and self.at().isAllowedID:
           res &= self.take()
-        return self.make(res, getKeywordID(res))
+        return self.make(res, getKeywordID(res)) 
+      elif self.at() == '\t': 
+        echo "\ttab"
       # unknown
       echo "error unknown char " & self.take()
       return self.make("unknown_char", TType.exception)

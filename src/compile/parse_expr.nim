@@ -2,7 +2,7 @@ import parser_def
 import tokenize
 import AST
 import strutils
-
+import print
 proc parse_primary_expr(self: var Parser): Expr =
   case self.at().tok:
     of TType.num:
@@ -56,8 +56,9 @@ proc parse_list_args(self: var Parser): seq[Expr] =
   var items: seq[Expr] = @[]
   var item = self.parse_start(self)
   items.add(item)
-  while self.at().tok == comma:
-    items.add(self.parse_start(self))
+  while self.at().tok == comma: 
+    discard self.take()
+    items.add(self.parse_start(self)) 
   return items
 
 proc parse_args(self: var Parser): seq[Expr] =
@@ -70,8 +71,8 @@ proc parse_args(self: var Parser): seq[Expr] =
       return @[exception]
 
 
-proc parse_func_declaration(self: var Parser, name: string): Expr = 
-  var ident = self.at().colmun
+proc parse_func_declaration(self: var Parser, name: string, ident: int): Expr = 
+
 
   var argsl = self.parse_args
     
@@ -82,7 +83,9 @@ proc parse_func_declaration(self: var Parser, name: string): Expr =
   let (found, exception) = self.excep(to_kw)
   if not found:
     return exception
-  var body: seq[Expr] = @[]
+  var body: seq[Expr] = @[] 
+  print ident 
+  print self.at().colmun
   while self.at().colmun > ident: 
     body.add(self.parse_start(self))
   return MakeFuncDeclaration(name=name,argsl, body)
@@ -90,13 +93,13 @@ proc parse_func_declaration(self: var Parser, name: string): Expr =
   
   
 proc parse_var_declaration(self: var Parser): Expr =
-  if self.at().tok == set_kw:
-    discard self.take()
+  if self.at().tok == set_kw: 
+    var ident = self.take().colmun - 3
     var name = self.take()
     if name.tok != id:
       return self.UnexceptedTokenE()
 
-    if self.at().value == "(": return self.parse_func_declaration(name.value)
+    if self.at().value == "(": return self.parse_func_declaration(name.value,ident)
     
     let (found, exception) = self.excep(to_kw)
     if not found:

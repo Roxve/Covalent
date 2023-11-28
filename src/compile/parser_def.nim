@@ -50,7 +50,8 @@ proc UnexceptedTokenE*(self: var Parser, excepted: TType): Expr =
   return MakeError(msg, self.line, self.colmun)
 
 proc excep*(self: var Parser, excepted: TType): (bool, Expr) =
-  if self.take().tok != excepted:
-    return (false, self.UnExceptedTokenE(excepted))
+  if self.at().tok != excepted:
+    return (false, self.UnExceptedTokenE(excepted)) 
+  discard self.take()
   return (true, Expr())
 
