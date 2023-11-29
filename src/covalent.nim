@@ -1,12 +1,12 @@
-import compile/parser
 import print 
-import compile/codegen
+import compile/[parser,parse_expr, compiler,codegen]
 import runtime/vm
 import noxen
 import std/[times,os]
-import etc/[enviroments, utils]
-import strutils
+import etc/[utils]
 
+
+import compile/AST
 
 proc main() =
   var args = commandLineParams()
@@ -31,8 +31,11 @@ proc main() =
           echo src
   debug = true
   let time = cpuTime()  
-  var Parser = make_parser(src)
-  var bytes = Parser.productBytes()
+  var parser = make_parser(src)
+  # needed to tell the parser where the start is
+  parser.parse_start = proc(self: var Parser): Expr = self.parse_expr
+  
+  var bytes = parser.productBytes()
   print interpret(bytes)
   echo "- time: ", cpuTime() - time  
 main()

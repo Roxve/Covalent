@@ -1,8 +1,9 @@
-import parser_def
+
 import tokenize
-import AST
 import strutils
 import print
+import compiler
+import codegen
 proc parse_primary_expr(self: var Parser): Expr =
   case self.at().tok:
     of TType.num:

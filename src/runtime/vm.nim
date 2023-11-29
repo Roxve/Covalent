@@ -1,10 +1,12 @@
-import ../compile/codegen_def
+import ../compile/compiler
 import print
 import vm_def
 import ../etc/utils
-import strutils
 import ../etc/enviroments
 import tables
+import strutils
+
+
 # template to quickly add binary operations
 template BIN_OP(tasks: untyped): untyped =
   var reg0_addr {.inject.} = system.int(bytecode[vm.ip])
