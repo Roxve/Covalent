@@ -53,7 +53,9 @@ type
     parser*: Parser
     consts_count*: int16
     const_objs*: seq[(RuntimeValue, int16)]
-    const_bytes*: seq[byte]    
+    const_bytes*: seq[byte]
+    def_count*: int16 
+    def_bytes*: seq[byte]    
     body*: seq[byte]
 
   Expr* = ref object 

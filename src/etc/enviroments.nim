@@ -22,6 +22,9 @@ type
     var_count*: uint16 = 0
 
 
+proc MakeEnv*(parent: Option[Enviroment]): Enviroment = 
+  return Enviroment(parent: parent)
+
 proc resolve*(this: Enviroment, index: uint16): Option[Enviroment] =
   
   if this.varibles.contains(index): return some(this)

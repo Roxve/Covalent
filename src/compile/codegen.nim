@@ -100,7 +100,8 @@ proc MakeFuncDeclaration*(name: string, parameters: seq[Expr], body: seq[Expr]):
   var expr = Expr(kind: NodeType.funcDeclare, name: name, parameters: parameters, funcBody: body)
   NodeCodegen:
     dprint: expr 
-    return error
+    var funcCodegen = Codegen(env: self.env, parser: self.parser) 
+    for exprs in expr.funcBody
   return expr
 
 
