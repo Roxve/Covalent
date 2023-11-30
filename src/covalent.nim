@@ -6,7 +6,6 @@ import std/[times,os]
 import etc/[utils]
 
 
-import compile/AST
 
 proc main() =
   var args = commandLineParams()

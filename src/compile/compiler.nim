@@ -12,7 +12,8 @@ type
     OP_DEF
     TAG_INT
     TAG_FLOAT
-    TAG_STR
+    TAG_STR 
+    OP_LOAD
     OP_LOAD_CONST
     OP_CALL # CALL DEF_ADDR
     OP_STRNAME

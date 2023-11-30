@@ -1,5 +1,5 @@
 # VM and codegen
-import codegen_def
+
 import compiler
 import tokenize
 
