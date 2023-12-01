@@ -9,7 +9,8 @@ import ../etc/[enviroments, utils]
 type
   OP*  = enum
     OP_CONSTS = byte(0) 
-    OP_DEF
+    OP_DEF 
+    OP_RET
     TAG_INT
     TAG_FLOAT
     TAG_STR 

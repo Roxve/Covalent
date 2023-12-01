@@ -13,7 +13,8 @@ import Options
 
 proc isVaildBinaryExpr*(left: ValueType, right: ValueType, op: string): bool =
   return (left == str and (op == "-" or op == "+")) or
-         ((left == ValueType.int or left == ValueType.float) and (right == ValueType.int or right == ValueType.float))
+         ((left == ValueType.int or left == ValueType.float) and (right == ValueType.int or right == ValueType.float)) or 
+         (left == null and right == null)
  
 proc error(self: Codegen, msg: string) =
   echo makeBox(msg & &"\nat line:{self.line}, colmun:{self.colmun}", "error", full_style=red)
@@ -100,8 +101,19 @@ proc MakeFuncDeclaration*(name: string, parameters: seq[Expr], body: seq[Expr]):
   var expr = Expr(kind: NodeType.funcDeclare, name: name, parameters: parameters, funcBody: body)
   NodeCodegen:
     dprint: expr 
+    self.def_count += 1
     var funcCodegen = Codegen(env: self.env, parser: self.parser) 
-    for exprs in expr.funcBody
+    result = error  
+    for parameter in expr.parameters:
+      funcCodegen.env.addVarIndex(parameter.symbol)
+    
+    for fexpr in expr.funcBody: 
+      result = fexpr.codegen(funcCodegen) 
+    var bytes = @[byte(OP_CONSTS)] & funcCodegen.consts_count.to2Bytes & funcCodegen.const_bytes & funcCodegen.body
+    self.def_bytes.emit(OP_DEF, self.def_count.to2Bytes)
+    self.def_bytes &= bytes 
+    self.def_bytes &= byte(OP_RET)
+    return result
   return expr
 
 
@@ -199,6 +211,6 @@ proc productBytes*(this: var Parser): seq[byte] =
       quit(1)
 
   var head = @[byte(OP_CONSTS)] & (generator.consts_count - 1).to2Bytes()
-  res_bytes = head & generator.const_bytes & generator.body
+  res_bytes = head & generator.const_bytes & generator.def_bytes & generator.body
   return res_bytes
   

@@ -1,7 +1,4 @@
-set number to 6
-number := 6
-number := 10 * number + 5
-set msg to "Hello! " + number
 
 set add(a, b) to 
 	a + b
+1

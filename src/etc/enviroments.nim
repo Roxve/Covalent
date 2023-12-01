@@ -59,5 +59,10 @@ proc getVarIndex*(this: Enviroment, index: string): (uint16, RuntimeValue) =
   if env.isNone():
     return (0, RuntimeValue(kind: null))
   var val = env.get.varible_names[index] 
-  echo env.get.varibles
-  return (val, env.get.varibles[val])
+  echo env.get.varibles 
+  var runtime = RuntimeValue(kind: null)
+  try:
+    runtime = env.get.varibles[val]
+  except: 
+    runtime = RuntimeValue(kind: null)
+  return (val, runtime)
