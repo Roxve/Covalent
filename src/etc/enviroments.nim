@@ -1,7 +1,6 @@
 import tables
 import Options
 
-
 type
 
   ValueType* = enum
@@ -15,13 +14,18 @@ type
     kind*: ValueType
     bytes*: seq[byte]
   
-  Enviroment* = ref object
+  Enviroment* = ref object 
     parent*: Option[Enviroment]
-    varibles*: Table[uint16, RuntimeValue]
-    varible_names*: Table[string, uint16]
-    var_count*: uint16 = 0
-
-
+    varibles*: Table[uint16, RuntimeValue] = Table[uint16, RuntimeValue]()
+    varible_names*: Table[string, uint16] = Table[string, uint16]()
+    var_count*: uint16 = 0 
+    consts_count*: uint16
+    const_objs*: seq[(RuntimeValue, uint16)] = @[]
+    const_bytes*: seq[byte] = @[]
+    def_count*: uint16 
+    def_bytes*: seq[(uint16, seq[byte])] = @[]
+    def_objs*: seq[(uint16, seq[uint16])] = @[]
+    
 proc MakeEnv*(parent: Option[Enviroment]): Enviroment = 
   return Enviroment(parent: parent)
 

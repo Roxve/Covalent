@@ -20,7 +20,7 @@ proc seqToIntBytes*(val: seq[byte]): intBytes =
     for i in 0..(val.len - 1):
       result[i] = val[i]
 
-proc to2Bytes*(val: int16): seq[byte] =
+proc to2Bytes*(val: uint16): seq[byte] =
     var bytes: seq[byte] = toSeq(cast[int16Bytes](val))
     return bytes
 proc signExtend*(x: uint8): uint32 = 

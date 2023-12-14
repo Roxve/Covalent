@@ -52,9 +52,6 @@ type
     line*, colmun*: int
     env*: Enviroment
     parser*: Parser
-    consts_count*: int16
-    const_objs*: seq[(RuntimeValue, int16)]
-    const_bytes*: seq[byte]
     def_count*: int16 
     def_bytes*: seq[byte]    
     body*: seq[byte]
@@ -149,33 +146,33 @@ proc emit*(bytes: var seq[byte],tag: OP, value: seq[byte]) =
   bytes.add(byte(tag))
   bytes.add(value)
 
-proc emit*(bytes: var seq[byte],tag: OP, byteCount: int16,value: seq[byte]) =
+proc emit*(bytes: var seq[byte],tag: OP, byteCount: uint16,value: seq[byte]) =
   bytes.add(byte(tag))
   bytes.add(byteCount.to2Bytes)
   bytes.add(value)
 
 
-proc addConst*(self: var Codegen, tag: OP,kind: ValueType ,bytes: seq[byte]): int16 =
+proc addConst*(self: var Codegen, tag: OP,kind: ValueType ,bytes: seq[byte]): uint16 =
   var aConsant = RuntimeValue(kind: kind,bytes: bytes)    
-  for key, val in self.const_objs.items():
+  for key, val in self.env.const_objs.items():
     if key == aConsant:
       return val
   
-  self.const_bytes.emit(tag, bytes)
-  inc self.consts_count
-  self.const_objs.add((aConsant, self.consts_count))
-  return self.consts_count
+  self.env.const_bytes.emit(tag, bytes)
+  inc self.env.consts_count
+  self.env.const_objs.add((aConsant, self.env.consts_count))
+  return self.env.consts_count
 
-proc addConst*(self: var Codegen, tag: OP,kind: ValueType, byteCount: int16 ,bytes: seq[byte]): int16 =
+proc addConst*(self: var Codegen, tag: OP,kind: ValueType, byteCount: int16 ,bytes: seq[byte]): uint16 =
   var aConsant = RuntimeValue(kind: kind,bytes: bytes)    
-  for key, val in self.const_objs.items():
+  for key, val in self.env.const_objs.items():
     if key == aConsant:
       return val
   
-  self.const_bytes.emit(tag, byteCount ,bytes)
-  inc self.consts_count 
-  self.const_objs.add((aConsant, self.consts_count))
-  return self.consts_count
+  self.env.const_bytes.emit(tag, byteCount ,bytes)
+  inc self.env.consts_count 
+  self.env.const_objs.add((aConsant, self.env.consts_count))
+  return self.env.consts_count
 
 
   

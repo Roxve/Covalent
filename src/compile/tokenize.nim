@@ -25,7 +25,7 @@ type
     value*: string
   Tokenizer* = object
     current_token*: Token
-    src: string
+    src*: string
     line*: int = 1
     colmun*: int = 0
 

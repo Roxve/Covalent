@@ -11,11 +11,7 @@ import print
 import math
 import Options
 
-proc isVaildBinaryExpr*(left: ValueType, right: ValueType, op: string): bool =
-  return (left == str and (op == "-" or op == "+")) or
-         ((left == ValueType.int or left == ValueType.float) and (right == ValueType.int or right == ValueType.float)) or 
-         (left == null and right == null)
- 
+
 proc error(self: Codegen, msg: string) =
   echo makeBox(msg & &"\nat line:{self.line}, colmun:{self.colmun}", "error", full_style=red)
 
@@ -61,7 +57,7 @@ proc MakeID*(symbol: string, line: int, colmun: int): Expr =
       if index == 0:
         return self.UndeclaredIDE(expr)
       result = val.kind
-      self.body.emit(OP_LOADNAME, reg, int16(index).to2Bytes)
+      self.body.emit(OP_LOADNAME, reg, uint16(index).to2Bytes)
       reg += 1
   return expr
 
@@ -73,7 +69,7 @@ proc MakeOperator*(symbol: string, line: int, colmun: int): Expr =
 proc MakeNum*(value: float, line: int, colmun: int):  Expr =
   var expr =  Expr(kind:  NodeType.Num, num_value: value, line: line, colmun: colmun)
   NodeCodegen:  
-      var count = int16(0)
+      var count = uint16(0)
       if expr.num_value == round(expr.num_value):
         result = ValueType.int        
         count = self.addConst(TAG_INT, ValueType.int, uint32(expr.num_value).to4Bytes())
@@ -99,7 +95,7 @@ proc MakeStr*(value: string, line: int, colmun: int): Expr =
 
 proc MakeFuncDeclaration*(name: string, parameters: seq[Expr], body: seq[Expr]): Expr =
   var expr = Expr(kind: NodeType.funcDeclare, name: name, parameters: parameters, funcBody: body)
-  NodeCodegen:
+  #[NodeCodegen:
     dprint: expr 
     self.def_count += 1
     var funcCodegen = Codegen(env: self.env, parser: self.parser) 
@@ -113,7 +109,7 @@ proc MakeFuncDeclaration*(name: string, parameters: seq[Expr], body: seq[Expr]):
     self.def_bytes.emit(OP_DEF, self.def_count.to2Bytes)
     self.def_bytes &= bytes 
     self.def_bytes &= byte(OP_RET)
-    return result
+    return result]#
   return expr
 
 
@@ -136,8 +132,6 @@ proc MakeBinaryExpr*(left: Expr, right: Expr, operator: Expr, line: int, colmun:
       if left == error or right == error:
         return error
   
-      if not isVaildBinaryExpr(left, right, expr.operator.op):
-        return self.TypeMissmatchE(expr, left, right)
       result = right
       var op: OP
       case binop        
@@ -172,7 +166,7 @@ proc MakeVarDeclartion*(name: string, value: Expr, line, colmun: int): Expr =
       result = val.codegen(self)  
       self.env.setVar(index, RuntimeValue(kind: result))      
       # DIST_INDEX <= REG
-      self.body.emit(OP_STRNAME, int16(index).to2Bytes(), reg - 1)
+      self.body.emit(OP_STRNAME, uint16(index).to2Bytes(), reg - 1)
       reg -= 1
   return expr
 
@@ -190,17 +184,14 @@ proc MakeVarAssignment*(name: string, value: Expr, line, colmun: int): Expr =
       if aval.kind != result:
         return self.TypeMissmatchE(expr, aval.kind, result)
       # DIST_INDEX <= REG
-      self.body.emit(OP_STRNAME, int16(index).to2Bytes(), reg - 1)
+      self.body.emit(OP_STRNAME, uint16(index).to2Bytes(), reg - 1)
       reg -= 1
   return expr
 
 
 
 proc productBytes*(this: var Parser): seq[byte] =
-  var res_bytes: seq[byte] = @[]  
-  
-  var generator = Codegen(const_bytes: @[], body: @[], env: Enviroment(varibles: Table[uint16, RuntimeValue]()), parser: this)
-
+  var generator = Codegen(body: @[], env:  MakeEnv(none(Enviroment)), parser: this)
   while this.at().tok != TType.EOF:
     var expr = this.parse_start(this)
   
@@ -210,7 +201,6 @@ proc productBytes*(this: var Parser): seq[byte] =
     if res == ValueType.error:
       quit(1)
 
-  var head = @[byte(OP_CONSTS)] & (generator.consts_count - 1).to2Bytes()
-  res_bytes = head & generator.const_bytes & generator.def_bytes & generator.body
-  return res_bytes
+  var head = @[byte(OP_CONSTS)] & (generator.env.consts_count - 1).to2Bytes()
+  result = head & generator.env.const_bytes & generator.body
   
