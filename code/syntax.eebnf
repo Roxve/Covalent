@@ -26,16 +26,3 @@
 <vars> = "set" [<type>] <str> <equal> <type> // set vartype varname = varvalue
 <methods> "set" [<type>] <str> "(" { [<type>] <str> } ")" {" {<expression>} "} // set methodtype methodname(args) { methodbody }
 
-<functions> "set" [<type>] <str> { [<type>] <str> } <equal> {<expression>} 
-/* functions is a mix of vars and methods a function doesnt need () or a body {}
-in turn a function cannot return oits return val(cannot be void) is the last mentioned var also doesnt need args in () instead the next val is the next arg*/
-/*
-  # keywords can be added to give syntax to functions (has to be choosen from a list)
-  set int add int x,keyword to, int y =
-    x + y
-  set int add(int x, int y) {
-    return  x + y
-  }
-  add 1 to 5
-  add(1,5)
-*/

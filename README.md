@@ -1,4 +1,2 @@
 # Covalent 
-This is the unfinished rewrite of my scripting language [Atomic-Script](https://GitHub.com/Atonix0/Atomic-Script)
-
-# needs help! 
+(WIP Language)
