@@ -18,7 +18,7 @@ fn main() {
 
         println!("entered {}", src.code);
         let mut tokens: Vec<Token> = Vec::new();
-        while src.tokenize() != Ok(0) {
+        while src.tokenize() != Token::EOF {
             let t = src.current();
             println!("is {:#?}", t);
             tokens.push(t);

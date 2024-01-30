@@ -3,6 +3,7 @@
 pub enum Token {
     Operator(char),
     Number(String), // later parse number
+    Err(String),    // error code and msg
     EOF,
 }
 
