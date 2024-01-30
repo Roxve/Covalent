@@ -2,8 +2,9 @@
 // open file as current -> tokenize
 pub enum Token {
     Operator(char),
-    Number(String), // later parse number
-    Err(String),    // error code and msg
+    Int(i32),
+    Float(f32),
+    Err(String), // error code and msg
     EOF,
 }
 
@@ -19,7 +20,7 @@ impl Source {
         Source {
             code,
             line: 1,
-            colmun: 1,
+            colmun: 0,
             current_tok: None,
         }
     }

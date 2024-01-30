@@ -1,7 +1,7 @@
 use crate::source::*;
 
 pub fn is_num(c: char) -> bool {
-    return "0123456789".contains(c);
+    return "01234.56789".contains(c);
 }
 
 pub trait Tokenizer {
@@ -9,6 +9,7 @@ pub trait Tokenizer {
     fn at(&self) -> char;
     fn set(&mut self, tok: Token) -> Token;
     fn current(&mut self) -> Token;
+    fn parse_num(&mut self, x: String) -> Token;
     fn tokenize(&mut self) -> Token;
 }
 
@@ -33,6 +34,13 @@ impl Tokenizer for Source {
         return self.current_tok.clone().expect("None");
     }
 
+    fn parse_num(&mut self, x: String) -> Token {
+        if x.contains('.') {
+            return self.set(Token::Float(x.parse().unwrap()));
+        }
+        return self.set(Token::Int(x.parse().unwrap()));
+    }
+
     fn tokenize(&mut self) -> Token {
         loop {
             if self.code.len() <= 0 {
@@ -40,12 +48,11 @@ impl Tokenizer for Source {
             }
             match self.at() {
                 ' ' | '\t' => {
-                    self.colmun += 1;
                     self.eat();
                 }
                 '\n' => {
                     self.eat();
-                    self.colmun = 1;
+                    self.colmun = 0;
                     self.line += 1;
                 }
                 _ => break,
@@ -58,7 +65,7 @@ impl Tokenizer for Source {
                 while is_num(self.at()) {
                     res.push(self.eat())
                 }
-                return self.set(Token::Number(res));
+                return self.parse_num(res);
             }
             '+' | '-' | '*' | '/' | '^' => {
                 let op = self.eat();
