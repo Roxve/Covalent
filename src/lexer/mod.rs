@@ -8,7 +8,6 @@ pub trait Tokenizer {
     fn eat(&mut self) -> char;
     fn at(&self) -> char;
     fn set(&mut self, tok: Token) -> Token;
-    fn current(&mut self) -> Token;
     fn parse_num(&mut self, x: String) -> Token;
     fn tokenize(&mut self) -> Token;
 }
@@ -26,12 +25,9 @@ impl Tokenizer for Source {
     }
 
     fn set(&mut self, tok: Token) -> Token {
-        self.current_tok = Some(tok.clone());
+        self.current_tok = self.next_tok.clone();
+        self.next_tok = Some(tok.clone());
         return tok;
-    }
-
-    fn current(&mut self) -> Token {
-        return self.current_tok.clone().expect("None");
     }
 
     fn parse_num(&mut self, x: String) -> Token {

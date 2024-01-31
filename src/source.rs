@@ -13,6 +13,7 @@ pub struct Source {
     pub line: u32,
     pub colmun: u32,
     pub current_tok: Option<Token>,
+    pub next_tok: Option<Token>,
 }
 
 impl Source {
@@ -22,6 +23,7 @@ impl Source {
             line: 1,
             colmun: 0,
             current_tok: None,
+            next_tok: None,
         }
     }
 }

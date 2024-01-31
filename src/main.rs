@@ -1,8 +1,11 @@
 use std::io::{self, Write};
+mod ast;
 mod lexer;
+mod parser;
 mod source;
 
-use crate::lexer::*;
+use crate::ast::*;
+use crate::parser::*;
 use crate::source::*;
 
 fn main() {
@@ -14,14 +17,11 @@ fn main() {
         let stdin = io::stdin();
 
         let _ = stdin.read_line(&mut buffer);
+
         let mut src = Source::new(buffer);
 
         println!("entered {}", src.code);
-        let mut tokens: Vec<Token> = Vec::new();
-        while src.tokenize() != Token::EOF {
-            let t = src.current();
-            println!("is {:#?}", t);
-            tokens.push(t);
-        }
+        let prog: Vec<Expr> = src.parse_prog();
+        println!("{:#?}", prog);
     }
 }
