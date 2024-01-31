@@ -2,6 +2,8 @@ use crate::ast::*;
 use crate::lexer::Tokenizer;
 use crate::source::*;
 
+pub trait ParserError {}
+
 pub trait Parser {
     fn next(&mut self) -> Token;
     fn current(&mut self) -> Token;
@@ -63,38 +65,35 @@ impl Parser for Source {
         println!("l{:?}", self.next());
         loop {
             if let Token::Operator(c) = self.current() {
-                let op_level = get_operator_level(c);
-                if op_level < level {
+                let current_op_level = get_operator_level(c);
+                if current_op_level < level {
                     break;
                 }
 
                 self.tokenize();
                 right = self.parse_level(level + 1);
 
-                //left = Expr::BinaryExpr(c, Box::new(left), Box::new(right.clone()));
-
                 // swap left and right operators for right order
-                let mut op1: char = c;
-                let mut op2: Option<char> = None;
+                let mut left_op: char = c;
+                let mut right_op: Option<char> = None;
                 let mut right_l: Option<Box<Expr>> = None;
                 let mut right_r: Option<Box<Expr>> = None;
-                // if let Expr::BinaryExpr(c1, _, _) = left {
-                // op1 = Some(c);
-                //}
 
-                if let Expr::BinaryExpr(c2, rh_l, rh_r) = right.clone() {
-                    op2 = Some(c2);
-                    right_l = Some(rh_l);
-                    right_r = Some(rh_r);
+                if let Expr::BinaryExpr(op, l_e, r_e) = right.clone() {
+                    right_op = Some(op);
+                    right_l = Some(l_e);
+                    right_r = Some(r_e);
                 }
 
-                if (op2.is_some()) && (get_operator_level(op1) > get_operator_level(op2.unwrap())) {
-                    right = Expr::BinaryExpr(op1, right_l.unwrap(), right_r.unwrap());
-                    op1 = op2.unwrap();
+                if (right_op.is_some())
+                    && (get_operator_level(left_op) > get_operator_level(right_op.unwrap()))
+                {
+                    right = Expr::BinaryExpr(left_op, right_l.unwrap(), right_r.unwrap());
+                    left_op = right_op.unwrap();
                 }
                 // end swap
-                // maybe not best thing but i cannot think of a better idea rn
-                left = Expr::BinaryExpr(op1, Box::new(left), Box::new(right));
+                // maybe not best thing but i cannot think of a better idea rn (works without swap but miss up in some things)
+                left = Expr::BinaryExpr(left_op, Box::new(left), Box::new(right));
             } else {
                 break;
             }
