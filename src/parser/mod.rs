@@ -59,7 +59,6 @@ impl Parser for Source {
     fn parse_level(&mut self, level: u8) -> Expr {
         let mut left: Expr = self.parse_expr();
         let mut right: Expr;
-        let mut op: Operator;
 
         println!("l{:?}", self.next());
         loop {
@@ -69,16 +68,33 @@ impl Parser for Source {
                     break;
                 }
 
-                op = match c {
-                    '+' => Operator::Plus,
-                    '-' => Operator::Minus,
-                    '*' => Operator::Multi,
-                    '/' => Operator::Divide,
-                    _ => Operator::Divide,
-                };
                 self.tokenize();
                 right = self.parse_level(level + 1);
-                left = Expr::BinaryExpr(op, Box::new(left), Box::new(right));
+
+                //left = Expr::BinaryExpr(c, Box::new(left), Box::new(right.clone()));
+
+                // swap left and right operators for right order
+                let mut op1: char = c;
+                let mut op2: Option<char> = None;
+                let mut right_l: Option<Box<Expr>> = None;
+                let mut right_r: Option<Box<Expr>> = None;
+                // if let Expr::BinaryExpr(c1, _, _) = left {
+                // op1 = Some(c);
+                //}
+
+                if let Expr::BinaryExpr(c2, rh_l, rh_r) = right.clone() {
+                    op2 = Some(c2);
+                    right_l = Some(rh_l);
+                    right_r = Some(rh_r);
+                }
+
+                if (op2.is_some()) && (get_operator_level(op1) > get_operator_level(op2.unwrap())) {
+                    right = Expr::BinaryExpr(op1, right_l.unwrap(), right_r.unwrap());
+                    op1 = op2.unwrap();
+                }
+                // end swap
+                // maybe not best thing but i cannot think of a better idea rn
+                left = Expr::BinaryExpr(op1, Box::new(left), Box::new(right));
             } else {
                 break;
             }

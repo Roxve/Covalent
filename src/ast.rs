@@ -6,13 +6,13 @@ pub enum Literal {
 // 33 -> token int -> literal int? literal is a connection with expr and token
 
 // operator -> level
-#[derive(Debug, Clone, PartialEq)]
-pub enum Operator {
-    Plus,
-    Minus,
-    Multi,
-    Divide,
-}
+// #[derive(Debug, Clone, PartialEq)]
+// pub enum Operator {
+//     Plus,
+//     Minus,
+//     Multi,
+//     Divide,
+// }
 pub fn get_operator_level(op: char) -> u8 {
     match op {
         '+' | '-' => 1,
@@ -24,5 +24,5 @@ pub fn get_operator_level(op: char) -> u8 {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Literal(Literal),
-    BinaryExpr(Operator, Box<Expr>, Box<Expr>),
+    BinaryExpr(char, Box<Expr>, Box<Expr>),
 }
