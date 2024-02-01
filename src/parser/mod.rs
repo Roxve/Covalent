@@ -36,15 +36,16 @@ impl Parser for Source {
     fn parse_prog(&mut self) -> Vec<Expr> {
         let mut body: Vec<Expr> = Vec::new();
         while self.current() != Token::EOF {
-            println!("{:#?}:{:?}:{:?}", body, self.current(), self.next());
             body.push(self.parse_level(0));
         }
+
+        println!("{:#?}", body);
         return body;
     }
 
     fn parse_expr(&mut self) -> Expr {
-        println!("e{:?}", self.current());
-        match self.current() {
+        let tok = self.current();
+        match tok {
             Token::Int(i) => {
                 self.tokenize();
                 Expr::Literal(Literal::Int(i))
@@ -53,8 +54,19 @@ impl Parser for Source {
                 self.tokenize();
                 Expr::Literal(Literal::Float(f))
             }
-            Token::EOF => Expr::Literal(Literal::Int(0)),
-            _ => self.parse_level(1),
+            Token::Err(_) => {
+                todo!()
+            }
+            _ => {
+                self.err(
+                    ErrKind::UnexceptedTokenE,
+                    format!("unexcepted token [{:#?}]", tok),
+                );
+                self.tokenize();
+
+                // todo!(); // add null
+                Expr::Literal(Literal::Int(0))
+            }
         }
     }
 
@@ -62,7 +74,6 @@ impl Parser for Source {
         let mut left: Expr = self.parse_expr();
         let mut right: Expr;
 
-        println!("l{:?}", self.next());
         loop {
             if let Token::Operator(c) = self.current() {
                 let current_op_level = get_operator_level(c);

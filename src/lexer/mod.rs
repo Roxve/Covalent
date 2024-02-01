@@ -16,7 +16,7 @@ impl Tokenizer for Source {
     fn eat(&mut self) -> char {
         let p = self.at();
         self.code.remove(0);
-        self.colmun += 1;
+        self.column += 1;
         return p;
     }
 
@@ -48,7 +48,7 @@ impl Tokenizer for Source {
                 }
                 '\n' => {
                     self.eat();
-                    self.colmun = 0;
+                    self.column = 0;
                     self.line += 1;
                 }
                 _ => break,
@@ -72,9 +72,12 @@ impl Tokenizer for Source {
                     return self.set(Token::Err("how did we get here?".to_string()));
                 } else {
                     let c = self.eat();
+                    self.err(ErrKind::UnknownCharE, format!("unknown char '{}'", c));
+
+                    // to remove?
                     return self.set(Token::Err(format!(
-                        "AT0001::UNKNOWN_CHAR::{}::{}:{}",
-                        c, self.line, self.colmun
+                        "AT0001::UNKNOWN_CHAR::{}::{}",
+                        self.line, self.column
                     )));
                 }
             }
