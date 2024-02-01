@@ -4,7 +4,7 @@ use crate::ast::*;
 // type 1: op(8b), dest(8b), reg(8b)
 // ADD R0, R1
 
-type RegIP = u8;
+pub type RegIP = u8;
 #[derive(Debug, Clone)]
 pub enum Op {
     Add(RegIP, RegIP),
@@ -14,7 +14,7 @@ pub enum Op {
     Load(RegIP, u16),
 }
 
-type Insturactions = Vec<Op>;
+pub type Insturactions = Vec<Op>;
 
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
@@ -113,7 +113,7 @@ impl Source {
             self.consts.push(pconst);
         }
 
-        return ip;
+        return ip - 1; // ip is 1 indexed;
     }
 
     pub fn push_instr(&mut self, instr: Op) {
