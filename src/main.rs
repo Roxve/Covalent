@@ -1,10 +1,12 @@
 use std::io::{self, Write};
 mod ast;
+mod codegen;
 mod lexer;
 mod parser;
 mod source;
 
 use crate::ast::*;
+use crate::codegen::*;
 use crate::parser::*;
 use crate::source::*;
 
@@ -22,6 +24,8 @@ fn main() {
 
         println!("entered {}", src.code);
         let prog: Vec<Expr> = src.parse_prog();
-        println!("{:#?}", prog);
+
+        src.codegen_prog(prog);
+        println!("{:#?}", src.codegen);
     }
 }

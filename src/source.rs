@@ -98,6 +98,9 @@ impl Source {
     pub fn push_const(&mut self, pconst: Literal) -> u16 {
         let mut found = false;
         let mut ip = 0;
+        if self.consts.len() == 0 {
+            ip = 1;
+        }
 
         for constant in self.consts.clone() {
             if constant == pconst {
