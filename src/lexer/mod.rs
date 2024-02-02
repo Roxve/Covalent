@@ -65,7 +65,7 @@ impl Tokenizer for Source {
             }
             '+' | '-' | '*' | '/' | '^' => {
                 let op = self.eat();
-                return self.set(Token::Operator(op));
+                return self.set(Token::Operator(op.to_string()));
             }
             _ => {
                 if false {

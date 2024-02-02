@@ -24,8 +24,6 @@ fn main() {
 
         println!("entered {}", src.code);
         let prog: Vec<Expr> = src.parse_prog();
-
-        src.codegen_prog(prog);
-        println!("{:#?}", src.codegen);
+        println!("{:#?}", prog);
     }
 }

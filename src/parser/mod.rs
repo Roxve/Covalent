@@ -39,7 +39,6 @@ impl Parser for Source {
             body.push(self.parse_level(0));
         }
 
-        println!("{:#?}", body);
         return body;
     }
 
@@ -75,36 +74,17 @@ impl Parser for Source {
         let mut right: Expr;
 
         loop {
+            // 5 (2*) 5 nothing (1+) 5
             if let Token::Operator(c) = self.current() {
-                let current_op_level = get_operator_level(c);
+                let current_op_level = get_operator_level(c.as_str());
                 if current_op_level < level {
                     break;
                 }
 
                 self.tokenize();
-                right = self.parse_level(level + 1);
+                right = self.parse_level(current_op_level + 1);
 
-                // swap left and right operators for right order
-                let mut left_op: char = c;
-                let mut right_op: Option<char> = None;
-                let mut right_l: Option<Box<Expr>> = None;
-                let mut right_r: Option<Box<Expr>> = None;
-
-                if let Expr::BinaryExpr(op, l_e, r_e) = right.clone() {
-                    right_op = Some(op);
-                    right_l = Some(l_e);
-                    right_r = Some(r_e);
-                }
-
-                if (right_op.is_some())
-                    && (get_operator_level(left_op) > get_operator_level(right_op.unwrap()))
-                {
-                    right = Expr::BinaryExpr(left_op, right_l.unwrap(), right_r.unwrap());
-                    left_op = right_op.unwrap();
-                }
-                // end swap
-                // maybe not best thing but i cannot think of a better idea rn (works without swap but miss up in some things)
-                left = Expr::BinaryExpr(left_op, Box::new(left), Box::new(right));
+                left = Expr::BinaryExpr(c, Box::new(left), Box::new(right));
             } else {
                 break;
             }

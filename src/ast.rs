@@ -4,10 +4,10 @@ pub enum Literal {
     Float(f32),
 }
 
-pub fn get_operator_level(op: char) -> u8 {
+pub fn get_operator_level(op: &str) -> u8 {
     match op {
-        '+' | '-' => 1,
-        '*' | '/' => 2,
+        "+" | "-" => 1,
+        "*" | "/" => 2,
         _ => todo!(),
     }
 }
@@ -15,5 +15,5 @@ pub fn get_operator_level(op: char) -> u8 {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Literal(Literal),
-    BinaryExpr(char, Box<Expr>, Box<Expr>),
+    BinaryExpr(String, Box<Expr>, Box<Expr>),
 }

@@ -1,25 +1,7 @@
-use crate::ast::*;
-
-// 32 bit max
-// type 1: op(8b), dest(8b), reg(8b)
-// ADD R0, R1
-
-pub type RegIP = u8;
-#[derive(Debug, Clone)]
-pub enum Op {
-    Add(RegIP, RegIP),
-    Sub(RegIP, RegIP),
-    Mul(RegIP, RegIP),
-    Div(RegIP, RegIP), // we dont talk about div or floats
-    Load(RegIP, u16),
-}
-
-pub type Insturactions = Vec<Op>;
-
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
 pub enum Token {
-    Operator(char),
+    Operator(String),
     Int(i32),
     Float(f32),
     Err(String), // error code and msg
@@ -52,7 +34,7 @@ impl ATErr {
 
     pub fn get_error(&self) -> String {
         format!(
-            "code:AT{}\n{}\nat line:{}, column:{}",
+            "code:AT00{}\n{}\nat line:{}, column:{}",
             self.kind.clone() as u8,
             self.msg,
             self.line,
@@ -66,15 +48,13 @@ impl ATErr {
     }
 }
 
+//todo remove VM after replacing with LLVM
 pub struct Source {
     pub code: String,
     pub line: u32,
     pub column: u32,
     pub current_tok: Option<Token>,
     pub next_tok: Option<Token>,
-    pub current_reg: RegIP,
-    pub consts: Vec<Literal>,
-    pub codegen: Insturactions,
     pub errors: Vec<ATErr>,
     pub warnings: Vec<ATErr>, // program can continue error
 }
@@ -87,41 +67,18 @@ impl Source {
             column: 0,
             current_tok: None,
             next_tok: None,
-            current_reg: 0,
-            consts: Vec::new(),
-            codegen: Vec::new(),
             errors: Vec::new(),
             warnings: Vec::new(),
         }
     }
 
-    pub fn push_const(&mut self, pconst: Literal) -> u16 {
-        let mut found = false;
-        let mut ip = 0;
-        if self.consts.len() == 0 {
-            ip = 1;
-        }
-
-        for constant in self.consts.clone() {
-            if constant == pconst {
-                found = true;
-            }
-            ip += 1;
-        }
-
-        if !found {
-            self.consts.push(pconst);
-        }
-
-        return ip - 1; // ip is 1 indexed;
-    }
-
-    pub fn push_instr(&mut self, instr: Op) {
-        self.codegen.push(instr);
-    }
-
     pub fn err(&mut self, kind: ErrKind, msg: String) {
-        let err = ATErr::new(kind, msg, self.line, self.column);
+        let err = ATErr {
+            kind,
+            msg,
+            line: self.line,
+            column: self.column,
+        };
         self.errors.push(err.clone());
         err.out_error();
     }
