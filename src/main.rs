@@ -27,7 +27,12 @@ fn main() {
         println!("entered {}", src.code);
         let prog: Vec<Expr> = src.parse_prog();
         println!("{:#?}", prog);
-        let res = src.codegen_prog(prog);
+
+        let main_fn_type = src.context.void_type().fn_type(&[], false);
+        let main_fn = src.module.add_function("main", main_fn_type, None);
+        let main = src.context.append_basic_block(main_fn, "entry");
+        let res = src.compile_prog(prog, main);
         println!("{:#?}", res);
+        println!("{:#?}", main_fn);
     }
 }

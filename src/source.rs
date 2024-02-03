@@ -54,6 +54,7 @@ impl ATErr {
 
 // #[derive(Debug, Clone)]
 //todo remove VM after replacing with LLVM
+#[derive(Debug)]
 pub struct Source<'ctx> {
     pub code: String,
     pub line: u32,
