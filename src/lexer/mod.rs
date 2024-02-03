@@ -3,6 +3,9 @@ use crate::source::*;
 pub fn is_num(c: char) -> bool {
     return "01234.56789".contains(c);
 }
+pub fn is_id(c: char) -> bool {
+    return !" \t\n+-*/<&|>=@#%:!?$".contains(c);
+}
 
 pub trait Tokenizer {
     fn eat(&mut self) -> char;
@@ -63,13 +66,21 @@ impl Tokenizer for Source<'_> {
                 }
                 return self.parse_num(res);
             }
-            '+' | '-' | '*' | '/' | '^' => {
+            '+' | '-' | '*' | '/' | '^' | '=' => {
                 let op = self.eat();
                 return self.set(Token::Operator(op.to_string()));
             }
-            _ => {
-                if false {
-                    return self.set(Token::Err("how did we get here?".to_string()));
+            c => {
+                if is_id(c) {
+                    let mut res = String::from("");
+                    while is_id(self.at()) {
+                        res.push(self.eat());
+                    }
+
+                    match res.as_str() {
+                        "set" => self.set(Token::SetKw),
+                        _ => self.set(Token::Ident(res)),
+                    }
                 } else {
                     let c = self.eat();
                     self.err(ErrKind::UnknownCharE, format!("unknown char '{}'", c));
