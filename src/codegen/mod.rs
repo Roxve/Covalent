@@ -1,4 +1,14 @@
+macro_rules! extract {
+    ($e: expr, $variant:path, $fields:tt) => {
+        match $e {
+            $variant($fields) => $fields,
+            variant => panic!("unexcepted variant: {:?}", variant),
+        }
+    };
+}
+
 use inkwell::basic_block::BasicBlock;
+
 use inkwell::values::*;
 
 use crate::ast::Expr;
@@ -9,6 +19,28 @@ use crate::source::*;
 pub enum RuntimeVal<'ctx> {
     Int(IntValue<'ctx>),
     Float(FloatValue<'ctx>),
+}
+
+macro_rules! con_num {
+    ($self: expr,$e: expr) => {
+        match $e {
+            RuntimeVal::Int(val) => {
+                let i: i32 = val.to_string().replace("i32 ", "").parse().unwrap();
+                let res: f32 = i as f32;
+                RuntimeVal::Float($self.context.f32_type().const_float(res as f64))
+            }
+            RuntimeVal::Float(val) => {
+                let f: f32 = val
+                    .to_string()
+                    .replace("float ", "")
+                    .replace("e+", "")
+                    .parse()
+                    .unwrap();
+                let res: i32 = f.round() as i32;
+                RuntimeVal::Int($self.context.i32_type().const_int(res as u64, true))
+            } // _ => todo!(),
+        }
+    };
 }
 
 fn mkint(val: IntValue) -> RuntimeVal {
@@ -43,6 +75,9 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             Expr::Literal(Literal::Int(nb)) => {
                 Ok(mkint(self.context.i32_type().const_int(nb as u64, true)))
             }
+            Expr::Literal(Literal::Float(f)) => Ok(RuntimeVal::Float(
+                self.context.f32_type().const_float(f as f64),
+            )),
             Expr::BinaryExpr(op, left, right) => self.compile_binary_expr(op, left, right),
             _ => todo!(),
         }
@@ -60,12 +95,18 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         let etype = {
             match lhs {
                 RuntimeVal::Int(_) => {
-                    if let RuntimeVal::Float(nb) = rhs {
-                        let num: i64 = nb.to_string().parse().unwrap();
-                        rhs = RuntimeVal::Int(self.context.i32_type().const_int(num as u64, true));
+                    if let RuntimeVal::Float(_) = rhs {
+                        rhs = con_num!(self, rhs);
                     }
 
                     "int"
+                }
+                RuntimeVal::Float(_) => {
+                    if let RuntimeVal::Int(_) = rhs {
+                        rhs = con_num!(self, rhs);
+                    }
+
+                    "float"
                 }
                 _ => todo!(),
             }
@@ -73,24 +114,62 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         match op.as_str() {
             "+" => match etype {
                 "int" => {
-                    let mut left: Option<IntValue> = None;
-                    let mut right: Option<IntValue> = None;
+                    let left: IntValue = extract!(lhs, RuntimeVal::Int, val);
+                    let right: IntValue = extract!(rhs, RuntimeVal::Int, val);
 
-                    if let RuntimeVal::Int(nb) = lhs {
-                        left = Some(nb);
-                    }
-
-                    if let RuntimeVal::Int(nb) = rhs {
-                        right = Some(nb);
-                    }
-
-                    let res = self.builder.build_int_add(
-                        left.expect("Null left"),
-                        right.expect("Null right"),
-                        "tmpadd",
-                    );
+                    let res = self.builder.build_int_add(left, right, "tmpadd").unwrap();
                     println!("{:#?}", res);
-                    Ok(RuntimeVal::Int(res.unwrap()))
+                    Ok(RuntimeVal::Int(res))
+                }
+                _ => todo!(),
+            },
+
+            "-" => match etype {
+                "int" => {
+                    let left = extract!(lhs, RuntimeVal::Int, val);
+                    let right = extract!(lhs, RuntimeVal::Int, val);
+
+                    Ok(RuntimeVal::Int(
+                        self.builder.build_int_sub(left, right, "tmpmul").unwrap(),
+                    ))
+                }
+                _ => todo!(),
+            },
+
+            "*" => match etype {
+                "int" => {
+                    let left = extract!(lhs, RuntimeVal::Int, val);
+                    let right = extract!(lhs, RuntimeVal::Int, val);
+
+                    Ok(RuntimeVal::Int(
+                        self.builder.build_int_mul(left, right, "tmpmul").unwrap(),
+                    ))
+                }
+                _ => todo!(),
+            },
+
+            "/" => match etype {
+                "int" => {
+                    let left = extract!(lhs, RuntimeVal::Int, val);
+                    let right = extract!(lhs, RuntimeVal::Int, val);
+
+                    Ok(RuntimeVal::Float(
+                        self.builder
+                            .build_float_div(
+                                extract!(
+                                    con_num!(self, RuntimeVal::Int(left)),
+                                    RuntimeVal::Float,
+                                    val
+                                ),
+                                extract!(
+                                    con_num!(self, RuntimeVal::Int(right)),
+                                    RuntimeVal::Float,
+                                    val
+                                ),
+                                "tmpdiv",
+                            )
+                            .unwrap(),
+                    ))
                 }
                 _ => todo!(),
             },

@@ -10,6 +10,8 @@ use crate::codegen::*;
 use crate::parser::*;
 use crate::source::*;
 use inkwell::context::Context;
+use inkwell::execution_engine::ExecutionEngine;
+use inkwell::execution_engine::JitFunction;
 
 fn main() {
     loop {
@@ -32,6 +34,7 @@ fn main() {
         let main_fn = src.module.add_function("main", main_fn_type, None);
         let main = src.context.append_basic_block(main_fn, "entry");
         let res = src.compile_prog(prog, main);
+
         println!("{:#?}", res);
         println!("{:#?}", main_fn);
     }
