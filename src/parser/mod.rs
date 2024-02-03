@@ -12,7 +12,7 @@ pub trait Parser {
     fn parse_level(&mut self, level: u8) -> Expr;
 }
 
-impl Parser for Source {
+impl Parser for Source<'_> {
     fn next(&mut self) -> Token {
         if self.next_tok.is_none() {
             if self.current_tok.is_none() {

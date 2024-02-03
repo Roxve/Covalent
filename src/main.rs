@@ -9,6 +9,7 @@ use crate::ast::*;
 use crate::codegen::*;
 use crate::parser::*;
 use crate::source::*;
+use inkwell::context::Context;
 
 fn main() {
     loop {
@@ -20,10 +21,13 @@ fn main() {
 
         let _ = stdin.read_line(&mut buffer);
 
-        let mut src = Source::new(buffer);
+        let ctx = &Context::create();
+        let mut src = Source::new(buffer, ctx);
 
         println!("entered {}", src.code);
         let prog: Vec<Expr> = src.parse_prog();
         println!("{:#?}", prog);
+        let res = src.codegen_prog(prog);
+        println!("{:#?}", res);
     }
 }
