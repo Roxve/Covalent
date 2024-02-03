@@ -21,33 +21,12 @@ pub enum RuntimeVal<'ctx> {
     Float(FloatValue<'ctx>),
 }
 
-macro_rules! con_num {
-    ($self: expr,$e: expr) => {
-        match $e {
-            RuntimeVal::Int(val) => {
-                let i: i32 = val.to_string().replace("i32 ", "").parse().unwrap();
-                let res: f32 = i as f32;
-                RuntimeVal::Float($self.context.f32_type().const_float(res as f64))
-            }
-            RuntimeVal::Float(val) => {
-                let f: f32 = val
-                    .to_string()
-                    .replace("float ", "")
-                    .replace("e+", "")
-                    .parse()
-                    .unwrap();
-                let res: i32 = f.round() as i32;
-                RuntimeVal::Int($self.context.i32_type().const_int(res as u64, true))
-            } // _ => todo!(),
-        }
-    };
-}
-
 fn mkint(val: IntValue) -> RuntimeVal {
     return RuntimeVal::Int(val);
 }
 
 pub trait Codegen<'ctx> {
+    fn con_num(&mut self, val: RuntimeVal<'ctx>) -> RuntimeVal<'ctx>;
     fn compile_prog(&mut self, body: Vec<Expr>, main: BasicBlock) -> Result<RuntimeVal<'ctx>, i8>;
     fn compile(&mut self, expr: Expr) -> Result<RuntimeVal<'ctx>, i8>;
     fn compile_binary_expr(
@@ -59,6 +38,20 @@ pub trait Codegen<'ctx> {
 }
 
 impl<'ctx> Codegen<'ctx> for Source<'ctx> {
+    fn con_num(&mut self, val: RuntimeVal<'ctx>) -> RuntimeVal<'ctx> {
+        match val {
+            RuntimeVal::Int(nb) => RuntimeVal::Float(
+                self.builder
+                    .build_signed_int_to_float(nb, self.context.f32_type(), "fcon")
+                    .unwrap(),
+            ),
+            RuntimeVal::Float(nb) => RuntimeVal::Int(
+                self.builder
+                    .build_float_to_signed_int(nb, self.context.i32_type(), "icon")
+                    .unwrap(),
+            ), // _ => todo!(),
+        }
+    }
     fn compile_prog(&mut self, body: Vec<Expr>, main: BasicBlock) -> Result<RuntimeVal<'ctx>, i8> {
         let mut result: Result<RuntimeVal<'ctx>, i8> = Err(-1);
 
@@ -89,21 +82,21 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         left: Box<Expr>,
         right: Box<Expr>,
     ) -> Result<RuntimeVal<'ctx>, i8> {
-        let lhs = self.compile(*left)?;
+        let mut lhs = self.compile(*left)?;
         let mut rhs = self.compile(*right)?;
 
         let etype = {
             match lhs {
                 RuntimeVal::Int(_) => {
                     if let RuntimeVal::Float(_) = rhs {
-                        rhs = con_num!(self, rhs);
+                        rhs = self.con_num(rhs);
                     }
 
                     "int"
                 }
                 RuntimeVal::Float(_) => {
                     if let RuntimeVal::Int(_) = rhs {
-                        rhs = con_num!(self, rhs);
+                        rhs = self.con_num(rhs);
                     }
 
                     "float"
@@ -118,8 +111,16 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                     let right: IntValue = extract!(rhs, RuntimeVal::Int, val);
 
                     let res = self.builder.build_int_add(left, right, "tmpadd").unwrap();
-                    println!("{:#?}", res);
                     Ok(RuntimeVal::Int(res))
+                }
+
+                "float" => {
+                    let left: FloatValue = extract!(lhs, RuntimeVal::Float, val);
+                    let right: FloatValue = extract!(rhs, RuntimeVal::Float, val);
+
+                    Ok(RuntimeVal::Float(
+                        self.builder.build_float_add(left, right, "tmpadd").unwrap(),
+                    ))
                 }
                 _ => todo!(),
             },
@@ -127,10 +128,19 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             "-" => match etype {
                 "int" => {
                     let left = extract!(lhs, RuntimeVal::Int, val);
-                    let right = extract!(lhs, RuntimeVal::Int, val);
+                    let right = extract!(rhs, RuntimeVal::Int, val);
 
                     Ok(RuntimeVal::Int(
-                        self.builder.build_int_sub(left, right, "tmpmul").unwrap(),
+                        self.builder.build_int_sub(left, right, "tmpsub").unwrap(),
+                    ))
+                }
+
+                "float" => {
+                    let left: FloatValue = extract!(lhs, RuntimeVal::Float, val);
+                    let right: FloatValue = extract!(rhs, RuntimeVal::Float, val);
+
+                    Ok(RuntimeVal::Float(
+                        self.builder.build_float_sub(left, right, "tmpsub").unwrap(),
                     ))
                 }
                 _ => todo!(),
@@ -139,40 +149,39 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             "*" => match etype {
                 "int" => {
                     let left = extract!(lhs, RuntimeVal::Int, val);
-                    let right = extract!(lhs, RuntimeVal::Int, val);
+                    let right = extract!(rhs, RuntimeVal::Int, val);
 
                     Ok(RuntimeVal::Int(
                         self.builder.build_int_mul(left, right, "tmpmul").unwrap(),
                     ))
                 }
-                _ => todo!(),
-            },
 
-            "/" => match etype {
-                "int" => {
-                    let left = extract!(lhs, RuntimeVal::Int, val);
-                    let right = extract!(lhs, RuntimeVal::Int, val);
+                "float" => {
+                    let left: FloatValue = extract!(lhs, RuntimeVal::Float, val);
+                    let right: FloatValue = extract!(rhs, RuntimeVal::Float, val);
 
                     Ok(RuntimeVal::Float(
-                        self.builder
-                            .build_float_div(
-                                extract!(
-                                    con_num!(self, RuntimeVal::Int(left)),
-                                    RuntimeVal::Float,
-                                    val
-                                ),
-                                extract!(
-                                    con_num!(self, RuntimeVal::Int(right)),
-                                    RuntimeVal::Float,
-                                    val
-                                ),
-                                "tmpdiv",
-                            )
-                            .unwrap(),
+                        self.builder.build_float_mul(left, right, "tmpmul").unwrap(),
                     ))
                 }
                 _ => todo!(),
             },
+
+            "/" => {
+                match etype {
+                    "int" => {
+                        lhs = self.con_num(lhs);
+                        rhs = self.con_num(rhs);
+                    }
+                    _ => todo!(),
+                }
+
+                let left = extract!(lhs, RuntimeVal::Float, val);
+                let right = extract!(rhs, RuntimeVal::Float, val);
+                Ok(RuntimeVal::Float(
+                    self.builder.build_float_div(left, right, "tmpdiv").unwrap(),
+                ))
+            }
             _ => todo!(),
         }
     }
