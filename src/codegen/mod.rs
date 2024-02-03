@@ -72,7 +72,10 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 self.context.f32_type().const_float(f as f64),
             )),
             Expr::BinaryExpr(op, left, right) => self.compile_binary_expr(op, left, right),
-            _ => todo!(),
+            e => {
+                println!("{:#?}", e);
+                todo!()
+            }
         }
     }
 

@@ -5,7 +5,7 @@ pub enum Literal {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Ident(String);
+pub struct Ident(pub String);
 
 pub fn get_operator_level(op: &str) -> u8 {
     match op {
