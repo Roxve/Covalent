@@ -7,8 +7,6 @@ macro_rules! extract {
     };
 }
 
-use inkwell::basic_block::BasicBlock;
-
 use inkwell::types::BasicType;
 use inkwell::values::*;
 
@@ -24,6 +22,13 @@ pub enum RuntimeVal<'ctx> {
     Float(FloatValue<'ctx>),
 }
 
+fn basic_to_runtime(val: BasicValueEnum) -> RuntimeVal {
+    match val {
+        BasicValueEnum::IntValue(i) => RuntimeVal::Int(i),
+        BasicValueEnum::FloatValue(f) => RuntimeVal::Float(f),
+        _ => todo!(),
+    }
+}
 fn mkint(val: IntValue) -> RuntimeVal {
     return RuntimeVal::Int(val);
 }
@@ -80,6 +85,12 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             Expr::Literal(Literal::Float(f)) => Ok(RuntimeVal::Float(
                 self.context.f32_type().const_float(f as f64),
             )),
+            Expr::Ident(Ident(ref name)) => match self.variables.get(name) {
+                Some(var) => Ok(basic_to_runtime(
+                    self.builder.build_load(*var, name).unwrap(),
+                )),
+                None => Err(-2),
+            },
             Expr::BinaryExpr(op, left, right) => self.compile_binary_expr(op, left, right),
             Expr::VarDeclare(id, value) => self.compile_var_declare(id, *value),
             e => {
@@ -97,7 +108,6 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
     ) -> Result<RuntimeVal<'ctx>, i8> {
         let mut lhs = self.compile(*left)?;
         let mut rhs = self.compile(*right)?;
-
         let etype = {
             match lhs {
                 RuntimeVal::Int(_) => {
@@ -114,7 +124,6 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
 
                     "float"
                 }
-                _ => todo!(),
             }
         };
         match op.as_str() {
@@ -229,13 +238,13 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 RuntimeVal::Int(i) => {
                     let alloca =
                         self.create_entry_block_alloca(var_name.as_str(), self.context.i32_type());
-                    self.builder.build_store(alloca, i);
+                    let _ = self.builder.build_store(alloca, i);
                     alloca
                 }
                 RuntimeVal::Float(f) => {
                     let alloca =
                         self.create_entry_block_alloca(var_name.as_str(), self.context.f32_type());
-                    self.builder.build_store(alloca, f);
+                    let _ = self.builder.build_store(alloca, f);
                     alloca
                 }
             }
