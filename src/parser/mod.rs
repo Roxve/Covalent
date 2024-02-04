@@ -140,7 +140,7 @@ impl Parser for Source<'_> {
         if let Expr::Ident(id) = left {
             self.except(Token::Operator("=".to_string()));
 
-            let expr = self.parse_expr();
+            let expr = self.parse_level(0);
             return Expr::VarDeclare(id, Box::new(expr));
         } else {
             self.err(

@@ -1,6 +1,9 @@
+use std::collections::HashMap;
+
 use inkwell::builder::Builder;
-use inkwell::context::{AsContextRef, Context, ContextRef};
+use inkwell::context::Context;
 use inkwell::module::Module;
+use inkwell::values::{FunctionValue, PointerValue};
 
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
@@ -29,14 +32,14 @@ pub struct ATErr {
 }
 
 impl ATErr {
-    pub fn new(kind: ErrKind, msg: String, line: u32, column: u32) -> Self {
-        ATErr {
-            kind,
-            msg,
-            line,
-            column,
-        }
-    }
+    // pub fn new(kind: ErrKind, msg: String, line: u32, column: u32) -> Self {
+    //     ATErr {
+    //         kind,
+    //         msg,
+    //         line,
+    //         column,
+    //     }
+    // }
 
     pub fn get_error(&self) -> String {
         format!(
@@ -66,6 +69,8 @@ pub struct Source<'ctx> {
     pub context: &'ctx Context,
     pub module: Module<'ctx>,
     pub builder: Builder<'ctx>,
+    pub fn_value: FunctionValue<'ctx>,
+    pub variables: HashMap<String, PointerValue<'ctx>>,
     pub errors: Vec<ATErr>,
     pub warnings: Vec<ATErr>, // program can continue error
 }
@@ -75,6 +80,12 @@ impl<'ctx> Source<'ctx> {
         // todo set codegen stuff as parameters
         let module = context.create_module("temp");
 
+        let main_fn_type = context.i32_type().fn_type(&[], false);
+        let main_fn = module.add_function("main", main_fn_type, None);
+        let builder = context.create_builder();
+        let main = context.append_basic_block(main_fn, "entry");
+
+        builder.position_at_end(main);
         let src = Source {
             code,
             line: 1,
@@ -82,8 +93,10 @@ impl<'ctx> Source<'ctx> {
             current_tok: None,
             next_tok: None,
             context: &context,
-            module: module.to_owned(),
-            builder: context.create_builder(),
+            module,
+            builder,
+            fn_value: main_fn,
+            variables: HashMap::new(),
             errors: Vec::new(),
             warnings: Vec::new(),
         };
