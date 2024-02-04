@@ -16,60 +16,45 @@ use crate::ast::Literal;
 
 use crate::source::*;
 
-#[derive(Debug)]
-pub enum RuntimeVal<'ctx> {
-    Int(IntValue<'ctx>),
-    Float(FloatValue<'ctx>),
-}
-
-fn basic_to_runtime(val: BasicValueEnum) -> RuntimeVal {
-    match val {
-        BasicValueEnum::IntValue(i) => RuntimeVal::Int(i),
-        BasicValueEnum::FloatValue(f) => RuntimeVal::Float(f),
-        _ => todo!(),
-    }
-}
-fn mkint(val: IntValue) -> RuntimeVal {
-    return RuntimeVal::Int(val);
-}
-
 pub trait Codegen<'ctx> {
-    fn con_num(&mut self, val: RuntimeVal<'ctx>) -> RuntimeVal<'ctx>;
-    fn compile_prog(&mut self, body: Vec<Expr>) -> Result<RuntimeVal<'ctx>, i8>;
-    fn compile(&mut self, expr: Expr) -> Result<RuntimeVal<'ctx>, i8>;
+    fn con_num(&mut self, val: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx>;
+    fn compile_prog(&mut self, body: Vec<Expr>) -> Result<BasicValueEnum<'ctx>, i8>;
+    fn compile(&mut self, expr: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
     fn compile_binary_expr(
         &mut self,
         op: String,
         left: Box<Expr>,
         right: Box<Expr>,
-    ) -> Result<RuntimeVal<'ctx>, i8>;
+    ) -> Result<BasicValueEnum<'ctx>, i8>;
 
     fn create_entry_block_alloca<T: BasicType<'ctx>>(
         &self,
         name: &str,
         ty: T,
     ) -> PointerValue<'ctx>;
-    fn compile_var_declare(&mut self, var: Ident, value: Expr) -> Result<RuntimeVal<'ctx>, i8>;
+    fn compile_var_assign(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
+    fn compile_var_declare(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
 }
 
 impl<'ctx> Codegen<'ctx> for Source<'ctx> {
-    fn con_num(&mut self, val: RuntimeVal<'ctx>) -> RuntimeVal<'ctx> {
+    fn con_num(&mut self, val: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
         match val {
-            RuntimeVal::Int(nb) => RuntimeVal::Float(
+            BasicValueEnum::IntValue(nb) => BasicValueEnum::FloatValue(
                 self.builder
                     .build_signed_int_to_float(nb, self.context.f32_type(), "fcon")
                     .unwrap(),
             ),
-            RuntimeVal::Float(nb) => RuntimeVal::Int(
+            BasicValueEnum::FloatValue(nb) => BasicValueEnum::IntValue(
                 self.builder
                     .build_float_to_signed_int(nb, self.context.i32_type(), "icon")
                     .unwrap(),
-            ), // _ => todo!(),
+            ),
+            _ => todo!(),
         }
     }
 
-    fn compile_prog(&mut self, body: Vec<Expr>) -> Result<RuntimeVal<'ctx>, i8> {
-        let mut result: Result<RuntimeVal<'ctx>, i8> = Err(-1);
+    fn compile_prog(&mut self, body: Vec<Expr>) -> Result<BasicValueEnum<'ctx>, i8> {
+        let mut result: Result<BasicValueEnum<'ctx>, i8> = Err(-1);
 
         for expr in body {
             result = self.compile(expr.clone());
@@ -77,22 +62,21 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         return result;
     }
 
-    fn compile(&mut self, expr: Expr) -> Result<RuntimeVal<'ctx>, i8> {
+    fn compile(&mut self, expr: Expr) -> Result<BasicValueEnum<'ctx>, i8> {
         match expr {
             Expr::Literal(Literal::Int(nb)) => {
-                Ok(mkint(self.context.i32_type().const_int(nb as u64, true)))
+                Ok(self.context.i32_type().const_int(nb as u64, true).into())
             }
-            Expr::Literal(Literal::Float(f)) => Ok(RuntimeVal::Float(
-                self.context.f32_type().const_float(f as f64),
-            )),
+            Expr::Literal(Literal::Float(f)) => {
+                Ok(self.context.f32_type().const_float(f as f64).into())
+            }
             Expr::Ident(Ident(ref name)) => match self.variables.get(name) {
-                Some(var) => Ok(basic_to_runtime(
-                    self.builder.build_load(*var, name).unwrap(),
-                )),
+                Some(var) => Ok(self.builder.build_load(*var, name).unwrap()),
                 None => Err(-2),
             },
             Expr::BinaryExpr(op, left, right) => self.compile_binary_expr(op, left, right),
             Expr::VarDeclare(id, value) => self.compile_var_declare(id, *value),
+            Expr::VarAssign(id, value) => self.compile_var_assign(id, *value),
             e => {
                 println!("{:#?}", e);
                 todo!()
@@ -105,86 +89,97 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         op: String,
         left: Box<Expr>,
         right: Box<Expr>,
-    ) -> Result<RuntimeVal<'ctx>, i8> {
+    ) -> Result<BasicValueEnum<'ctx>, i8> {
         let mut lhs = self.compile(*left)?;
         let mut rhs = self.compile(*right)?;
         let etype = {
             match lhs {
-                RuntimeVal::Int(_) => {
-                    if let RuntimeVal::Float(_) = rhs {
+                BasicValueEnum::IntValue(_) => {
+                    if let BasicValueEnum::FloatValue(_) = rhs {
                         rhs = self.con_num(rhs);
                     }
 
                     "int"
                 }
-                RuntimeVal::Float(_) => {
-                    if let RuntimeVal::Int(_) = rhs {
+                BasicValueEnum::FloatValue(_) => {
+                    if let BasicValueEnum::IntValue(_) = rhs {
                         rhs = self.con_num(rhs);
                     }
 
                     "float"
                 }
+                _ => todo!(),
             }
         };
         match op.as_str() {
             "+" => match etype {
                 "int" => {
-                    let left: IntValue = extract!(lhs, RuntimeVal::Int, val);
-                    let right: IntValue = extract!(rhs, RuntimeVal::Int, val);
+                    let left: IntValue = lhs.into_int_value();
+                    let right: IntValue = rhs.into_int_value();
 
                     let res = self.builder.build_int_add(left, right, "tmpadd").unwrap();
-                    Ok(RuntimeVal::Int(res))
+                    Ok(res.into())
                 }
 
                 "float" => {
-                    let left: FloatValue = extract!(lhs, RuntimeVal::Float, val);
-                    let right: FloatValue = extract!(rhs, RuntimeVal::Float, val);
+                    let left: FloatValue = lhs.into_float_value();
+                    let right: FloatValue = rhs.into_float_value();
 
-                    Ok(RuntimeVal::Float(
-                        self.builder.build_float_add(left, right, "tmpadd").unwrap(),
-                    ))
+                    Ok(self
+                        .builder
+                        .build_float_add(left, right, "tmpadd")
+                        .unwrap()
+                        .into())
                 }
                 _ => todo!(),
             },
 
             "-" => match etype {
                 "int" => {
-                    let left = extract!(lhs, RuntimeVal::Int, val);
-                    let right = extract!(rhs, RuntimeVal::Int, val);
+                    let left = lhs.into_int_value();
+                    let right = rhs.into_int_value();
 
-                    Ok(RuntimeVal::Int(
-                        self.builder.build_int_sub(left, right, "tmpsub").unwrap(),
-                    ))
+                    Ok(self
+                        .builder
+                        .build_int_sub(left, right, "tmpsub")
+                        .unwrap()
+                        .into())
                 }
 
                 "float" => {
-                    let left: FloatValue = extract!(lhs, RuntimeVal::Float, val);
-                    let right: FloatValue = extract!(rhs, RuntimeVal::Float, val);
+                    let left: FloatValue = lhs.into_float_value();
+                    let right: FloatValue = rhs.into_float_value();
 
-                    Ok(RuntimeVal::Float(
-                        self.builder.build_float_sub(left, right, "tmpsub").unwrap(),
-                    ))
+                    Ok(self
+                        .builder
+                        .build_float_sub(left, right, "tmpsub")
+                        .unwrap()
+                        .into())
                 }
                 _ => todo!(),
             },
 
             "*" => match etype {
                 "int" => {
-                    let left = extract!(lhs, RuntimeVal::Int, val);
-                    let right = extract!(rhs, RuntimeVal::Int, val);
+                    let left = lhs.into_int_value();
+                    let right = rhs.into_int_value();
 
-                    Ok(RuntimeVal::Int(
-                        self.builder.build_int_mul(left, right, "tmpmul").unwrap(),
-                    ))
+                    Ok(self
+                        .builder
+                        .build_int_mul(left, right, "tmpmul")
+                        .unwrap()
+                        .into())
                 }
 
                 "float" => {
-                    let left: FloatValue = extract!(lhs, RuntimeVal::Float, val);
-                    let right: FloatValue = extract!(rhs, RuntimeVal::Float, val);
+                    let left: FloatValue = lhs.into_float_value();
+                    let right: FloatValue = rhs.into_float_value();
 
-                    Ok(RuntimeVal::Float(
-                        self.builder.build_float_mul(left, right, "tmpmul").unwrap(),
-                    ))
+                    Ok(self
+                        .builder
+                        .build_float_mul(left, right, "tmpmul")
+                        .unwrap()
+                        .into())
                 }
                 _ => todo!(),
             },
@@ -198,11 +193,13 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                     _ => todo!(),
                 }
 
-                let left = extract!(lhs, RuntimeVal::Float, val);
-                let right = extract!(rhs, RuntimeVal::Float, val);
-                Ok(RuntimeVal::Float(
-                    self.builder.build_float_div(left, right, "tmpdiv").unwrap(),
-                ))
+                let left = lhs.into_float_value();
+                let right = rhs.into_float_value();
+                Ok(self
+                    .builder
+                    .build_float_div(left, right, "tmpdiv")
+                    .unwrap()
+                    .into())
             }
             _ => todo!(),
         }
@@ -225,7 +222,33 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         builder.build_alloca(ty, name).unwrap()
     }
 
-    fn compile_var_declare(&mut self, var: Ident, value: Expr) -> Result<RuntimeVal<'ctx>, i8> {
+    fn compile_var_assign(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8> {
+        let var_name = extract!(var, Ident, str);
+        if !self.variables.contains_key(&var_name) {
+            return Err(-2);
+        }
+
+        let val = self.compile(value.clone())?;
+
+        if self
+            .variables
+            .get(&var_name)
+            .unwrap()
+            .get_type()
+            .as_basic_type_enum()
+            != val.get_type()
+        {
+            self.variables.remove(&var_name);
+            return self.compile_var_declare(Ident(var_name), value);
+        }
+
+        let _ = self
+            .builder
+            .build_store(*self.variables.get(&var_name).unwrap(), val);
+        return Ok(val);
+    }
+
+    fn compile_var_declare(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8> {
         let var_name = extract!(var, Ident, str);
 
         if self.variables.contains_key(&var_name) {
@@ -233,22 +256,9 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         }
 
         let init = self.compile(value)?;
-        let alloca = {
-            match init {
-                RuntimeVal::Int(i) => {
-                    let alloca =
-                        self.create_entry_block_alloca(var_name.as_str(), self.context.i32_type());
-                    let _ = self.builder.build_store(alloca, i);
-                    alloca
-                }
-                RuntimeVal::Float(f) => {
-                    let alloca =
-                        self.create_entry_block_alloca(var_name.as_str(), self.context.f32_type());
-                    let _ = self.builder.build_store(alloca, f);
-                    alloca
-                }
-            }
-        };
+        let tt = init.get_type();
+        let alloca = self.create_entry_block_alloca(&var_name, tt);
+        let _ = self.builder.build_store(alloca, init);
 
         self.variables.insert(var_name, alloca);
 
