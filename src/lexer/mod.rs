@@ -4,7 +4,7 @@ pub fn is_num(c: char) -> bool {
     return "01234.56789".contains(c);
 }
 pub fn is_id(c: char) -> bool {
-    return !" \t\n+-*/<&|>=@#%:!?$".contains(c);
+    return !" \t\n+-*/<&|>=@#%:!?$,[{()}]".contains(c);
 }
 
 pub trait Tokenizer {
@@ -66,10 +66,42 @@ impl Tokenizer for Source<'_> {
                 }
                 return self.parse_num(res);
             }
+
             '+' | '-' | '*' | '/' | '^' | '=' => {
                 let op = self.eat();
                 return self.set(Token::Operator(op.to_string()));
             }
+
+            '(' => {
+                self.eat();
+                return self.set(Token::LeftParen);
+            }
+
+            ')' => {
+                self.eat();
+                return self.set(Token::RightParen);
+            }
+
+            '{' => {
+                self.eat();
+                return self.set(Token::LeftBracket);
+            }
+
+            '}' => {
+                self.eat();
+                return self.set(Token::RightBracket);
+            }
+
+            ':' => {
+                self.eat();
+                return self.set(Token::Colon);
+            }
+
+            ',' => {
+                self.eat();
+                return self.set(Token::Comma);
+            }
+
             c => {
                 if is_id(c) {
                     let mut res = String::from("");

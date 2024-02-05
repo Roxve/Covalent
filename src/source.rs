@@ -13,6 +13,12 @@ pub enum Token {
     Float(f32),
     Ident(String),
     Err(String), // error code and msg
+    LeftParen,
+    RightParen,
+    LeftBracket,
+    RightBracket,
+    Colon,
+    Comma,
     SetKw,
     EOF,
 }

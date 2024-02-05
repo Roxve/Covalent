@@ -22,6 +22,10 @@ pub enum Expr {
     Ident(Ident),
     VarDeclare(Ident, Box<Expr>),
     VarAssign(Ident, Box<Expr>),
-    FnDeclare(/* id */ Ident, /* body */ Vec<Expr>),
+    FnDeclare(
+        /* id */ Ident,
+        /* args */ Vec<Expr>,
+        /* body */ Vec<Expr>,
+    ),
     FnCall(/* id */ Ident, /* args */ Vec<Expr>),
 }

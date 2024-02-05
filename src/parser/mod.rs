@@ -11,6 +11,9 @@ pub trait Parser {
     fn parse_prog(&mut self) -> Vec<Expr>;
     fn parse_level(&mut self, level: u8) -> Expr;
     fn parse_declare(&mut self) -> Expr;
+    fn parse_declare_fn(&mut self, id: Ident) -> Expr;
+    fn parse_call_fn(&mut self) -> Expr;
+    fn parse_list(&mut self) -> Vec<Expr>;
     fn parse_expr(&mut self) -> Expr;
 }
 
@@ -60,7 +63,7 @@ impl Parser for Source<'_> {
     }
 
     fn parse_level(&mut self, level: u8) -> Expr {
-        let mut left: Expr = self.parse_expr();
+        let mut left: Expr = self.parse_call_fn();
         let mut right: Expr;
 
         loop {
@@ -98,6 +101,31 @@ impl Parser for Source<'_> {
         }
 
         return left;
+    }
+
+    fn parse_call_fn(&mut self) -> Expr {
+        let call = self.parse_expr();
+
+        if let Expr::Ident(id) = &call {
+            if self.current() == Token::Colon {
+                self.tokenize();
+                let args = self.parse_list();
+                return Expr::FnCall(id.to_owned(), args);
+            }
+        }
+        return call;
+    }
+
+    fn parse_list(&mut self) -> Vec<Expr> {
+        let mut args: Vec<Expr> = Vec::new();
+
+        args.push(self.parse_level(0));
+        while self.current() == Token::Comma {
+            self.tokenize();
+            args.push(self.parse_level(0));
+        }
+
+        return args;
     }
 
     fn parse_expr(&mut self) -> Expr {
@@ -138,10 +166,14 @@ impl Parser for Source<'_> {
         let left = self.parse_expr();
 
         if let Expr::Ident(id) = left {
-            self.except(Token::Operator("=".to_string()));
+            if Token::Operator("=".to_string()) == self.current() {
+                self.tokenize();
 
-            let expr = self.parse_level(0);
-            return Expr::VarDeclare(id, Box::new(expr));
+                let expr = self.parse_level(0);
+                return Expr::VarDeclare(id, Box::new(expr));
+            }
+
+            return self.parse_declare_fn(id);
         } else {
             self.err(
                 ErrKind::UnexceptedTokenE,
@@ -153,5 +185,34 @@ impl Parser for Source<'_> {
 
             return left;
         }
+    }
+    fn parse_declare_fn(&mut self, id: Ident) -> Expr {
+        let mut body: Vec<Expr> = Vec::new();
+        let mut args: Vec<Expr> = Vec::new();
+
+        if self.current() == Token::Colon {
+            self.tokenize();
+            /* add fn to check if arg not id */
+            args = self.parse_list();
+        } else {
+            let arg = self.parse_expr();
+
+            if let Expr::Ident(id) = arg {
+                args.push(Expr::Ident(id));
+            } else {
+                self.err(
+                    ErrKind::UnexceptedTokenE,
+                    "excepted id for argument".to_string(),
+                );
+            }
+        }
+
+        self.except(Token::LeftBracket);
+        while self.current() != Token::RightBracket && self.current() != Token::EOF {
+            body.push(self.parse_level(0));
+        }
+        self.except(Token::RightBracket);
+
+        return Expr::FnDeclare(id, args, body);
     }
 }
