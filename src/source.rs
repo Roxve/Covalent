@@ -12,6 +12,7 @@ pub enum Token {
     Int(i32),
     Float(f32),
     Ident(String),
+    Tag(String),
     Err(String), // error code and msg
     LeftParen,
     RightParen,

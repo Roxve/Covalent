@@ -111,6 +111,8 @@ impl Tokenizer for Source<'_> {
 
                     match res.as_str() {
                         "set" => self.set(Token::SetKw),
+                        "int" => self.set(Token::Tag("int".to_string())),
+                        "float" => self.set(Token::Tag("float".to_string())),
                         _ => self.set(Token::Ident(res)),
                     }
                 } else {

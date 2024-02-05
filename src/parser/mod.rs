@@ -146,6 +146,14 @@ impl Parser for Source<'_> {
                 self.tokenize();
                 Expr::Ident(Ident(id))
             }
+            Token::Tag(tag) => {
+                self.tokenize();
+                if let Token::Ident(id) = self.current() {
+                    self.tokenize();
+                    return Expr::TaggedIdent(Tag(tag.to_string()), Ident(id));
+                }
+                todo!()
+            }
             Token::SetKw => self.parse_declare(),
             _ => {
                 self.err(

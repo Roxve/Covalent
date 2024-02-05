@@ -39,6 +39,15 @@ pub trait Codegen<'ctx> {
     ) -> PointerValue<'ctx>;
     fn compile_var_assign(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
     fn compile_var_declare(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
+
+    // fn compile_fn_declare(
+    //     &mut self,
+    //     name: Ident,
+    //     args: Vec<Expr>,
+    //     body: Vec<Expr>,
+    // ) -> Result<BasicValueEnum<'ctx>, i8>;
+    // fn compile_fn_call(&mut self, name: Ident, args: Vec<Expr>)
+    //     -> Result<BasicValueEnum<'ctx>, i8>;
 }
 
 impl<'ctx> Codegen<'ctx> for Source<'ctx> {
@@ -85,7 +94,14 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                         .as_basic_value_enum(),
                 );
             }
-            _ => todo!(), // err
+            _ => {
+                self.err(
+                    ErrKind::CannotConvertRight,
+                    "cannot convert right to left (usually in binary expressions)".to_string(),
+                );
+
+                None
+            } // err
         }
     }
 
