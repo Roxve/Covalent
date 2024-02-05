@@ -1,5 +1,3 @@
-# eebnf is an extended ebnf (made by me) which is extend bnf for writing lang syntax
-
 <digit> = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 
 <int> = <digit> { <digit> };
@@ -12,17 +10,15 @@
 <type> = <str> | <char> | <num> | <int> | <float>;
 
 <operator> = "+" | "-" | "*" | "^" | "/" | "%" | "<" | ">" | "==" | "&&" | "||";
-<listed_or operator> = "|=" | "|<" | "|>";
-<unary operator> = "+" | "-";
 
-# listed_or cannot be in the top level can only be used with '=='
-<listed_or expression> = <type> <listed_or> (<type> | <listed_or expression>)
+<unary operator> = "+" | "-";
 
 <binary expression> = <type> <operator> <type> | ([<listed_or expression>] if <operator> is "==");
 
 <unary expression> = <unary operator> <type>;
 
 <equal> = "=";
-<vars> = "set" [<type>] <str> <equal> <type> // set vartype varname = varvalue
-<methods> "set" [<type>] <str> "(" { [<type>] <str> } ")" {" {<expression>} "} // set methodtype methodname(args) { methodbody }
+<var_declare> = "set" [<type>] <str> <equal> <type> // set vartype varname = varvalue
 
+<fn_declare> = "set" <str> (<arg> | ":" { <arg> "," | arg }) "=>" { expression } 
+<fn_call> = <str> (":" {<arg> ","}) | (<arg>)

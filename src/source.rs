@@ -21,6 +21,9 @@ pub enum Token {
 pub enum ErrKind {
     UnknownCharE = 0,
     UnexceptedTokenE = 1,
+    UndeclaredVar = 2,
+    VarAlreadyDeclared = 3,
+    CannotConvertRight = 4, // in binary expressions right is always coverted to left
 }
 
 #[derive(Debug, Clone)]
@@ -32,15 +35,6 @@ pub struct ATErr {
 }
 
 impl ATErr {
-    // pub fn new(kind: ErrKind, msg: String, line: u32, column: u32) -> Self {
-    //     ATErr {
-    //         kind,
-    //         msg,
-    //         line,
-    //         column,
-    //     }
-    // }
-
     pub fn get_error(&self) -> String {
         format!(
             "code:AT00{}\n{}\nat line:{}, column:{}",

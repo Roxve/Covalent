@@ -2,12 +2,12 @@ macro_rules! extract {
     ($e: expr, $variant:path, $fields:tt) => {
         match $e {
             $variant($fields) => $fields,
-            variant => panic!("unexcepted variant: {:?}", variant),
         }
     };
 }
 
 use inkwell::types::BasicType;
+use inkwell::types::BasicTypeEnum;
 use inkwell::values::*;
 
 use crate::ast::Expr;
@@ -17,7 +17,12 @@ use crate::ast::Literal;
 use crate::source::*;
 
 pub trait Codegen<'ctx> {
-    fn con_num(&mut self, val: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx>;
+    fn conv_into(
+        &mut self,
+        from: BasicValueEnum<'ctx>,
+        into: BasicTypeEnum<'ctx>,
+    ) -> Option<BasicValueEnum<'ctx>>;
+
     fn compile_prog(&mut self, body: Vec<Expr>) -> Result<BasicValueEnum<'ctx>, i8>;
     fn compile(&mut self, expr: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
     fn compile_binary_expr(
@@ -37,19 +42,50 @@ pub trait Codegen<'ctx> {
 }
 
 impl<'ctx> Codegen<'ctx> for Source<'ctx> {
-    fn con_num(&mut self, val: BasicValueEnum<'ctx>) -> BasicValueEnum<'ctx> {
-        match val {
-            BasicValueEnum::IntValue(nb) => BasicValueEnum::FloatValue(
-                self.builder
-                    .build_signed_int_to_float(nb, self.context.f32_type(), "fcon")
-                    .unwrap(),
-            ),
-            BasicValueEnum::FloatValue(nb) => BasicValueEnum::IntValue(
-                self.builder
-                    .build_float_to_signed_int(nb, self.context.i32_type(), "icon")
-                    .unwrap(),
-            ),
-            _ => todo!(),
+    fn conv_into(
+        &mut self,
+        from: BasicValueEnum<'ctx>,
+        into: BasicTypeEnum<'ctx>,
+    ) -> Option<BasicValueEnum<'ctx>> {
+        if from.get_type() == into {
+            return Some(from);
+        }
+
+        match from.get_type() {
+            BasicTypeEnum::FloatType(_) => {
+                if !into.is_int_type() {
+                    // todo err here
+                    return None;
+                }
+                return Some(
+                    self.builder
+                        .build_float_to_signed_int(
+                            from.into_float_value(),
+                            into.into_int_type(),
+                            "fcon",
+                        )
+                        .unwrap()
+                        .as_basic_value_enum(),
+                );
+            }
+
+            BasicTypeEnum::IntType(_) => {
+                if !into.is_float_type() {
+                    return None;
+                }
+
+                return Some(
+                    self.builder
+                        .build_signed_int_to_float(
+                            from.into_int_value(),
+                            into.into_float_type(),
+                            "icon",
+                        )
+                        .unwrap()
+                        .as_basic_value_enum(),
+                );
+            }
+            _ => todo!(), // err
         }
     }
 
@@ -78,7 +114,8 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             Expr::VarDeclare(id, value) => self.compile_var_declare(id, *value),
             Expr::VarAssign(id, value) => self.compile_var_assign(id, *value),
             e => {
-                println!("{:#?}", e);
+                println!("if you are a normal user please report this!, if you are a dev fix it!");
+                dbg!(e);
                 todo!()
             }
         }
@@ -92,22 +129,14 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
     ) -> Result<BasicValueEnum<'ctx>, i8> {
         let mut lhs = self.compile(*left)?;
         let mut rhs = self.compile(*right)?;
+
+        // we compile everything then terminate to make sure every error is encoutared
+        rhs = self.conv_into(rhs, lhs.get_type()).unwrap_or(lhs);
+
         let etype = {
             match lhs {
-                BasicValueEnum::IntValue(_) => {
-                    if let BasicValueEnum::FloatValue(_) = rhs {
-                        rhs = self.con_num(rhs);
-                    }
-
-                    "int"
-                }
-                BasicValueEnum::FloatValue(_) => {
-                    if let BasicValueEnum::IntValue(_) = rhs {
-                        rhs = self.con_num(rhs);
-                    }
-
-                    "float"
-                }
+                BasicValueEnum::IntValue(_) => "int",
+                BasicValueEnum::FloatValue(_) => "float",
                 _ => todo!(),
             }
         };
@@ -187,8 +216,12 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             "/" => {
                 match etype {
                     "int" => {
-                        lhs = self.con_num(lhs);
-                        rhs = self.con_num(rhs);
+                        lhs = self
+                            .conv_into(lhs, self.context.f32_type().as_basic_type_enum())
+                            .unwrap();
+                        rhs = self
+                            .conv_into(rhs, self.context.f32_type().as_basic_type_enum())
+                            .unwrap();
                     }
                     _ => todo!(),
                 }
@@ -225,7 +258,11 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
     fn compile_var_assign(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8> {
         let var_name = extract!(var, Ident, str);
         if !self.variables.contains_key(&var_name) {
-            return Err(-2);
+            self.err(
+                ErrKind::UndeclaredVar,
+                format!("cannot assign to {} because its not declared", var_name),
+            );
+            return Err(ErrKind::UndeclaredVar as i8);
         }
 
         let val = self.compile(value.clone())?;
@@ -252,7 +289,8 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         let var_name = extract!(var, Ident, str);
 
         if self.variables.contains_key(&var_name) {
-            return Err(-2);
+            self.err(ErrKind::VarAlreadyDeclared, format!("var {} already declared, covalent is dynamic so you can assign the var to a new type using the '=' operator.", var_name));
+            return Err(ErrKind::VarAlreadyDeclared as i8);
         }
 
         let init = self.compile(value)?;
