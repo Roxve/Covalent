@@ -131,6 +131,8 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             Expr::BinaryExpr(op, left, right) => self.compile_binary_expr(op, left, right),
             Expr::VarDeclare(id, value) => self.compile_var_declare(id, *value),
             Expr::VarAssign(id, value) => self.compile_var_assign(id, *value),
+            Expr::FnDeclare(id, args, body) => self.compile_fn_declare(id, args, body),
+            Expr::FnCall(id, args) => self.compile_fn_call(id, args),
             e => {
                 println!("if you are a normal user please report this!, if you are a dev fix it!");
                 dbg!(e);
@@ -330,7 +332,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         let mut types: Vec<BasicMetadataTypeEnum> = vec![];
         let mut names: Vec<String> = Vec::new();
 
-        for arg in args {
+        for arg in args.clone() {
             if let Expr::TaggedIdent(Tag(tag), Ident(id)) = arg {
                 match tag.as_str() {
                     "int" => types.push(self.context.i32_type().into()),
@@ -338,6 +340,10 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                     _ => todo!(),
                 }
                 names.push(id);
+            } else {
+                // invaild argument
+                self.err(ErrKind::UnexceptedTokenE, "invaild argument functions must have typed args! (this is temp), arg should look like (type arg) ex: int a".to_string());
+                return Err(-2);
             }
         }
 
@@ -349,8 +355,6 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             self.fn_value = fn_val;
             todo!()
         } else {
-            let mut results: BasicValueEnum;
-
             // for expr in body {
             //     results = self.compile(expr)?;
             // }
@@ -360,35 +364,89 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 self.module
                     .add_function(extract!(name, Ident, str).as_str(), fn_type, None);
 
-            for (i, arg) in fn_value.get_param_iter().enumerate() {
-                match arg.get_type() {
-                    BasicTypeEnum::IntType(_) => arg.into_int_value().set_name(names[i].as_str()),
-                    BasicTypeEnum::FloatType(_) => {
-                        arg.into_float_value().set_name(names[i].as_str())
-                    }
-                    _ => todo!(),
-                }
-            }
+            // func only vars
+
+            let old_vars = self.variables.clone();
+
+            self.variables.clear();
+            self.variables.reserve(args.len());
 
             let entry = self.context.append_basic_block(fn_value, "entry");
             self.builder.position_at_end(entry);
+
             let prev = self.fn_value;
 
             self.fn_value = fn_value;
 
-            let mut res: BasicValueEnum;
-            for expr in body {
-                res = self.compile(expr)?;
+            for (i, arg) in fn_value.get_param_iter().enumerate() {
+                let arg_name = names[i].as_str();
+
+                match arg.get_type() {
+                    BasicTypeEnum::IntType(_) => arg.into_int_value().set_name(arg_name),
+                    BasicTypeEnum::FloatType(_) => arg.into_float_value().set_name(arg_name),
+                    _ => todo!(),
+                }
+
+                let alloca = self.create_entry_block_alloca(arg_name, arg.get_type());
+
+                self.builder.build_store(alloca, arg).unwrap();
+                self.variables.insert(arg_name.to_string(), alloca);
             }
 
+            let mut res: Option<BasicValueEnum> = None;
+            for expr in body {
+                let e = self.compile(expr)?;
+                res = Some(e);
+            }
+
+            let ret = res.unwrap().into_int_value();
+
+            let _ = self.builder.build_return(Some(&ret));
+
+            self.fn_value.verify(false);
+
+            self.variables.clear();
+            self.variables = old_vars;
             let prev_entry = prev.get_first_basic_block().unwrap();
             self.fn_value = prev;
 
             self.builder.position_at_end(prev_entry);
 
-            return Ok(res);
+            return Ok(res.unwrap().as_basic_value_enum());
         }
+    }
 
-        todo!()
+    fn compile_fn_call(
+        &mut self,
+        name: Ident,
+        args: Vec<Expr>,
+    ) -> Result<BasicValueEnum<'ctx>, i8> {
+        let fn_name = extract!(&name, Ident, str).as_str();
+        match self.module.get_function(&fn_name) {
+            Some(f) => {
+                let mut compiled_args = Vec::with_capacity(args.len());
+
+                for arg in args {
+                    compiled_args.push(self.compile(arg)?);
+                }
+
+                let argsv: Vec<BasicMetadataValueEnum> = compiled_args
+                    .iter()
+                    .by_ref()
+                    .map(|&val| val.into())
+                    .collect();
+                match self
+                    .builder
+                    .build_call(f, argsv.as_slice(), "call")
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                {
+                    Some(val) => Ok(val),
+                    _ => todo!(),
+                }
+            }
+            None => todo!(),
+        }
     }
 }
