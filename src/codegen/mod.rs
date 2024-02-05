@@ -6,6 +6,7 @@ macro_rules! extract {
     };
 }
 
+use inkwell::types::BasicMetadataTypeEnum;
 use inkwell::types::BasicType;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::*;
@@ -13,6 +14,7 @@ use inkwell::values::*;
 use crate::ast::Expr;
 use crate::ast::Ident;
 use crate::ast::Literal;
+use crate::ast::Tag;
 
 use crate::source::*;
 
@@ -40,14 +42,14 @@ pub trait Codegen<'ctx> {
     fn compile_var_assign(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
     fn compile_var_declare(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
 
-    // fn compile_fn_declare(
-    //     &mut self,
-    //     name: Ident,
-    //     args: Vec<Expr>,
-    //     body: Vec<Expr>,
-    // ) -> Result<BasicValueEnum<'ctx>, i8>;
-    // fn compile_fn_call(&mut self, name: Ident, args: Vec<Expr>)
-    //     -> Result<BasicValueEnum<'ctx>, i8>;
+    fn compile_fn_declare(
+        &mut self,
+        name: Ident,
+        args: Vec<Expr>,
+        body: Vec<Expr>,
+    ) -> Result<BasicValueEnum<'ctx>, i8>;
+    fn compile_fn_call(&mut self, name: Ident, args: Vec<Expr>)
+        -> Result<BasicValueEnum<'ctx>, i8>;
 }
 
 impl<'ctx> Codegen<'ctx> for Source<'ctx> {
@@ -317,5 +319,76 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         self.variables.insert(var_name, alloca);
 
         return Ok(init);
+    }
+
+    fn compile_fn_declare(
+        &mut self,
+        name: Ident,
+        args: Vec<Expr>,
+        body: Vec<Expr>,
+    ) -> Result<BasicValueEnum<'ctx>, i8> {
+        let mut types: Vec<BasicMetadataTypeEnum> = vec![];
+        let mut names: Vec<String> = Vec::new();
+
+        for arg in args {
+            if let Expr::TaggedIdent(Tag(tag), Ident(id)) = arg {
+                match tag.as_str() {
+                    "int" => types.push(self.context.i32_type().into()),
+                    "float" => types.push(self.context.f32_type().into()),
+                    _ => todo!(),
+                }
+                names.push(id);
+            }
+        }
+
+        if body.len() == 0 {
+            let fn_type = self.context.void_type().fn_type(&[], false);
+            let fn_val =
+                self.module
+                    .add_function(extract!(name, Ident, str).as_str(), fn_type, None);
+            self.fn_value = fn_val;
+            todo!()
+        } else {
+            let mut results: BasicValueEnum;
+
+            // for expr in body {
+            //     results = self.compile(expr)?;
+            // }
+
+            let fn_type = self.context.i32_type().fn_type(types.as_slice(), false);
+            let fn_value =
+                self.module
+                    .add_function(extract!(name, Ident, str).as_str(), fn_type, None);
+
+            for (i, arg) in fn_value.get_param_iter().enumerate() {
+                match arg.get_type() {
+                    BasicTypeEnum::IntType(_) => arg.into_int_value().set_name(names[i].as_str()),
+                    BasicTypeEnum::FloatType(_) => {
+                        arg.into_float_value().set_name(names[i].as_str())
+                    }
+                    _ => todo!(),
+                }
+            }
+
+            let entry = self.context.append_basic_block(fn_value, "entry");
+            self.builder.position_at_end(entry);
+            let prev = self.fn_value;
+
+            self.fn_value = fn_value;
+
+            let mut res: BasicValueEnum;
+            for expr in body {
+                res = self.compile(expr)?;
+            }
+
+            let prev_entry = prev.get_first_basic_block().unwrap();
+            self.fn_value = prev;
+
+            self.builder.position_at_end(prev_entry);
+
+            return Ok(res);
+        }
+
+        todo!()
     }
 }
