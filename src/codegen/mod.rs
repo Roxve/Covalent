@@ -360,9 +360,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             // }
 
             let fn_type = self.context.i32_type().fn_type(types.as_slice(), false);
-            let fn_value =
-                self.module
-                    .add_function(extract!(name, Ident, str).as_str(), fn_type, None);
+            let fn_value = self.module.add_function("temp", fn_type, None);
 
             // func only vars
 
@@ -394,19 +392,74 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             }
 
             let mut res: Option<BasicValueEnum> = None;
-            for expr in body {
+            for expr in body.clone() {
                 let e = self.compile(expr)?;
                 res = Some(e);
             }
 
-            let ret = res.unwrap().into_int_value();
+            // convert fn type to res (regenerate function)
+            let full_fn_type = res.unwrap().get_type().fn_type(types.as_slice(), false);
+            let full_fn =
+                self.module
+                    .add_function(extract!(name, Ident, str).as_str(), full_fn_type, None);
 
-            let _ = self.builder.build_return(Some(&ret));
+            let full_entry = self.context.append_basic_block(full_fn, "entry");
+            self.builder.position_at_end(full_entry);
 
-            self.fn_value.verify(false);
+            self.variables.clear();
+
+            self.fn_value = full_fn;
+            for inst in entry.get_instructions() {
+                // let new_inst = inst.clone();
+
+                // let name = {
+                //     match new_inst.get_name() {
+                //         Some(s) => Some(s.to_str().unwrap()),
+                //         None => None,
+                //     }
+                // };
+                // self.builder.insert_instruction(&new_inst, name);
+                inst.remove_from_basic_block();
+            }
+            unsafe {
+                fn_value.delete();
+            }
+
+            for (i, arg) in full_fn.get_param_iter().enumerate() {
+                let arg_name = names[i].as_str();
+
+                match arg.get_type() {
+                    BasicTypeEnum::IntType(_) => arg.into_int_value().set_name(arg_name),
+                    BasicTypeEnum::FloatType(_) => arg.into_float_value().set_name(arg_name),
+                    _ => todo!(),
+                }
+
+                let alloca = self.create_entry_block_alloca(arg_name, arg.get_type());
+
+                self.builder.build_store(alloca, arg).unwrap();
+                self.variables.insert(arg_name.to_string(), alloca);
+            }
+
+            for expr in body.clone() {
+                let e = self.compile(expr)?;
+                res = Some(e);
+            }
+
+            let _ = match res.unwrap().get_type().as_basic_type_enum() {
+                BasicTypeEnum::IntType(_) => self
+                    .builder
+                    .build_return(Some(&res.unwrap().into_int_value())),
+                BasicTypeEnum::FloatType(_) => self
+                    .builder
+                    .build_return(Some(&res.unwrap().into_float_value())),
+                _ => todo!(),
+            };
+
+            self.fn_value.verify(true);
 
             self.variables.clear();
             self.variables = old_vars;
+
             let prev_entry = prev.get_first_basic_block().unwrap();
             self.fn_value = prev;
 

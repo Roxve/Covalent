@@ -34,6 +34,8 @@ fn main() {
         let _ = src
             .builder
             .build_return(Some(&src.context.i32_type().const_int(0, true)));
+
+        src.module.print_to_stderr();
         src.module.verify().expect("invaild");
 
         src.module.print_to_stderr();
