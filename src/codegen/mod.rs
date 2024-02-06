@@ -47,7 +47,7 @@ pub trait Codegen<'ctx> {
         args_names: Vec<String>,
         types: Vec<BasicMetadataTypeEnum<'ctx>>,
         body: Vec<Expr>,
-    ) -> Result<BasicValueEnum<'ctx>, i8>;
+    );
     fn compile_fn_call(&mut self, name: Ident, args: Vec<Expr>)
         -> Result<BasicValueEnum<'ctx>, i8>;
 }
@@ -329,13 +329,11 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         arg_names: Vec<String>,
         args: Vec<BasicMetadataTypeEnum<'ctx>>,
         body: Vec<Expr>,
-    ) -> Result<BasicValueEnum<'ctx>, i8> {
+    ) {
         if body.len() == 0 {
             let fn_type = self.context.void_type().fn_type(args.as_slice(), false);
             let fn_val = self.module.add_function(name.as_str(), fn_type, None);
             fn_val.verify(true);
-
-            return Ok(self.context.i8_type().const_zero().as_basic_value_enum());
         } else {
             let fn_type = self.context.i32_type().fn_type(args.as_slice(), false);
             let fn_value = self.module.add_function("temp", fn_type, None);
@@ -371,8 +369,11 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
 
             let mut res: Option<BasicValueEnum> = None;
             for expr in body.clone() {
-                let e = self.compile(expr)?;
-                res = Some(e);
+                let e = self.compile(expr);
+                if let Err(_) = e {
+                    break;
+                }
+                res = Some(e.unwrap());
             }
 
             // convert fn type to res (regenerate function)
@@ -409,8 +410,11 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             }
 
             for expr in body.clone() {
-                let e = self.compile(expr)?;
-                res = Some(e);
+                let e = self.compile(expr);
+                if let Err(_) = e {
+                    break;
+                }
+                res = Some(e.unwrap());
             }
 
             let _ = match res.unwrap().get_type().as_basic_type_enum() {
@@ -432,8 +436,6 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             self.fn_value = prev;
 
             self.builder.position_at_end(prev_entry);
-
-            return Ok(res.unwrap().as_basic_value_enum());
         }
     }
 
@@ -462,15 +464,12 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         let fun = self.module.get_function(&fn_typed_name);
         match fun {
             Some(f) => {
-                if f.count_params() != args.len() as u32 {
-                    return Err(ErrKind::UnexceptedArgs as i8);
-                }
-
                 let argsv: Vec<BasicMetadataValueEnum> = compiled_args
                     .iter()
                     .by_ref()
                     .map(|&val| val.into())
                     .collect();
+
                 match self
                     .builder
                     .build_call(f, argsv.as_slice(), "call")
@@ -484,16 +483,31 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             }
             None => match self.get_function(fn_name.to_string()) {
                 Some(f) => {
+                    if f.args.len() != args.len() {
+                        self.err(
+                            ErrKind::UnexceptedArgs,
+                            format!(
+                                "unexcepted arg count for function {}\nexcepted {} args got {}",
+                                f.get_name(),
+                                f.args.len(),
+                                args.len()
+                            ),
+                        );
+                        return Err(ErrKind::UnexceptedArgs as i8);
+                    }
+
                     let types: Vec<BasicMetadataTypeEnum> = compiled_args
                         .iter()
                         .map(|arg| arg.get_type().into())
                         .collect();
+
                     self.compile_fn(
                         fn_typed_name,
                         f.args.iter().map(|val| val.0.clone()).collect(),
                         types,
                         f.body,
-                    )?;
+                    );
+
                     return self.compile_fn_call(name, args);
                 }
                 None => todo!(),
