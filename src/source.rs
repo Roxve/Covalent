@@ -5,6 +5,9 @@ use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::values::{FunctionValue, PointerValue};
 
+use crate::ast::Expr;
+use crate::ast::Ident;
+
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
 pub enum Token {
@@ -59,8 +62,20 @@ impl ATErr {
     }
 }
 
-// #[derive(Debug, Clone)]
-//todo remove VM after replacing with LLVM
+#[derive(Debug, Clone)]
+
+pub struct function {
+    pub name: Ident,
+    pub args: Vec<Ident>,
+    pub body: Vec<Expr>,
+}
+
+impl function {
+    pub fn get_name(&self) -> String {
+        self.name.0.clone()
+    }
+}
+
 #[derive(Debug)]
 pub struct Source<'ctx> {
     pub code: String,
@@ -72,6 +87,7 @@ pub struct Source<'ctx> {
     pub module: Module<'ctx>,
     pub builder: Builder<'ctx>,
     pub fn_value: FunctionValue<'ctx>,
+    pub functions: Vec<function>,
     pub variables: HashMap<String, PointerValue<'ctx>>,
     pub errors: Vec<ATErr>,
     pub warnings: Vec<ATErr>, // program can continue error
@@ -97,6 +113,7 @@ impl<'ctx> Source<'ctx> {
             context: &context,
             module,
             builder,
+            functions: vec![],
             fn_value: main_fn,
             variables: HashMap::new(),
             errors: Vec::new(),
@@ -115,5 +132,18 @@ impl<'ctx> Source<'ctx> {
         };
         self.errors.push(err.clone());
         err.out_error();
+    }
+
+    pub fn get_function(&self, name: String) -> Option<function> {
+        for fun in self.functions.clone().into_iter() {
+            if fun.get_name() == name {
+                return Some(fun);
+            }
+        }
+        return None;
+    }
+
+    pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Expr>) {
+        self.functions.push(function { name, args, body });
     }
 }

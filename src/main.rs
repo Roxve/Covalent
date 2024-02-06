@@ -25,6 +25,7 @@ fn run(input: String) {
 
     let res = src.compile_prog(prog);
 
+    dbg!(src.functions.clone());
     let _ = src
         .builder
         .build_return(Some(&src.context.i32_type().const_int(0, true)));

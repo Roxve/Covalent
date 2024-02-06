@@ -14,7 +14,6 @@ use inkwell::values::*;
 use crate::ast::Expr;
 use crate::ast::Ident;
 use crate::ast::Literal;
-use crate::ast::Tag;
 
 use crate::source::*;
 
@@ -42,10 +41,11 @@ pub trait Codegen<'ctx> {
     fn compile_var_assign(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
     fn compile_var_declare(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
 
-    fn compile_fn_declare(
+    fn compile_fn(
         &mut self,
-        name: Ident,
-        args: Vec<Expr>,
+        name: String,
+        args_names: Vec<String>,
+        types: Vec<BasicMetadataTypeEnum<'ctx>>,
         body: Vec<Expr>,
     ) -> Result<BasicValueEnum<'ctx>, i8>;
     fn compile_fn_call(&mut self, name: Ident, args: Vec<Expr>)
@@ -131,7 +131,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             Expr::BinaryExpr(op, left, right) => self.compile_binary_expr(op, left, right),
             Expr::VarDeclare(id, value) => self.compile_var_declare(id, *value),
             Expr::VarAssign(id, value) => self.compile_var_assign(id, *value),
-            Expr::FnDeclare(id, args, body) => self.compile_fn_declare(id, args, body),
+
             Expr::FnCall(id, args) => self.compile_fn_call(id, args),
             e => {
                 println!("if you are a normal user please report this!, if you are a dev fix it!");
@@ -323,40 +323,21 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         return Ok(init);
     }
 
-    fn compile_fn_declare(
+    fn compile_fn(
         &mut self,
-        name: Ident,
-        args: Vec<Expr>,
+        name: String,
+        arg_names: Vec<String>,
+        args: Vec<BasicMetadataTypeEnum<'ctx>>,
         body: Vec<Expr>,
     ) -> Result<BasicValueEnum<'ctx>, i8> {
-        let mut types: Vec<BasicMetadataTypeEnum> = vec![];
-        let mut names: Vec<String> = Vec::new();
-
-        for arg in args.clone() {
-            if let Expr::TaggedIdent(Tag(tag), Ident(id)) = arg {
-                match tag.as_str() {
-                    "int" => types.push(self.context.i32_type().into()),
-                    "float" => types.push(self.context.f32_type().into()),
-                    _ => todo!(),
-                }
-                names.push(id);
-            } else {
-                // invaild argument
-                self.err(ErrKind::UnexceptedTokenE, "invaild argument functions must have typed args! (this is temp), arg should look like (type arg) ex: int a".to_string());
-                return Err(-2);
-            }
-        }
-
         if body.len() == 0 {
-            let fn_type = self.context.void_type().fn_type(types.as_slice(), false);
-            let fn_val =
-                self.module
-                    .add_function(extract!(name, Ident, str).as_str(), fn_type, None);
+            let fn_type = self.context.void_type().fn_type(args.as_slice(), false);
+            let fn_val = self.module.add_function(name.as_str(), fn_type, None);
             fn_val.verify(true);
 
             return Ok(self.context.i8_type().const_zero().as_basic_value_enum());
         } else {
-            let fn_type = self.context.i32_type().fn_type(types.as_slice(), false);
+            let fn_type = self.context.i32_type().fn_type(args.as_slice(), false);
             let fn_value = self.module.add_function("temp", fn_type, None);
 
             // func only vars
@@ -374,7 +355,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             self.fn_value = fn_value;
 
             for (i, arg) in fn_value.get_param_iter().enumerate() {
-                let arg_name = names[i].as_str();
+                let arg_name = arg_names[i].as_str();
 
                 match arg.get_type() {
                     BasicTypeEnum::IntType(_) => arg.into_int_value().set_name(arg_name),
@@ -395,10 +376,9 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             }
 
             // convert fn type to res (regenerate function)
-            let full_fn_type = res.unwrap().get_type().fn_type(types.as_slice(), false);
-            let full_fn =
-                self.module
-                    .add_function(extract!(name, Ident, str).as_str(), full_fn_type, None);
+            let full_fn_type = res.unwrap().get_type().fn_type(args.as_slice(), false);
+
+            let full_fn = self.module.add_function(name.as_str(), full_fn_type, None);
 
             let full_entry = self.context.append_basic_block(full_fn, "entry");
             self.builder.position_at_end(full_entry);
@@ -414,7 +394,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             }
 
             for (i, arg) in full_fn.get_param_iter().enumerate() {
-                let arg_name = names[i].as_str();
+                let arg_name = arg_names[i].as_str();
 
                 match arg.get_type() {
                     BasicTypeEnum::IntType(_) => arg.into_int_value().set_name(arg_name),
@@ -462,17 +442,28 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         name: Ident,
         args: Vec<Expr>,
     ) -> Result<BasicValueEnum<'ctx>, i8> {
+        let mut compiled_args = Vec::with_capacity(args.len());
+
+        for arg in args.clone() {
+            compiled_args.push(self.compile(arg)?);
+        }
+
         let fn_name = extract!(&name, Ident, str).as_str();
-        let fun = self.module.get_function(&fn_name);
+        let mut fn_typed_name = String::from(fn_name);
+
+        for arg in compiled_args.clone() {
+            match arg.get_type() {
+                BasicTypeEnum::IntType(_) => fn_typed_name.push_str("_int"),
+                BasicTypeEnum::FloatType(_) => fn_typed_name.push_str("_float"),
+                _ => todo!(),
+            }
+        }
+
+        let fun = self.module.get_function(&fn_typed_name);
         match fun {
             Some(f) => {
                 if f.count_params() != args.len() as u32 {
                     return Err(ErrKind::UnexceptedArgs as i8);
-                }
-                let mut compiled_args = Vec::with_capacity(args.len());
-
-                for arg in args {
-                    compiled_args.push(self.compile(arg)?);
                 }
 
                 let argsv: Vec<BasicMetadataValueEnum> = compiled_args
@@ -491,7 +482,22 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                     _ => todo!(),
                 }
             }
-            None => todo!(),
+            None => match self.get_function(fn_name.to_string()) {
+                Some(f) => {
+                    let types: Vec<BasicMetadataTypeEnum> = compiled_args
+                        .iter()
+                        .map(|arg| arg.get_type().into())
+                        .collect();
+                    self.compile_fn(
+                        fn_typed_name,
+                        f.args.iter().map(|val| val.0.clone()).collect(),
+                        types,
+                        f.body,
+                    )?;
+                    return self.compile_fn_call(name, args);
+                }
+                None => todo!(),
+            },
         }
     }
 }
