@@ -348,17 +348,14 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         }
 
         if body.len() == 0 {
-            let fn_type = self.context.void_type().fn_type(&[], false);
+            let fn_type = self.context.void_type().fn_type(types.as_slice(), false);
             let fn_val =
                 self.module
                     .add_function(extract!(name, Ident, str).as_str(), fn_type, None);
-            self.fn_value = fn_val;
-            todo!()
-        } else {
-            // for expr in body {
-            //     results = self.compile(expr)?;
-            // }
+            fn_val.verify(true);
 
+            return Ok(self.context.i8_type().const_zero().as_basic_value_enum());
+        } else {
             let fn_type = self.context.i32_type().fn_type(types.as_slice(), false);
             let fn_value = self.module.add_function("temp", fn_type, None);
 
@@ -410,15 +407,6 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
 
             self.fn_value = full_fn;
             for inst in entry.get_instructions() {
-                // let new_inst = inst.clone();
-
-                // let name = {
-                //     match new_inst.get_name() {
-                //         Some(s) => Some(s.to_str().unwrap()),
-                //         None => None,
-                //     }
-                // };
-                // self.builder.insert_instruction(&new_inst, name);
                 inst.remove_from_basic_block();
             }
             unsafe {
@@ -475,8 +463,12 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         args: Vec<Expr>,
     ) -> Result<BasicValueEnum<'ctx>, i8> {
         let fn_name = extract!(&name, Ident, str).as_str();
-        match self.module.get_function(&fn_name) {
+        let fun = self.module.get_function(&fn_name);
+        match fun {
             Some(f) => {
+                if f.count_params() != args.len() as u32 {
+                    return Err(ErrKind::UnexceptedArgs as i8);
+                }
                 let mut compiled_args = Vec::with_capacity(args.len());
 
                 for arg in args {

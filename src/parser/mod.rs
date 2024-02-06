@@ -197,10 +197,13 @@ impl Parser for Source<'_> {
     fn parse_declare_fn(&mut self, id: Ident) -> Expr {
         let mut body: Vec<Expr> = Vec::new();
         let args: Vec<Expr>;
-
-        self.except(Token::Colon);
-        /* add fn to check if arg not tagged id */
-        args = self.parse_list();
+        if self.current() == Token::Colon {
+            self.tokenize();
+            /* add fn to check if arg not tagged id */
+            args = self.parse_list();
+        } else {
+            args = vec![];
+        }
 
         self.except(Token::LeftBracket);
         while self.current() != Token::RightBracket && self.current() != Token::EOF {

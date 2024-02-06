@@ -1,4 +1,5 @@
-
-set add(a, b) to 
+set add: float a, float b {
 	a + b
-1
+}
+
+add: 5.0 * 5, 5.0

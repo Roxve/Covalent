@@ -31,6 +31,7 @@ pub enum ErrKind {
     UndeclaredVar = 2,
     VarAlreadyDeclared = 3,
     CannotConvertRight = 4, // in binary expressions right is always coverted to left
+    UnexceptedArgs = 5,
 }
 
 #[derive(Debug, Clone)]
