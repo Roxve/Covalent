@@ -4,7 +4,7 @@ pub fn is_num(c: char) -> bool {
     return "01234.56789".contains(c);
 }
 pub fn is_id(c: char) -> bool {
-    return !" \t\n+-*/<&|>=@#%:!?$,[{()}]".contains(c);
+    return !(" \t\n+-*/<&|>=@#%:!?$,[{('`)}]").contains(c);
 }
 
 pub trait Tokenizer {
@@ -65,6 +65,17 @@ impl Tokenizer for Source<'_> {
                     res.push(self.eat())
                 }
                 return self.parse_num(res);
+            }
+
+            '"' | '\'' => {
+                let op = self.eat();
+                let mut res = String::from("");
+
+                while self.code.len() > 0 && self.at() != op {
+                    res.push(self.eat());
+                }
+
+                return self.set(Token::Str(res));
             }
 
             '+' | '-' | '*' | '/' | '^' | '=' => {

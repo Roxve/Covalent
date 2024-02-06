@@ -139,6 +139,10 @@ impl Parser for Source<'_> {
                 self.tokenize();
                 Expr::Literal(Literal::Float(f))
             }
+            Token::Str(s) => {
+                self.tokenize();
+                Expr::Literal(Literal::Str(s))
+            }
             Token::Err(_) => {
                 todo!()
             }

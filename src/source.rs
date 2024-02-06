@@ -14,6 +14,7 @@ pub enum Token {
     Operator(String),
     Int(i32),
     Float(f32),
+    Str(String),
     Ident(String),
     Tag(String),
     Err(String), // error code and msg

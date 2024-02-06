@@ -2,6 +2,7 @@
 pub enum Literal {
     Int(i32),
     Float(f32),
+    Str(String)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -26,10 +27,6 @@ pub enum Expr {
     TaggedIdent(Tag, Ident),
     VarDeclare(Ident, Box<Expr>),
     VarAssign(Ident, Box<Expr>),
-    FnDeclare(
-        /* id */ Ident,
-        /* args */ Vec<Expr>,
-        /* body */ Vec<Expr>,
-    ),
+    // fn declare ast is genereated in a special Vec in Source
     FnCall(/* id */ Ident, /* args */ Vec<Expr>),
 }
