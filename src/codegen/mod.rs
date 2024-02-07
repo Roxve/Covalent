@@ -6,6 +6,9 @@ macro_rules! extract {
     };
 }
 
+mod tools;
+use crate::codegen::tools::*;
+
 use inkwell::types::BasicMetadataTypeEnum;
 use inkwell::types::BasicType;
 use inkwell::types::BasicTypeEnum;
@@ -18,12 +21,6 @@ use crate::ast::Literal;
 use crate::source::*;
 
 pub trait Codegen<'ctx> {
-    fn conv_into(
-        &mut self,
-        from: BasicValueEnum<'ctx>,
-        into: BasicTypeEnum<'ctx>,
-    ) -> Option<BasicValueEnum<'ctx>>;
-
     fn compile_prog(&mut self, body: Vec<Expr>) -> Result<BasicValueEnum<'ctx>, i8>;
     fn compile(&mut self, expr: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
     fn compile_binary_expr(
@@ -53,60 +50,6 @@ pub trait Codegen<'ctx> {
 }
 
 impl<'ctx> Codegen<'ctx> for Source<'ctx> {
-    fn conv_into(
-        &mut self,
-        from: BasicValueEnum<'ctx>,
-        into: BasicTypeEnum<'ctx>,
-    ) -> Option<BasicValueEnum<'ctx>> {
-        if from.get_type() == into {
-            return Some(from);
-        }
-
-        match from.get_type() {
-            BasicTypeEnum::FloatType(_) => {
-                if !into.is_int_type() {
-                    // todo err here
-                    return None;
-                }
-                return Some(
-                    self.builder
-                        .build_float_to_signed_int(
-                            from.into_float_value(),
-                            into.into_int_type(),
-                            "fcon",
-                        )
-                        .unwrap()
-                        .as_basic_value_enum(),
-                );
-            }
-
-            BasicTypeEnum::IntType(_) => {
-                if !into.is_float_type() {
-                    return None;
-                }
-
-                return Some(
-                    self.builder
-                        .build_signed_int_to_float(
-                            from.into_int_value(),
-                            into.into_float_type(),
-                            "icon",
-                        )
-                        .unwrap()
-                        .as_basic_value_enum(),
-                );
-            }
-            _ => {
-                self.err(
-                    ErrKind::CannotConvertRight,
-                    "cannot convert right to left (usually in binary expressions)".to_string(),
-                );
-
-                None
-            } // err
-        }
-    }
-
     fn compile_prog(&mut self, body: Vec<Expr>) -> Result<BasicValueEnum<'ctx>, i8> {
         let mut result: Result<BasicValueEnum<'ctx>, i8> = Err(-1);
 
@@ -168,7 +111,15 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 BasicValueEnum::FloatValue(_) => "float",
                 BasicValueEnum::ArrayValue(v) => {
                     if v.is_const_string() {
-                        "string"
+                        "arr"
+                    } else {
+                        todo!()
+                    }
+                }
+
+                BasicValueEnum::PointerValue(ptr) => {
+                    if ptr.get_type().get_element_type().is_int_type() {
+                        "arr"
                     } else {
                         todo!()
                     }
@@ -195,6 +146,13 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                         .build_float_add(left, right, "tmpadd")
                         .unwrap()
                         .into())
+                }
+
+                "arr" => {
+                    let _left = lhs.into_pointer_value();
+                    let _right = rhs.into_pointer_value();
+
+                    todo!("build add for strings and arrs")
                 }
                 _ => todo!(),
             },
@@ -371,13 +329,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             for (i, arg) in fn_value.get_param_iter().enumerate() {
                 let arg_name = arg_names[i].as_str();
 
-                match arg.get_type() {
-                    BasicTypeEnum::IntType(_) => arg.into_int_value().set_name(arg_name),
-                    BasicTypeEnum::FloatType(_) => arg.into_float_value().set_name(arg_name),
-                    BasicTypeEnum::ArrayType(_) => arg.into_array_value().set_name(arg_name),
-                    BasicTypeEnum::PointerType(_) => arg.into_pointer_value().set_name(arg_name),
-                    _ => todo!(),
-                }
+                arg.set_name(arg_name);
 
                 let alloca = self.create_entry_block_alloca(arg_name, arg.get_type());
 
@@ -385,17 +337,17 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 self.variables.insert(arg_name.to_string(), alloca);
             }
 
-            let mut res: Option<BasicValueEnum> = None;
+            let mut result: Option<BasicValueEnum> = None;
             for expr in body.clone() {
                 let e = self.compile(expr);
                 if let Err(_) = e {
                     break;
                 }
-                res = Some(e.unwrap());
+                result = Some(e.unwrap());
             }
 
             // convert fn type to res (regenerate function)
-            let full_fn_type = res.unwrap().get_type().fn_type(args.as_slice(), false);
+            let full_fn_type = result.unwrap().get_type().fn_type(args.as_slice(), false);
 
             let full_fn = self.module.add_function(name.as_str(), full_fn_type, None);
 
@@ -414,14 +366,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
 
             for (i, arg) in full_fn.get_param_iter().enumerate() {
                 let arg_name = arg_names[i].as_str();
-
-                match arg.get_type() {
-                    BasicTypeEnum::IntType(_) => arg.into_int_value().set_name(arg_name),
-                    BasicTypeEnum::FloatType(_) => arg.into_float_value().set_name(arg_name),
-                    BasicTypeEnum::ArrayType(_) => arg.into_array_value().set_name(arg_name),
-                    BasicTypeEnum::PointerType(_) => arg.into_pointer_value().set_name(arg_name),
-                    _ => todo!(),
-                }
+                arg.set_name(arg_name);
 
                 let alloca = self.create_entry_block_alloca(arg_name, arg.get_type());
 
@@ -434,22 +379,22 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 if let Err(_) = e {
                     break;
                 }
-                res = Some(e.unwrap());
+                result = Some(e.unwrap());
             }
 
-            let _ = match res.unwrap().get_type().as_basic_type_enum() {
+            let _ = match result.unwrap().get_type().as_basic_type_enum() {
                 BasicTypeEnum::IntType(_) => self
                     .builder
-                    .build_return(Some(&res.unwrap().into_int_value())),
+                    .build_return(Some(&result.unwrap().into_int_value())),
                 BasicTypeEnum::FloatType(_) => self
                     .builder
-                    .build_return(Some(&res.unwrap().into_float_value())),
+                    .build_return(Some(&result.unwrap().into_float_value())),
                 BasicTypeEnum::ArrayType(_) => self
                     .builder
-                    .build_return(Some(&res.unwrap().into_array_value())),
+                    .build_return(Some(&result.unwrap().into_array_value())),
                 BasicTypeEnum::PointerType(_) => self
                     .builder
-                    .build_return(Some(&res.unwrap().into_pointer_value())),
+                    .build_return(Some(&result.unwrap().into_pointer_value())),
                 _ => todo!(),
             };
 
@@ -480,17 +425,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         let mut fn_typed_name = String::from(fn_name);
 
         for arg in compiled_args.clone() {
-            match arg.get_type() {
-                BasicTypeEnum::IntType(_) => fn_typed_name.push_str("_int"),
-                BasicTypeEnum::FloatType(_) => fn_typed_name.push_str("_float"),
-                BasicTypeEnum::ArrayType(arr) => fn_typed_name.push_str(
-                    ("_a".to_owned() + arr.get_element_type().to_string().as_str()).as_str(),
-                ),
-                BasicTypeEnum::PointerType(ptr) => fn_typed_name.push_str(
-                    ("_p".to_owned() + ptr.get_element_type().to_string().as_str()).as_str(),
-                ),
-                _ => todo!(),
-            }
+            fn_typed_name.push_str(get_type_name(arg.get_type()).as_str());
         }
 
         let fun = self.module.get_function(&fn_typed_name);

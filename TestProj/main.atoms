@@ -1,14 +1,8 @@
-
-hello
-
-
-set add: a, b {
-	a + b
+set x: a {
+	a
 }
 
-set var = add: 5.0 * 5, 5.0
-
-var = add: 5.0 * 5, 0.0
-
-set result = add: 10, var
-
+x: 5 
+x: 5.0
+set var = x: "Hello, world!"
+set var1 = x: 6
