@@ -69,10 +69,27 @@ impl Tokenizer for Source<'_> {
 
             '"' | '\'' => {
                 let op = self.eat();
+
+                let start_line = self.line;
+                let start_column = self.column;
+
                 let mut res = String::from("");
 
                 while self.code.len() > 0 && self.at() != op {
                     res.push(self.eat());
+                }
+
+                if self.code.len() > 0 && self.at() == op {
+                    self.eat();
+                } else {
+                    self.err(
+                        ErrKind::UnknownCharE,
+                        format!(
+                            "reached end of file and didnt finish string started at line {}, colmun {}",
+                            start_line,
+                            start_column
+                        ),
+                    );
                 }
 
                 return self.set(Token::Str(res));
