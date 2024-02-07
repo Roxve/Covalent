@@ -164,6 +164,13 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             match lhs {
                 BasicValueEnum::IntValue(_) => "int",
                 BasicValueEnum::FloatValue(_) => "float",
+                BasicValueEnum::ArrayValue(v) => {
+                    if v.is_const_string() {
+                        "string"
+                    } else {
+                        todo!()
+                    }
+                }
                 _ => todo!(),
             }
         };
