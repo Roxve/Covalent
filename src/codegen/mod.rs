@@ -124,11 +124,18 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             Expr::Literal(Literal::Float(f)) => {
                 Ok(self.context.f32_type().const_float(f as f64).into())
             }
+            Expr::Literal(Literal::Str(s)) => Ok(self
+                .context
+                .const_string((s).as_bytes(), false)
+                .as_basic_value_enum()),
+
             Expr::Ident(Ident(ref name)) => match self.variables.get(name) {
                 Some(var) => Ok(self.builder.build_load(*var, name).unwrap()),
                 None => Err(-2),
             },
+
             Expr::BinaryExpr(op, left, right) => self.compile_binary_expr(op, left, right),
+
             Expr::VarDeclare(id, value) => self.compile_var_declare(id, *value),
             Expr::VarAssign(id, value) => self.compile_var_assign(id, *value),
 
@@ -358,6 +365,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 match arg.get_type() {
                     BasicTypeEnum::IntType(_) => arg.into_int_value().set_name(arg_name),
                     BasicTypeEnum::FloatType(_) => arg.into_float_value().set_name(arg_name),
+                    BasicTypeEnum::ArrayType(_) => arg.into_array_value().set_name(arg_name),
                     _ => todo!(),
                 }
 
@@ -400,6 +408,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 match arg.get_type() {
                     BasicTypeEnum::IntType(_) => arg.into_int_value().set_name(arg_name),
                     BasicTypeEnum::FloatType(_) => arg.into_float_value().set_name(arg_name),
+                    BasicTypeEnum::ArrayType(_) => arg.into_array_value().set_name(arg_name),
                     _ => todo!(),
                 }
 
@@ -424,6 +433,9 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 BasicTypeEnum::FloatType(_) => self
                     .builder
                     .build_return(Some(&res.unwrap().into_float_value())),
+                BasicTypeEnum::ArrayType(_) => self
+                    .builder
+                    .build_return(Some(&res.unwrap().into_array_value())),
                 _ => todo!(),
             };
 
@@ -457,6 +469,9 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             match arg.get_type() {
                 BasicTypeEnum::IntType(_) => fn_typed_name.push_str("_int"),
                 BasicTypeEnum::FloatType(_) => fn_typed_name.push_str("_float"),
+                BasicTypeEnum::ArrayType(arr) => fn_typed_name.push_str(
+                    ("_a".to_owned() + arr.get_element_type().to_string().as_str()).as_str(),
+                ),
                 _ => todo!(),
             }
         }
