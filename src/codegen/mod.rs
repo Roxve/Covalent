@@ -125,8 +125,10 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 Ok(self.context.f32_type().const_float(f as f64).into())
             }
             Expr::Literal(Literal::Str(s)) => Ok(self
-                .context
-                .const_string((s).as_bytes(), false)
+                .builder
+                .build_global_string_ptr(s.as_str(), "str")
+                .unwrap()
+                .as_pointer_value()
                 .as_basic_value_enum()),
 
             Expr::Ident(Ident(ref name)) => match self.variables.get(name) {
@@ -373,6 +375,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                     BasicTypeEnum::IntType(_) => arg.into_int_value().set_name(arg_name),
                     BasicTypeEnum::FloatType(_) => arg.into_float_value().set_name(arg_name),
                     BasicTypeEnum::ArrayType(_) => arg.into_array_value().set_name(arg_name),
+                    BasicTypeEnum::PointerType(_) => arg.into_pointer_value().set_name(arg_name),
                     _ => todo!(),
                 }
 
@@ -416,6 +419,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                     BasicTypeEnum::IntType(_) => arg.into_int_value().set_name(arg_name),
                     BasicTypeEnum::FloatType(_) => arg.into_float_value().set_name(arg_name),
                     BasicTypeEnum::ArrayType(_) => arg.into_array_value().set_name(arg_name),
+                    BasicTypeEnum::PointerType(_) => arg.into_pointer_value().set_name(arg_name),
                     _ => todo!(),
                 }
 
@@ -443,6 +447,9 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 BasicTypeEnum::ArrayType(_) => self
                     .builder
                     .build_return(Some(&res.unwrap().into_array_value())),
+                BasicTypeEnum::PointerType(_) => self
+                    .builder
+                    .build_return(Some(&res.unwrap().into_pointer_value())),
                 _ => todo!(),
             };
 
@@ -478,6 +485,9 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 BasicTypeEnum::FloatType(_) => fn_typed_name.push_str("_float"),
                 BasicTypeEnum::ArrayType(arr) => fn_typed_name.push_str(
                     ("_a".to_owned() + arr.get_element_type().to_string().as_str()).as_str(),
+                ),
+                BasicTypeEnum::PointerType(ptr) => fn_typed_name.push_str(
+                    ("_p".to_owned() + ptr.get_element_type().to_string().as_str()).as_str(),
                 ),
                 _ => todo!(),
             }
