@@ -4,6 +4,7 @@ mod codegen;
 mod lexer;
 mod parser;
 mod source;
+mod cova_std;
 
 use std::path::Path;
 use std::{env, fs};

@@ -1,0 +1,17 @@
+set mul: a, b {
+	a * b
+}
+
+set add: a, b {
+	a + b
+}
+
+set res = mul: 5, 5
+set final = add: 5, res * 10
+
+writefn: "5 * 5 * 10 + 5 ="
+writefn: final
+
+writefn: "ver is"
+writefn: 5.5
+

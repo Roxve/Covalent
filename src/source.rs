@@ -4,10 +4,10 @@ use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::values::{FunctionValue, PointerValue};
-use inkwell::AddressSpace;
 
 use crate::ast::Expr;
 use crate::ast::Ident;
+use crate::cova_std::add_std;
 
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
@@ -66,13 +66,13 @@ impl ATErr {
 
 #[derive(Debug, Clone)]
 
-pub struct function {
+pub struct Function {
     pub name: Ident,
     pub args: Vec<Ident>,
     pub body: Vec<Expr>,
 }
 
-impl function {
+impl Function {
     pub fn get_name(&self) -> String {
         self.name.0.clone()
     }
@@ -89,7 +89,7 @@ pub struct Source<'ctx> {
     pub module: Module<'ctx>,
     pub builder: Builder<'ctx>,
     pub fn_value: FunctionValue<'ctx>,
-    pub functions: Vec<function>,
+    pub functions: Vec<Function>,
     pub variables: HashMap<String, PointerValue<'ctx>>,
     pub errors: Vec<ATErr>,
     pub warnings: Vec<ATErr>, // program can continue error
@@ -105,12 +105,7 @@ impl<'ctx> Source<'ctx> {
         let builder = context.create_builder();
         let main = context.append_basic_block(main_fn, "entry");
 
-        let print_fn = context.void_type().fn_type(
-            &[context.i8_type().ptr_type(AddressSpace::default()).into()],
-            false,
-        );
-
-        let _ = module.add_function("writefn_ptr__i8", print_fn, None);
+        add_std(&module, &context);
 
         builder.position_at_end(main);
         let src = Source {
@@ -143,7 +138,7 @@ impl<'ctx> Source<'ctx> {
         err.out_error();
     }
 
-    pub fn get_function(&self, name: String) -> Option<function> {
+    pub fn get_function(&self, name: String) -> Option<Function> {
         for fun in self.functions.clone().into_iter() {
             if fun.get_name() == name {
                 return Some(fun);
@@ -153,6 +148,6 @@ impl<'ctx> Source<'ctx> {
     }
 
     pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Expr>) {
-        self.functions.push(function { name, args, body });
+        self.functions.push(Function { name, args, body });
     }
 }

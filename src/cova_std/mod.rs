@@ -1,9 +1,44 @@
-#[no_mangle]
-#[allow(non_snake_case)]
-pub extern "C" fn writefn_ptr__i8(s: *const i8) {
-    let c_str = unsafe {
-        assert!(!s.is_null());
-        std::ffi::CStr::from_ptr(s as *const u8)
+use inkwell::context::Context;
+use inkwell::module::Module;
+use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum};
+use inkwell::AddressSpace;
+
+struct Builtin<'a> {
+    name: String,
+    args: Vec<BasicMetadataTypeEnum<'a>>,
+    return_ty: Option<BasicTypeEnum<'a>>,
+}
+
+fn add<'a>(
+    name: &str,
+    args: Vec<BasicMetadataTypeEnum<'a>>,
+    return_ty: Option<BasicTypeEnum<'a>>,
+) -> Builtin<'a> {
+    return Builtin {
+        name: name.to_string(),
+        args,
+        return_ty,
     };
-    println!("{}", c_str.to_str().unwrap());
+}
+
+pub fn add_std<'a>(module: &Module<'a>, ctx: &'a Context) {
+    let funcs = vec![
+        add(
+            "writefn_ptr__i8",
+            vec![ctx.i8_type().ptr_type(AddressSpace::default()).into()],
+            None,
+        ),
+        add("writefn_float", vec![ctx.f32_type().into()], None),
+        add("writefn_i32", vec![ctx.i32_type().into()], None),
+    ];
+
+    for fun in funcs {
+        if fun.return_ty == None {
+            let fun_type = ctx.void_type().fn_type(fun.args.as_slice(), false);
+            let _ = module.add_function(fun.name.as_str(), fun_type, None);
+        } else {
+            let fun_type = fun.return_ty.unwrap().fn_type(fun.args.as_slice(), false);
+            let _ = module.add_function(fun.name.as_str(), fun_type, None);
+        }
+    }
 }
