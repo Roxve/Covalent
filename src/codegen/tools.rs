@@ -16,8 +16,8 @@ pub fn any_type_to_basic(ty: AnyTypeEnum) -> BasicTypeEnum {
 
 pub fn get_type_name(ty: BasicTypeEnum) -> String {
     match ty {
-        BasicTypeEnum::IntType(_) => "_int".to_string(),
-        BasicTypeEnum::FloatType(_) => "_float".to_string(),
+        BasicTypeEnum::IntType(i) => format!("_i{}", i.get_bit_width()),
+        BasicTypeEnum::FloatType(_) => format!("_float"),
         BasicTypeEnum::ArrayType(t) => {
             "_arr_".to_owned() + get_type_name(t.get_element_type()).as_str()
         }

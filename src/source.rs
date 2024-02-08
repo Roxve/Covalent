@@ -4,6 +4,7 @@ use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::values::{FunctionValue, PointerValue};
+use inkwell::AddressSpace;
 
 use crate::ast::Expr;
 use crate::ast::Ident;
@@ -103,6 +104,13 @@ impl<'ctx> Source<'ctx> {
         let main_fn = module.add_function("main", main_fn_type, None);
         let builder = context.create_builder();
         let main = context.append_basic_block(main_fn, "entry");
+
+        let print_fn = context.void_type().fn_type(
+            &[context.i8_type().ptr_type(AddressSpace::default()).into()],
+            false,
+        );
+
+        let _ = module.add_function("writefn_ptr__i8", print_fn, None);
 
         builder.position_at_end(main);
         let src = Source {

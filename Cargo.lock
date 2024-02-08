@@ -25,6 +25,7 @@ name = "covalent"
 version = "0.0.0"
 dependencies = [
  "inkwell",
+ "llvm-sys",
 ]
 
 [[package]]

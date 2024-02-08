@@ -1,4 +1,5 @@
 use core::panic;
+
 use std::io::{self, Write};
 mod ast;
 mod codegen;
@@ -6,13 +7,14 @@ mod lexer;
 mod parser;
 mod source;
 
-use std::fs::{self, read_to_string};
+use std::fs;
 use std::path::Path;
 
 use crate::ast::*;
 use crate::codegen::*;
 use crate::parser::*;
 use crate::source::*;
+
 use inkwell::context::Context;
 
 fn run(input: String) {

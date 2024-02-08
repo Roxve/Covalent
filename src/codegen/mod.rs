@@ -111,15 +111,15 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 BasicValueEnum::FloatValue(_) => "float",
                 BasicValueEnum::ArrayValue(v) => {
                     if v.is_const_string() {
-                        "arr"
+                        "string"
                     } else {
                         todo!()
                     }
                 }
 
                 BasicValueEnum::PointerValue(ptr) => {
-                    if ptr.get_type().get_element_type().is_int_type() {
-                        "arr"
+                    if get_type_name(ptr.get_type().as_basic_type_enum()) == "_ptr__i8" {
+                        "string"
                     } else {
                         todo!()
                     }
@@ -148,7 +148,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                         .into())
                 }
 
-                "arr" => {
+                "string" => {
                     let _left = lhs.into_pointer_value();
                     let _right = rhs.into_pointer_value();
 
@@ -445,7 +445,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                     .left()
                 {
                     Some(val) => Ok(val),
-                    _ => todo!(),
+                    None => Ok(self.context.bool_type().const_zero().as_basic_value_enum()),
                 }
             }
             None => match self.get_function(fn_name.to_string()) {
