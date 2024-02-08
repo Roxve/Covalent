@@ -2,7 +2,5 @@ set x: a {
 	a
 }
 
-x: 5 
-x: 5.0
 set var = x: "Hello, world!"
-set var1 = x: 6
+writefn: var
