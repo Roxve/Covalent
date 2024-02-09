@@ -1,1 +1,4 @@
+set x = "Hello,"
+set y = " world!"
 
+writefn: x + y
