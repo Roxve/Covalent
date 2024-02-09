@@ -88,7 +88,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             e => {
                 println!("if you are a normal user please report this!, if you are a dev fix it!");
                 dbg!(e);
-                todo!()
+                todo!("the above expr ^^^")
             }
         }
     }
@@ -445,6 +445,8 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                     .left()
                 {
                     Some(val) => Ok(val),
+
+                    // todo find a way to add void ?
                     None => Ok(self.context.bool_type().const_zero().as_basic_value_enum()),
                 }
             }
@@ -477,7 +479,14 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
 
                     return self.compile_fn_call(name, args);
                 }
-                None => todo!(),
+                None => {
+                    self.err(
+                        ErrKind::UndeclaredVar,
+                        format!("attempt to call an undeclared function {}, or trying to call a declared function that doesnt accept these argument types...", fn_name),
+                    );
+
+                    return Err(ErrKind::UndeclaredVar as i8);
+                }
             },
         }
     }

@@ -1,10 +1,10 @@
 use std::io::{self, Write};
 mod ast;
 mod codegen;
+mod cova_std;
 mod lexer;
 mod parser;
 mod source;
-mod cova_std;
 
 use std::path::Path;
 use std::{env, fs};
@@ -17,7 +17,7 @@ use std::process::Command;
 
 use inkwell::context::Context;
 
-fn run(input: String, is_debug: bool, name: String) {
+fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
     let ctx = &Context::create();
     let mut src = Source::new(input, ctx);
 
@@ -41,6 +41,9 @@ fn run(input: String, is_debug: bool, name: String) {
         src.module.print_to_stderr();
     }
 
+    if src.errors.len() >= 1 {
+        panic!("exiting duo to previous errors");
+    }
     src.module.verify().expect("invaild module");
 
     let byte_path = format!("/tmp/{}.ll", name);
@@ -53,8 +56,16 @@ fn run(input: String, is_debug: bool, name: String) {
     }
 
     // compiling
+    let out = {
+        // add is repl
+        if is_debug || is_repl {
+            format!("/tmp/{}", name)
+        } else {
+            format!("./{}", name)
+        }
+    };
 
-    Command::new("clang")
+    let _ = Command::new("clang")
         .arg("-Wno-everything")
         .arg(byte_path)
         .arg(format!(
@@ -68,12 +79,19 @@ fn run(input: String, is_debug: bool, name: String) {
         ))
         .arg("-lstd")
         .arg("-o")
-        .arg(format!("./{}", name).as_str())
+        .arg(&out)
         .spawn()
-        .expect("failed compiling file(maybe you dont have clang installed in path)");
-    println!("compiled success!");
+        .expect("failed compiling file(maybe you dont have clang installed in path)")
+        .wait();
+    if is_repl {
+        let output = Command::new(out)
+            .spawn()
+            .expect("failed running compiled prog")
+            .wait();
+        println!("output: {:?}", output);
+    }
 }
-fn repl() {
+fn repl(is_debug: bool) {
     let mut buffer = String::with_capacity(4096);
     let stdin = io::stdin();
 
@@ -88,17 +106,33 @@ fn repl() {
 
         let mut repl = String::with_capacity(4096);
         let _ = stdin.read_line(&mut repl);
-        run(repl, true, "repl".to_string());
+        run(repl, is_debug, true, "repl".to_string());
     }
 }
 
 fn main() {
+    let mut is_debug = false;
     let mut args = env::args();
 
     if args.len() <= 1 {
-        return repl();
+        return repl(is_debug);
     }
-    let file = args.nth(1).unwrap();
+
+    let file = {
+        let arg = args.nth(1).unwrap();
+        if arg == "test" {
+            is_debug = true;
+
+            if args.len() == 2 {
+                return repl(is_debug);
+            }
+
+            args.nth(0).unwrap()
+        } else {
+            arg
+        }
+    };
+
     let prog = fs::read_to_string(file.clone());
 
     let path = Path::new(file.as_str());
@@ -106,6 +140,7 @@ fn main() {
     let filename = path.file_name().expect("file passed is a folder");
     run(
         prog.expect("file doesnt exist"),
+        is_debug,
         false,
         filename.to_str().unwrap().to_string().replace(".atoms", ""),
     )

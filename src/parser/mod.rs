@@ -200,13 +200,12 @@ impl Parser for Source<'_> {
     }
     fn parse_declare_fn(&mut self, id: Ident) -> Expr {
         let mut body: Vec<Expr> = Vec::new();
-        let args: Vec<Expr>;
+
         let mut id_args: Vec<Ident> = Vec::new();
 
         if self.current() == Token::Colon {
             self.tokenize();
-            /* add fn to check if arg not tagged id */
-            args = self.parse_list();
+            let args = self.parse_list();
 
             for arg in args {
                 if let Expr::Ident(id) = arg {
@@ -219,10 +218,7 @@ impl Parser for Source<'_> {
                     return self.parse_level(0);
                 }
             }
-        } else {
-            args = vec![];
         }
-
         self.except(Token::LeftBracket);
         while self.current() != Token::RightBracket && self.current() != Token::EOF {
             body.push(self.parse_level(0));
