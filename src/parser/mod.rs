@@ -158,6 +158,12 @@ impl Parser for Source<'_> {
                 }
                 todo!()
             }
+            Token::LeftParen => {
+                self.tokenize();
+                let expr = self.parse_level(0);
+                self.except(Token::RightParen);
+                expr
+            }
             Token::SetKw => self.parse_declare(),
             _ => {
                 self.err(
