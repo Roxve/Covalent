@@ -1,3 +1,5 @@
+mod gen;
+
 macro_rules! extract {
     ($e: expr, $variant:path, $fields:tt) => {
         match $e {
@@ -19,6 +21,9 @@ use crate::ast::Ident;
 use crate::ast::Literal;
 
 use crate::source::*;
+
+// build_add...
+use self::gen::Build;
 
 pub trait Codegen<'ctx> {
     fn compile_prog(&mut self, body: Vec<Expr>) -> Result<BasicValueEnum<'ctx>, i8>;
@@ -102,132 +107,20 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         let mut lhs = self.compile(*left)?;
         let mut rhs = self.compile(*right)?;
 
-        // we compile everything then terminate to make sure every error is encoutared
-        rhs = self.conv_into(rhs, lhs.get_type()).unwrap_or(lhs);
+        // handel types conv
 
-        let etype = {
-            match lhs {
-                BasicValueEnum::IntValue(_) => "int",
-                BasicValueEnum::FloatValue(_) => "float",
-                BasicValueEnum::ArrayValue(v) => {
-                    if v.is_const_string() {
-                        "string"
-                    } else {
-                        todo!()
-                    }
-                }
+        // rule: if l or r is float && l or r is int -> op is float
+        if lhs.is_float_value() && rhs.is_int_value() {
+            rhs = self.conv_into(rhs, lhs.get_type()).unwrap_or(lhs);
+        } else if rhs.is_float_value() && lhs.is_int_value() {
+            lhs = self.conv_into(lhs, rhs.get_type()).unwrap_or(rhs);
+        }
 
-                BasicValueEnum::PointerValue(ptr) => {
-                    if get_type_name(ptr.get_type().as_basic_type_enum()) == "_ptr__i8" {
-                        "string"
-                    } else {
-                        todo!()
-                    }
-                }
-                _ => todo!(),
-            }
-        };
         match op.as_str() {
-            "+" => match etype {
-                "int" => {
-                    let left: IntValue = lhs.into_int_value();
-                    let right: IntValue = rhs.into_int_value();
-
-                    let res = self.builder.build_int_add(left, right, "tmpadd").unwrap();
-                    Ok(res.into())
-                }
-
-                "float" => {
-                    let left: FloatValue = lhs.into_float_value();
-                    let right: FloatValue = rhs.into_float_value();
-
-                    Ok(self
-                        .builder
-                        .build_float_add(left, right, "tmpadd")
-                        .unwrap()
-                        .into())
-                }
-
-                "string" => {
-                    let _left = lhs.into_pointer_value();
-                    let _right = rhs.into_pointer_value();
-
-                    todo!("build add for strings and arrs")
-                }
-                _ => todo!(),
-            },
-
-            "-" => match etype {
-                "int" => {
-                    let left = lhs.into_int_value();
-                    let right = rhs.into_int_value();
-
-                    Ok(self
-                        .builder
-                        .build_int_sub(left, right, "tmpsub")
-                        .unwrap()
-                        .into())
-                }
-
-                "float" => {
-                    let left: FloatValue = lhs.into_float_value();
-                    let right: FloatValue = rhs.into_float_value();
-
-                    Ok(self
-                        .builder
-                        .build_float_sub(left, right, "tmpsub")
-                        .unwrap()
-                        .into())
-                }
-                _ => todo!(),
-            },
-
-            "*" => match etype {
-                "int" => {
-                    let left = lhs.into_int_value();
-                    let right = rhs.into_int_value();
-
-                    Ok(self
-                        .builder
-                        .build_int_mul(left, right, "tmpmul")
-                        .unwrap()
-                        .into())
-                }
-
-                "float" => {
-                    let left: FloatValue = lhs.into_float_value();
-                    let right: FloatValue = rhs.into_float_value();
-
-                    Ok(self
-                        .builder
-                        .build_float_mul(left, right, "tmpmul")
-                        .unwrap()
-                        .into())
-                }
-                _ => todo!(),
-            },
-
-            "/" => {
-                match etype {
-                    "int" => {
-                        lhs = self
-                            .conv_into(lhs, self.context.f32_type().as_basic_type_enum())
-                            .unwrap();
-                        rhs = self
-                            .conv_into(rhs, self.context.f32_type().as_basic_type_enum())
-                            .unwrap();
-                    }
-                    _ => todo!(),
-                }
-
-                let left = lhs.into_float_value();
-                let right = rhs.into_float_value();
-                Ok(self
-                    .builder
-                    .build_float_div(left, right, "tmpdiv")
-                    .unwrap()
-                    .into())
-            }
+            "+" => self.build_add(lhs, rhs),
+            "-" => self.build_sub(lhs, rhs),
+            "*" => self.build_mul(lhs, rhs),
+            "/" => self.build_div(lhs, rhs),
             _ => todo!(),
         }
     }
