@@ -38,3 +38,17 @@ pub extern "C" fn strcat_ptr__i8_ptr__i8(s: *const i8, s2: *const i8) -> *const 
     // let res_ptr = res_box.as_bytes().as_ptr();
     return unsafe { Box::into_raw(res_box).as_ref().unwrap().as_ptr() as *const i8 };
 }
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "C" fn str_i32(i: i32) -> *const i8 {
+    let res = Box::new(i.to_string());
+    return unsafe { Box::into_raw(res).as_ref().unwrap().as_ptr() as *const i8 };
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "C" fn str_float(f: f32) -> *const i8 {
+    let res = Box::new(f.to_string());
+    return unsafe { Box::into_raw(res).as_ref().unwrap().as_ptr() as *const i8 };
+}

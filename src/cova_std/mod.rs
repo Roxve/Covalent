@@ -23,19 +23,28 @@ fn add<'a>(
 
 pub fn add_std<'a>(module: &Module<'a>, ctx: &'a Context) {
     let ptr_i8 = ctx.i8_type().ptr_type(AddressSpace::default());
+    let i32_type = ctx.i32_type();
+    let f32_type = ctx.f32_type();
 
     let funcs = vec![
+        add(
+            // convert into string
+            "str_i32",
+            vec![i32_type.into()],
+            Some(ptr_i8.as_basic_type_enum()),
+        ),
+        add(
+            "str_float",
+            vec![f32_type.into()],
+            Some(ptr_i8.as_basic_type_enum()),
+        ),
         add(
             // used for adding two strings...
             "strcat_ptr__i8_ptr__i8",
             vec![ptr_i8.into(), ptr_i8.into()],
             Some(ptr_i8.as_basic_type_enum()),
         ),
-        add(
-            "writefn_ptr__i8",
-            vec![ctx.i8_type().ptr_type(AddressSpace::default()).into()],
-            None,
-        ),
+        add("writefn_ptr__i8", vec![ptr_i8.into()], None),
         add("writefn_float", vec![ctx.f32_type().into()], None),
         add("writefn_i32", vec![ctx.i32_type().into()], None),
     ];
