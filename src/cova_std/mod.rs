@@ -27,7 +27,7 @@ pub fn add_std<'a>(module: &Module<'a>, ctx: &'a Context) {
     let funcs = vec![
         add(
             // used for adding two strings...
-            "strcat",
+            "strcat_ptr__i8",
             vec![ptr_i8.into(), ptr_i8.into()],
             Some(ptr_i8.as_basic_type_enum()),
         ),
