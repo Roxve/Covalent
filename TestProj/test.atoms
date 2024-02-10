@@ -2,3 +2,4 @@ set x = "Hello,"
 set y = " world!"
 
 writefn: x + y
+writefn: strcat: x, y

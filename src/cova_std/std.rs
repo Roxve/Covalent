@@ -23,7 +23,7 @@ pub extern "C" fn writefn_float(f: f32) {
 
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "C" fn strcat_ptr__i8(s: *const i8, s2: *const i8) -> *const i8 {
+pub extern "C" fn strcat_ptr__i8_ptr__i8(s: *const i8, s2: *const i8) -> *const i8 {
     let c_str = unsafe {
         assert!(!s.is_null());
         std::ffi::CStr::from_ptr(s as *const u8)
