@@ -1,7 +1,6 @@
 use crate::codegen::tools::any_type_to_basic;
 use crate::source::Source;
-use inkwell::types::{BasicType, BasicTypeEnum::*};
-use inkwell::AddressSpace;
+use inkwell::types::BasicTypeEnum::*;
 
 use inkwell::values::{BasicValue, BasicValueEnum};
 

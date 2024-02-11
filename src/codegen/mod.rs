@@ -81,7 +81,10 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
 
             Expr::Ident(Ident(ref name)) => match self.variables.get(name) {
                 Some(var) => Ok(self.builder.build_load(*var, name).unwrap()),
-                None => Err(-2),
+                None => {
+                    self.err(ErrKind::UndeclaredVar, format!("undeclared var {}", name));
+                    Err(ErrKind::UndeclaredVar as i8)
+                }
             },
 
             Expr::BinaryExpr(op, left, right) => self.compile_binary_expr(op, left, right),
@@ -108,12 +111,56 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         let mut rhs = self.compile(*right)?;
 
         // handel types conv
-
-        // rule: if l or r is float && l or r is int -> op is float
-        if lhs.is_float_value() && rhs.is_int_value() {
-            rhs = self.conv_into(rhs, lhs.get_type()).unwrap_or(lhs);
-        } else if rhs.is_float_value() && lhs.is_int_value() {
-            lhs = self.conv_into(lhs, rhs.get_type()).unwrap_or(rhs);
+        // todo add blance type function...
+        // todo add NaN for unconvertable types
+        if get_type_name(lhs.get_type()) != get_type_name(rhs.get_type()) {
+            if lhs.is_float_value() && rhs.is_int_value() {
+                rhs = self.conv_into(rhs, lhs.get_type()).unwrap_or(lhs);
+            } else if rhs.is_float_value() && lhs.is_int_value() {
+                lhs = self.conv_into(lhs, rhs.get_type()).unwrap_or(rhs);
+            } else if get_type_name(lhs.get_type()) == "_ptr__i8".to_string() && rhs.is_int_value()
+            {
+                let strconv = self.module.get_function("str_i32").unwrap();
+                rhs = self
+                    .builder
+                    .build_call(strconv, &[rhs.into()], "itos")
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+            } else if get_type_name(lhs.get_type()) == "_ptr__i8".to_string()
+                && rhs.is_float_value()
+            {
+                let strconv = self.module.get_function("str_float").unwrap();
+                rhs = self
+                    .builder
+                    .build_call(strconv, &[rhs.into()], "ftos")
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+            } else if get_type_name(rhs.get_type()) == "_ptr__i8".to_string() && lhs.is_int_value()
+            {
+                let strconv = self.module.get_function("str_i32").unwrap();
+                lhs = self
+                    .builder
+                    .build_call(strconv, &[lhs.into()], "itos")
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+            } else if get_type_name(rhs.get_type()) == "_ptr__i8".to_string()
+                && lhs.is_float_value()
+            {
+                let strconv = self.module.get_function("str_float").unwrap();
+                lhs = self
+                    .builder
+                    .build_call(strconv, &[lhs.into()], "ftos")
+                    .unwrap()
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+            }
         }
 
         match op.as_str() {
