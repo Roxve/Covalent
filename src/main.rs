@@ -123,7 +123,7 @@ fn main() {
         if arg == "test" {
             is_debug = true;
 
-            if args.len() <= 2 {
+            if args.len() < 2 {
                 return repl(is_debug);
             }
 

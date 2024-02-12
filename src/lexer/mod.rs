@@ -148,14 +148,14 @@ impl Tokenizer for Source<'_> {
                     match res.as_str() {
                         // keywords
                         "set" => self.set(Token::SetKw),
+                        "if" => self.set(Token::IfKw),
+                        "else" => self.set(Token::ElseKw),
                         // tags(types(old WIP))
                         "__int__" => self.set(Token::Tag("int".to_string())),
                         "__float__" => self.set(Token::Tag("float".to_string())),
                         // bools
                         "true" => self.set(Token::Bool(true)),
                         "false" => self.set(Token::Bool(false)),
-                        // operations
-                        "==" => self.set(Token::Operator(res)),
                         _ => self.set(Token::Ident(res)),
                     }
                 } else {

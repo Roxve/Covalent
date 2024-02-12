@@ -10,11 +10,14 @@ pub trait Parser {
     fn except(&mut self, tok: Token) -> Token; // || NULL;
     fn parse_prog(&mut self) -> Vec<Expr>;
     fn parse_level(&mut self, level: u8) -> Expr;
+    fn parse_call_fn(&mut self) -> Expr;
+    fn parse_expr(&mut self) -> Expr;
     fn parse_declare(&mut self) -> Expr;
     fn parse_declare_fn(&mut self, id: Ident) -> Expr;
-    fn parse_call_fn(&mut self) -> Expr;
+    fn parse_if_expr(&mut self) -> Expr;
+
+    fn parse_body(&mut self) -> Vec<Expr>;
     fn parse_list(&mut self) -> Vec<Expr>;
-    fn parse_expr(&mut self) -> Expr;
 }
 
 impl Parser for Source<'_> {
@@ -173,6 +176,7 @@ impl Parser for Source<'_> {
             }
 
             Token::SetKw => self.parse_declare(),
+            Token::IfKw => self.parse_if_expr(),
             _ => {
                 self.err(
                     ErrKind::UnexceptedTokenE,
@@ -213,8 +217,6 @@ impl Parser for Source<'_> {
         }
     }
     fn parse_declare_fn(&mut self, id: Ident) -> Expr {
-        let mut body: Vec<Expr> = Vec::new();
-
         let mut id_args: Vec<Ident> = Vec::new();
 
         if self.current() == Token::Colon {
@@ -233,13 +235,40 @@ impl Parser for Source<'_> {
                 }
             }
         }
+        let body = self.parse_body();
+
+        self.push_function(id, id_args, body);
+        return self.parse_level(0);
+    }
+
+    fn parse_if_expr(&mut self) -> Expr {
+        self.tokenize(); // remove if
+        let condition = self.parse_level(0);
+        let body = self.parse_body();
+
+        let mut alts: Vec<Expr> = vec![];
+        while self.current() == Token::ElseKw {
+            self.tokenize();
+            if self.current() == Token::IfKw {
+                alts.push(self.parse_if_expr());
+            } else {
+                alts.push(Expr::Block(self.parse_body()));
+            }
+        }
+
+        return Expr::IfExpr(Box::new(condition), body, alts);
+    }
+
+    #[inline]
+    fn parse_body(&mut self) -> Vec<Expr> {
+        let mut body: Vec<Expr> = vec![];
+
         self.except(Token::LeftBracket);
         while self.current() != Token::RightBracket && self.current() != Token::EOF {
             body.push(self.parse_level(0));
         }
         self.except(Token::RightBracket);
 
-        self.push_function(id, id_args, body);
-        return self.parse_level(0);
+        return body;
     }
 }
