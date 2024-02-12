@@ -139,13 +139,19 @@ impl Parser for Source<'_> {
                 self.tokenize();
                 Expr::Literal(Literal::Float(f))
             }
+            Token::Bool(val) => {
+                self.tokenize();
+                Expr::Literal(Literal::Bool(val))
+            }
             Token::Str(s) => {
                 self.tokenize();
                 Expr::Literal(Literal::Str(s))
             }
+
             Token::Err(_) => {
                 todo!()
             }
+
             Token::Ident(id) => {
                 self.tokenize();
                 Expr::Ident(Ident(id))
@@ -158,12 +164,14 @@ impl Parser for Source<'_> {
                 }
                 todo!()
             }
+
             Token::LeftParen => {
                 self.tokenize();
                 let expr = self.parse_level(0);
                 self.except(Token::RightParen);
                 expr
             }
+
             Token::SetKw => self.parse_declare(),
             _ => {
                 self.err(

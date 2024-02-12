@@ -94,8 +94,16 @@ impl Tokenizer for Source<'_> {
 
                 return self.set(Token::Str(res));
             }
+            '=' => {
+                self.eat();
+                if self.code.len() > 0 && self.at() == '=' {
+                    self.eat();
+                    return self.set(Token::Operator("==".to_string()));
+                }
 
-            '+' | '-' | '*' | '/' | '^' | '=' => {
+                return self.set(Token::Operator("=".to_string()));
+            }
+            '+' | '-' | '*' | '/' | '^' | '<' | '>' | '&' | '|' => {
                 let op = self.eat();
                 return self.set(Token::Operator(op.to_string()));
             }
@@ -138,9 +146,16 @@ impl Tokenizer for Source<'_> {
                     }
 
                     match res.as_str() {
+                        // keywords
                         "set" => self.set(Token::SetKw),
-                        "int" => self.set(Token::Tag("int".to_string())),
-                        "float" => self.set(Token::Tag("float".to_string())),
+                        // tags(types(old WIP))
+                        "__int__" => self.set(Token::Tag("int".to_string())),
+                        "__float__" => self.set(Token::Tag("float".to_string())),
+                        // bools
+                        "true" => self.set(Token::Bool(true)),
+                        "false" => self.set(Token::Bool(false)),
+                        // operations
+                        "==" => self.set(Token::Operator(res)),
                         _ => self.set(Token::Ident(res)),
                     }
                 } else {

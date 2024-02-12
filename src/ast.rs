@@ -2,7 +2,8 @@
 pub enum Literal {
     Int(i32),
     Float(f32),
-    Str(String)
+    Str(String),
+    Bool(bool),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -13,8 +14,11 @@ pub struct Tag(pub String);
 
 pub fn get_operator_level(op: &str) -> u8 {
     match op {
-        "+" | "-" => 1,
-        "*" | "/" => 2,
+        "&" | "|" => 1,
+        "==" => 2,
+        "<" | ">" => 3,
+        "+" | "-" => 4,
+        "*" | "/" => 5,
         _ => todo!(),
     }
 }
@@ -29,4 +33,9 @@ pub enum Expr {
     VarAssign(Ident, Box<Expr>),
     // fn declare ast is genereated in a special Vec in Source
     FnCall(/* id */ Ident, /* args */ Vec<Expr>),
+    IfExpr(
+        /* condition */ Box<Expr>,
+        /* body */ Vec<Expr>,
+        /* alt */ Vec<Expr>,
+    ),
 }

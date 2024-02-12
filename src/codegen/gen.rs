@@ -1,8 +1,11 @@
 use crate::codegen::tools::any_type_to_basic;
 use crate::source::Source;
 use inkwell::types::BasicTypeEnum::*;
+use inkwell::{FloatPredicate, IntPredicate};
 
 use inkwell::values::{BasicValue, BasicValueEnum};
+
+use super::tools::get_type_name;
 
 pub trait Build<'ctx> {
     fn build_add(
@@ -21,6 +24,33 @@ pub trait Build<'ctx> {
         rhs: BasicValueEnum<'ctx>,
     ) -> Result<BasicValueEnum<'ctx>, i8>;
     fn build_div(
+        &mut self,
+        lhs: BasicValueEnum<'ctx>,
+        rhs: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, i8>;
+
+    fn build_bigger_than(
+        &mut self,
+        lhs: BasicValueEnum<'ctx>,
+        rhs: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, i8>;
+    fn build_smaller_than(
+        &mut self,
+        lhs: BasicValueEnum<'ctx>,
+        rhs: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, i8>;
+
+    fn build_and(
+        &mut self,
+        lhs: BasicValueEnum<'ctx>,
+        rhs: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, i8>;
+    fn build_or(
+        &mut self,
+        lhs: BasicValueEnum<'ctx>,
+        rhs: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, i8>;
+    fn build_equals(
         &mut self,
         lhs: BasicValueEnum<'ctx>,
         rhs: BasicValueEnum<'ctx>,
@@ -135,6 +165,126 @@ impl<'ctx> Build<'ctx> for Source<'ctx> {
                 .unwrap()
                 .as_basic_value_enum()),
             _ => todo!(),
+        }
+    }
+
+    fn build_bigger_than(
+        &mut self,
+        lhs: BasicValueEnum<'ctx>,
+        rhs: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, i8> {
+        match lhs.get_type() {
+            IntType(_) => Ok(self
+                .builder
+                .build_int_compare(
+                    IntPredicate::SGT,
+                    lhs.into_int_value(),
+                    rhs.into_int_value(),
+                    "icmp",
+                )
+                .unwrap()
+                .as_basic_value_enum()),
+            FloatType(_) => Ok(self
+                .builder
+                .build_float_compare(
+                    FloatPredicate::OGT,
+                    lhs.into_float_value(),
+                    rhs.into_float_value(),
+                    "fcmp",
+                )
+                .unwrap()
+                .as_basic_value_enum()),
+            _ => todo!(),
+        }
+    }
+    fn build_smaller_than(
+        &mut self,
+        lhs: BasicValueEnum<'ctx>,
+        rhs: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, i8> {
+        match lhs.get_type() {
+            IntType(_) => Ok(self
+                .builder
+                .build_int_compare(
+                    IntPredicate::SLT,
+                    lhs.into_int_value(),
+                    rhs.into_int_value(),
+                    "icmp",
+                )
+                .unwrap()
+                .as_basic_value_enum()),
+            FloatType(_) => Ok(self
+                .builder
+                .build_float_compare(
+                    FloatPredicate::OLT,
+                    lhs.into_float_value(),
+                    rhs.into_float_value(),
+                    "fcmp",
+                )
+                .unwrap()
+                .as_basic_value_enum()),
+            _ => todo!(),
+        }
+    }
+
+    fn build_and(
+        &mut self,
+        lhs: BasicValueEnum<'ctx>,
+        rhs: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, i8> {
+        if get_type_name(lhs.get_type()) != "_i1" {
+            todo!("{}", get_type_name(lhs.get_type()))
+        }
+
+        Ok(self
+            .builder
+            .build_and(lhs.into_int_value(), rhs.into_int_value(), "and")
+            .unwrap()
+            .as_basic_value_enum())
+    }
+    fn build_or(
+        &mut self,
+        lhs: BasicValueEnum<'ctx>,
+        rhs: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, i8> {
+        if get_type_name(lhs.get_type()) != "_i1" {
+            todo!("NaN")
+        }
+
+        Ok(self
+            .builder
+            .build_or(lhs.into_int_value(), rhs.into_int_value(), "or")
+            .unwrap()
+            .as_basic_value_enum())
+    }
+
+    fn build_equals(
+        &mut self,
+        lhs: BasicValueEnum<'ctx>,
+        rhs: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, i8> {
+        match lhs.get_type() {
+            IntType(_) => Ok(self
+                .builder
+                .build_int_compare(
+                    IntPredicate::EQ,
+                    lhs.into_int_value(),
+                    rhs.into_int_value(),
+                    "icmp",
+                )
+                .unwrap()
+                .as_basic_value_enum()),
+            FloatType(_) => Ok(self
+                .builder
+                .build_float_compare(
+                    FloatPredicate::OEQ,
+                    lhs.into_float_value(),
+                    rhs.into_float_value(),
+                    "fcmp",
+                )
+                .unwrap()
+                .as_basic_value_enum()),
+            _ => todo!("add cmp for ..."),
         }
     }
 }

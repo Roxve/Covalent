@@ -13,9 +13,12 @@ use crate::cova_std::add_std;
 // open file as current -> tokenize
 pub enum Token {
     Operator(String),
+    // convert these into literal
     Int(i32),
     Float(f32),
     Str(String),
+    Bool(bool),
+
     Ident(String),
     Tag(String),
     Err(String), // error code and msg
@@ -25,6 +28,8 @@ pub enum Token {
     RightBracket,
     Colon,
     Comma,
+    IfKw,
+    ElseKw,
     SetKw,
     EOF,
 }

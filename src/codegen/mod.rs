@@ -72,6 +72,9 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             Expr::Literal(Literal::Float(f)) => {
                 Ok(self.context.f32_type().const_float(f as f64).into())
             }
+            Expr::Literal(Literal::Bool(b)) => {
+                Ok(self.context.bool_type().const_int(b as u64, false).into())
+            }
             Expr::Literal(Literal::Str(s)) => Ok(self
                 .builder
                 .build_global_string_ptr(s.as_str(), "str")
@@ -168,7 +171,12 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             "-" => self.build_sub(lhs, rhs),
             "*" => self.build_mul(lhs, rhs),
             "/" => self.build_div(lhs, rhs),
-            _ => todo!(),
+            ">" => self.build_bigger_than(lhs, rhs),
+            "<" => self.build_smaller_than(lhs, rhs),
+            "&" => self.build_and(lhs, rhs),
+            "|" => self.build_or(lhs, rhs),
+            "==" => self.build_equals(lhs, rhs),
+            op => todo!("add {}", op),
         }
     }
 
