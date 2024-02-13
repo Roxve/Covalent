@@ -2,9 +2,8 @@ use std::ffi::CStr;
 use std::fmt::Display;
 
 use inkwell::types::{AnyTypeEnum, BasicTypeEnum};
-use inkwell::values::{BasicValue, BasicValueEnum};
+use inkwell::values::{ArrayValue, BasicValue, BasicValueEnum, IntValue, StructValue};
 
-use crate::ast::Literal;
 use crate::source::{ErrKind, Source};
 
 pub fn any_type_to_basic(ty: AnyTypeEnum) -> BasicTypeEnum {
@@ -126,6 +125,62 @@ impl Display for Object {
 impl Object {
     pub fn new(obj: i8, value: Value) -> Self {
         Object { value, obj }
+    }
+}
+
+impl<'ctx> Source<'ctx> {
+    pub fn use_obj(&mut self, obj: Object) -> StructValue<'ctx> {
+        let union_type = self
+            .context
+            .struct_type(&[self.context.i8_type().array_type(4).into()], false);
+        let obj_type = self
+            .context
+            .struct_type(&[union_type.into(), self.context.i8_type().into()], false);
+        let val_bytes = {
+            match obj.obj {
+                0 => unsafe { obj.value.int.to_le_bytes() },
+                1 => unsafe { obj.value.float.to_le_bytes() },
+                _ => todo!(),
+            }
+        };
+        let mut bytes = vec![];
+        for byte in val_bytes {
+            bytes.push(self.context.i8_type().const_int(byte as u64, false));
+        }
+
+        let llvm_obj = obj_type.const_named_struct(&[union_type
+            .const_named_struct(&[
+                self.context.i8_type().const_array(&bytes).into(),
+                self.context
+                    .i8_type()
+                    .const_int(obj.obj as u64, true)
+                    .into(),
+            ])
+            .into()]);
+        llvm_obj
+    }
+
+    pub fn mk_int(&mut self, val: ArrayValue<'ctx>) -> IntValue<'ctx> {
+        let mut result = self.context.i32_type().const_zero();
+
+        for i in 0..val.get_type().len() {
+            let byte = self
+                .builder
+                .build_extract_value(val, i, "byte")
+                .unwrap()
+                .into_int_value();
+            let shifted_byte = self
+                .builder
+                .build_left_shift(
+                    byte,
+                    self.context.i32_type().const_int((i * 8) as u64, false),
+                    "shift",
+                )
+                .unwrap();
+
+            result = self.builder.build_or(result, shifted_byte, "OR").unwrap();
+        }
+        result
     }
 }
 
