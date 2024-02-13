@@ -1,7 +1,10 @@
-use inkwell::types::{AnyTypeEnum, BasicTypeEnum};
+use std::ffi::CStr;
+use std::fmt::Display;
 
+use inkwell::types::{AnyTypeEnum, BasicTypeEnum};
 use inkwell::values::{BasicValue, BasicValueEnum};
 
+use crate::ast::Literal;
 use crate::source::{ErrKind, Source};
 
 pub fn any_type_to_basic(ty: AnyTypeEnum) -> BasicTypeEnum {
@@ -83,5 +86,55 @@ impl<'ctx> Source<'ctx> {
                 None
             } // err
         }
+    }
+}
+
+pub union Value {
+    pub int: i32,
+    pub float: f32,
+    pub bool: bool,
+    pub string: *const i8,
+}
+
+pub struct Object {
+    pub value: Value,
+    pub obj: i8,
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl Display for Object {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.obj {
+            0 => write!(f, "[\nint: {}\n]", unsafe { self.value.int }),
+            1 => write!(f, "[\nfloat: {}\n]", unsafe { self.value.float }),
+            2 => write!(f, "[\nbool: {}\n]", unsafe { self.value.bool }),
+            3 => write!(f, "[\nstring: {}\n]", unsafe {
+                CStr::from_ptr(self.value.string as *const u8)
+                    .to_str()
+                    .unwrap()
+            }),
+            t => todo!("unknown value to display type {}", t),
+        }
+    }
+}
+
+impl Object {
+    pub fn new(obj: i8, value: Value) -> Self {
+        Object { value, obj }
+    }
+}
+
+impl Value {
+    pub fn unpack_int(&self) -> i32 {
+        unsafe { self.int }
+    }
+
+    pub fn unpack_float(&self) -> f32 {
+        unsafe { self.float }
     }
 }
