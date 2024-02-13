@@ -50,14 +50,8 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
 
     fn compile(&mut self, expr: Expr) -> Result<StructValue<'ctx>, i8> {
         match expr {
-            Expr::Literal(Literal::Int(nb)) => Ok(self.use_obj(Object {
-                value: Value { int: nb },
-                obj: 0,
-            })),
-            Expr::Literal(Literal::Float(f)) => Ok(self.use_obj(Object {
-                value: Value { float: f },
-                obj: 1,
-            })),
+            Expr::Literal(Literal::Int(nb)) => Ok(self.mk_obj(nb)),
+            Expr::Literal(Literal::Float(f)) => Ok(self.mk_obj(f)),
             Expr::Ident(Ident(ref name)) => match self.variables.get(name) {
                 Some(var) => Ok(self
                     .builder
@@ -91,11 +85,6 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         let left = self.mk_int(lhs.get_field_at_index(0).unwrap().into_array_value());
         let right = self.mk_int(rhs.get_field_at_index(0).unwrap().into_array_value());
         let value = self.use_int(self.builder.build_int_add(left, right, "iadd").unwrap());
-
-        let alloca = self.create_entry_block_alloca("test", value.get_type());
-        let v = self.builder.build_store(alloca, value.clone());
-
-        println!("{:#?}", v);
 
         Ok(value)
     }

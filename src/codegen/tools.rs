@@ -1,163 +1,142 @@
-use std::ffi::CStr;
-use std::fmt::Display;
+// use std::ffi::CStr;
+// use std::fmt::Display;
 
-use inkwell::types::{AnyTypeEnum, BasicTypeEnum};
-use inkwell::values::{ArrayValue, BasicValue, BasicValueEnum, IntValue, StructValue};
+use crate::source::Source;
+use inkwell::context::Context;
+use inkwell::types::StructType;
+use inkwell::values::{ArrayValue, IntValue, StructValue};
+use inkwell::AddressSpace;
 
-use crate::source::{ErrKind, Source};
+// pub union Value {
+//     pub int: i32,
+//     pub float: f32,
+//     pub bool: bool,
+//     pub string: *const i8,
+// }
 
-pub fn any_type_to_basic(ty: AnyTypeEnum) -> BasicTypeEnum {
-    match ty {
-        AnyTypeEnum::PointerType(p) => BasicTypeEnum::PointerType(p),
-        AnyTypeEnum::IntType(i) => BasicTypeEnum::IntType(i),
-        AnyTypeEnum::FloatType(f) => BasicTypeEnum::FloatType(f),
-        AnyTypeEnum::ArrayType(t) => BasicTypeEnum::ArrayType(t),
-        _ => todo!(),
+// pub struct Object {
+//     pub value: Value,
+//     pub obj: i8,
+// }
+
+// impl Display for Value {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         write!(f, "{}", self)
+//     }
+// }
+
+// impl Display for Object {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match self.obj {
+//             0 => write!(f, "[\nint: {}\n]", unsafe { self.value.int }),
+//             1 => write!(f, "[\nfloat: {}\n]", unsafe { self.value.float }),
+//             2 => write!(f, "[\nbool: {}\n]", unsafe { self.value.bool }),
+//             3 => write!(f, "[\nstring: {}\n]", unsafe {
+//                 CStr::from_ptr(self.value.string as *const u8)
+//                     .to_str()
+//                     .unwrap()
+//             }),
+//             t => todo!("unknown value to display type {}", t),
+//         }
+//     }
+// }
+pub trait CovaObj<'ctx> {
+    fn get_type(&self) -> &str;
+    fn to_bytes(&self, ctx: &'ctx Context) -> Vec<IntValue<'ctx>>;
+}
+
+impl<'ctx> CovaObj<'ctx> for i32 {
+    fn get_type(&self) -> &str {
+        "int"
+    }
+
+    fn to_bytes(&self, ctx: &'ctx Context) -> Vec<IntValue<'ctx>> {
+        let bytes = self.to_le_bytes().to_vec();
+        let mut bytes_val = vec![];
+
+        for byte in bytes {
+            bytes_val.push(ctx.i8_type().const_int(byte as u64, false));
+        }
+        bytes_val
     }
 }
 
-pub fn get_type_name(ty: BasicTypeEnum) -> String {
-    match ty {
-        BasicTypeEnum::IntType(i) => format!("_i{}", i.get_bit_width()),
-        BasicTypeEnum::FloatType(_) => format!("_float"),
-        BasicTypeEnum::ArrayType(t) => {
-            "_arr_".to_owned() + get_type_name(t.get_element_type()).as_str()
-        }
-        BasicTypeEnum::PointerType(ref t) => {
-            let el = t.get_element_type();
-            let bel = &any_type_to_basic(el);
-            let s = "_ptr_".to_owned() + get_type_name(bel.to_owned()).as_str();
-            s
-        }
-        _ => todo!(),
+impl<'ctx> CovaObj<'ctx> for f32 {
+    fn get_type(&self) -> &str {
+        "float"
     }
-}
-impl<'ctx> Source<'ctx> {
-    pub fn conv_into(
-        &mut self,
-        from: BasicValueEnum<'ctx>,
-        into: BasicTypeEnum<'ctx>,
-    ) -> Option<BasicValueEnum<'ctx>> {
-        if from.get_type() == into {
-            return Some(from);
+
+    fn to_bytes(&self, ctx: &'ctx Context) -> Vec<IntValue<'ctx>> {
+        let bytes = self.to_le_bytes().to_vec();
+        let mut bytes_val = vec![];
+
+        for byte in bytes {
+            bytes_val.push(ctx.i8_type().const_int(byte as u64, false));
         }
-
-        match from.get_type() {
-            BasicTypeEnum::FloatType(_) => {
-                if !into.is_int_type() {
-                    // todo err here
-                    return None;
-                }
-                return Some(
-                    self.builder
-                        .build_float_to_signed_int(
-                            from.into_float_value(),
-                            into.into_int_type(),
-                            "fcon",
-                        )
-                        .unwrap()
-                        .as_basic_value_enum(),
-                );
-            }
-
-            BasicTypeEnum::IntType(_) => {
-                if !into.is_float_type() {
-                    return None;
-                }
-
-                return Some(
-                    self.builder
-                        .build_signed_int_to_float(
-                            from.into_int_value(),
-                            into.into_float_type(),
-                            "icon",
-                        )
-                        .unwrap()
-                        .as_basic_value_enum(),
-                );
-            }
-            _ => {
-                self.err(
-                    ErrKind::CannotConvertRight,
-                    "cannot convert right to left (usually in binary expressions)".to_string(),
-                );
-
-                None
-            } // err
-        }
-    }
-}
-
-pub union Value {
-    pub int: i32,
-    pub float: f32,
-    pub bool: bool,
-    pub string: *const i8,
-}
-
-pub struct Object {
-    pub value: Value,
-    pub obj: i8,
-}
-
-impl Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
-    }
-}
-
-impl Display for Object {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.obj {
-            0 => write!(f, "[\nint: {}\n]", unsafe { self.value.int }),
-            1 => write!(f, "[\nfloat: {}\n]", unsafe { self.value.float }),
-            2 => write!(f, "[\nbool: {}\n]", unsafe { self.value.bool }),
-            3 => write!(f, "[\nstring: {}\n]", unsafe {
-                CStr::from_ptr(self.value.string as *const u8)
-                    .to_str()
-                    .unwrap()
-            }),
-            t => todo!("unknown value to display type {}", t),
-        }
-    }
-}
-
-impl Object {
-    pub fn new(obj: i8, value: Value) -> Self {
-        Object { value, obj }
+        bytes_val
     }
 }
 
 impl<'ctx> Source<'ctx> {
-    pub fn use_obj(&mut self, obj: Object) -> StructValue<'ctx> {
-        let obj_type = self.context.struct_type(
+    pub fn obj_type(&mut self) -> StructType<'ctx> {
+        self.context.struct_type(
             &[
                 self.context.i8_type().array_type(4).into(),
                 self.context.i8_type().into(),
+                self.context
+                    .i8_type()
+                    .ptr_type(AddressSpace::default())
+                    .into(),
             ],
             false,
-        );
-        let val_bytes = {
-            match obj.obj {
-                0 => unsafe { obj.value.int.to_le_bytes() },
-                1 => unsafe { obj.value.float.to_le_bytes() },
-                _ => todo!(),
-            }
-        };
-        let mut bytes = vec![];
-        for byte in val_bytes {
-            bytes.push(self.context.i8_type().const_int(byte as u64, false));
-        }
-
-        let llvm_obj = obj_type.const_named_struct(&[
-            self.context.i8_type().const_array(&bytes).into(),
-            self.context
-                .i8_type()
-                .const_int(obj.obj as u64, true)
-                .into(),
-        ]);
-        llvm_obj
+        )
     }
+    pub fn mk_obj<T: CovaObj<'ctx>>(&mut self, obj: T) -> StructValue<'ctx> {
+        let ptr_type = self.context.i8_type().ptr_type(AddressSpace::default());
+        let int_type = self.context.i32_type();
+        let arr_type = self.context.i8_type();
+
+        let (bytes, ty, str) = match obj.get_type() {
+            "int" | "float" => (
+                arr_type.const_array(&obj.to_bytes(self.context).as_slice()),
+                int_type.const_zero(),
+                ptr_type.const_null(),
+            ),
+            _ => todo!(),
+        };
+
+        self.obj_type()
+            .const_named_struct(&[bytes.into(), ty.into(), str.into()])
+    }
+
+    // pub fn use_obj(&mut self, obj: Object) -> StructValue<'ctx> {
+    //     let obj_type = self.obj_type();
+    //     let val_bytes = {
+    //         match obj.obj {
+    //             0 => unsafe { obj.value.int.to_le_bytes() },
+    //             1 => unsafe { obj.value.float.to_le_bytes() },
+    //             _ => todo!(),
+    //         }
+    //     };
+    //     let mut bytes = vec![];
+    //     for byte in val_bytes {
+    //         bytes.push(self.context.i8_type().const_int(byte as u64, false));
+    //     }
+
+    //     let llvm_obj = obj_type.const_named_struct(&[
+    //         self.context.i8_type().const_array(&bytes).into(),
+    //         self.context
+    //             .i8_type()
+    //             .const_int(obj.obj as u64, true)
+    //             .into(),
+    //         self.context
+    //             .i8_type()
+    //             .ptr_type(AddressSpace::default())
+    //             .const_null()
+    //             .into(),
+    //     ]);
+    //     llvm_obj
+    // }
     pub fn use_int(&mut self, val: IntValue<'ctx>) -> StructValue<'ctx> {
         let mut bytes = vec![];
 
@@ -168,16 +147,16 @@ impl<'ctx> Source<'ctx> {
         }
         let array = self.context.i8_type().const_array(&bytes);
 
-        let obj_type = self.context.struct_type(
-            &[
-                self.context.i8_type().array_type(4).into(),
-                self.context.i8_type().into(),
-            ],
-            false,
-        );
-
-        let llvm_obj = obj_type
-            .const_named_struct(&[array.into(), self.context.i8_type().const_zero().into()]);
+        let obj_type = self.obj_type();
+        let llvm_obj = obj_type.const_named_struct(&[
+            array.into(),
+            self.context.i8_type().const_zero().into(),
+            self.context
+                .i8_type()
+                .ptr_type(AddressSpace::default())
+                .const_null()
+                .into(),
+        ]);
         llvm_obj
     }
 
@@ -205,15 +184,5 @@ impl<'ctx> Source<'ctx> {
             result = self.builder.build_or(result, shifted_byte, "OR").unwrap();
         }
         result
-    }
-}
-
-impl Value {
-    pub fn unpack_int(&self) -> i32 {
-        unsafe { self.int }
-    }
-
-    pub fn unpack_float(&self) -> f32 {
-        unsafe { self.float }
     }
 }
