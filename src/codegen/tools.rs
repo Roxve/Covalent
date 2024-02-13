@@ -130,12 +130,13 @@ impl Object {
 
 impl<'ctx> Source<'ctx> {
     pub fn use_obj(&mut self, obj: Object) -> StructValue<'ctx> {
-        let union_type = self
-            .context
-            .struct_type(&[self.context.i8_type().array_type(4).into()], false);
-        let obj_type = self
-            .context
-            .struct_type(&[union_type.into(), self.context.i8_type().into()], false);
+        let obj_type = self.context.struct_type(
+            &[
+                self.context.i8_type().array_type(4).into(),
+                self.context.i8_type().into(),
+            ],
+            false,
+        );
         let val_bytes = {
             match obj.obj {
                 0 => unsafe { obj.value.int.to_le_bytes() },
@@ -148,15 +149,35 @@ impl<'ctx> Source<'ctx> {
             bytes.push(self.context.i8_type().const_int(byte as u64, false));
         }
 
-        let llvm_obj = obj_type.const_named_struct(&[union_type
-            .const_named_struct(&[
-                self.context.i8_type().const_array(&bytes).into(),
-                self.context
-                    .i8_type()
-                    .const_int(obj.obj as u64, true)
-                    .into(),
-            ])
-            .into()]);
+        let llvm_obj = obj_type.const_named_struct(&[
+            self.context.i8_type().const_array(&bytes).into(),
+            self.context
+                .i8_type()
+                .const_int(obj.obj as u64, true)
+                .into(),
+        ]);
+        llvm_obj
+    }
+    pub fn use_int(&mut self, val: IntValue<'ctx>) -> StructValue<'ctx> {
+        let mut bytes = vec![];
+
+        for i in 0..4 {
+            let shift = self.context.i8_type().const_int((i * 8) as u64, false);
+            let byte = val.const_shl(shift).const_truncate(self.context.i8_type());
+            bytes.push(byte);
+        }
+        let array = self.context.i8_type().const_array(&bytes);
+
+        let obj_type = self.context.struct_type(
+            &[
+                self.context.i8_type().array_type(4).into(),
+                self.context.i8_type().into(),
+            ],
+            false,
+        );
+
+        let llvm_obj = obj_type
+            .const_named_struct(&[array.into(), self.context.i8_type().const_zero().into()]);
         llvm_obj
     }
 
@@ -169,15 +190,18 @@ impl<'ctx> Source<'ctx> {
                 .build_extract_value(val, i, "byte")
                 .unwrap()
                 .into_int_value();
+            let byte_as32 = self
+                .builder
+                .build_int_s_extend_or_bit_cast(byte, self.context.i32_type(), "cast")
+                .unwrap();
             let shifted_byte = self
                 .builder
                 .build_left_shift(
-                    byte,
+                    byte_as32,
                     self.context.i32_type().const_int((i * 8) as u64, false),
                     "shift",
                 )
                 .unwrap();
-
             result = self.builder.build_or(result, shifted_byte, "OR").unwrap();
         }
         result

@@ -1,6 +1,6 @@
 mod tools;
 use crate::codegen::tools::*;
-
+use inkwell::types::BasicType;
 use inkwell::values::*;
 
 use crate::ast::Expr;
@@ -19,11 +19,11 @@ pub trait Codegen<'ctx> {
         right: Box<Expr>,
     ) -> Result<StructValue<'ctx>, i8>;
 
-    // fn create_entry_block_alloca<T: BasicType<'ctx>>(
-    //     &self,
-    //     name: &str,
-    //     ty: T,
-    // ) -> PointerValue<'ctx>;
+    fn create_entry_block_alloca<T: BasicType<'ctx>>(
+        &self,
+        name: &str,
+        ty: T,
+    ) -> PointerValue<'ctx>;
     // fn compile_var_assign(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
     // fn compile_var_declare(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
 
@@ -90,10 +90,30 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
 
         let left = self.mk_int(lhs.get_field_at_index(0).unwrap().into_array_value());
         let right = self.mk_int(rhs.get_field_at_index(0).unwrap().into_array_value());
-        let value = Value {
-            int: self.builder.build_int_add(left, right, "iadd").unwrap(),
-        };
+        let value = self.use_int(self.builder.build_int_add(left, right, "iadd").unwrap());
 
-        Ok(self.use_obj(Object { value, obj: 0 }))
+        let alloca = self.create_entry_block_alloca("test", value.get_type());
+        let v = self.builder.build_store(alloca, value.clone());
+
+        println!("{:#?}", v);
+
+        Ok(value)
+    }
+
+    fn create_entry_block_alloca<T: BasicType<'ctx>>(
+        &self,
+        name: &str,
+        ty: T,
+    ) -> PointerValue<'ctx> {
+        let builder = self.context.create_builder();
+
+        let entry = self.fn_value.get_first_basic_block().unwrap();
+
+        match entry.get_first_instruction() {
+            Some(first_instr) => builder.position_before(&first_instr),
+            None => builder.position_at_end(entry),
+        }
+
+        builder.build_alloca(ty, name).unwrap()
     }
 }
