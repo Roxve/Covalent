@@ -7,8 +7,8 @@ use inkwell::values::{FunctionValue, PointerValue};
 
 use crate::ast::Expr;
 use crate::ast::Ident;
+use crate::codegen::Codegen;
 use crate::cova_std::add_std;
-
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
 pub enum Token {
@@ -110,7 +110,7 @@ impl<'ctx> Source<'ctx> {
         let builder = context.create_builder();
         let main = context.append_basic_block(main_fn, "entry");
 
-        add_std(&module, &context);
+        // add_std(&module, &context);
 
         builder.position_at_end(main);
         let src = Source {

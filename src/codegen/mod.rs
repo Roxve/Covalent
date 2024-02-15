@@ -27,8 +27,8 @@ pub trait Codegen<'ctx> {
         name: &str,
         ty: T,
     ) -> PointerValue<'ctx>;
-    // fn compile_var_assign(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
-    // fn compile_var_declare(&mut self, var: Ident, value: Expr) -> Result<BasicValueEnum<'ctx>, i8>;
+    fn compile_var_assign(&mut self, var: Ident, value: Expr) -> Result<StructValue<'ctx>, i8>;
+    fn compile_var_declare(&mut self, var: Ident, value: Expr) -> Result<StructValue<'ctx>, i8>;
 
     // fn compile_fn(
     //     &mut self,
@@ -67,7 +67,8 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
                 }
             },
             Expr::BinaryExpr(op, left, right) => self.compile_binary_expr(op, left, right),
-
+            Expr::VarDeclare(name, value) => self.compile_var_declare(name, *value),
+            Expr::VarAssign(var, value) => self.compile_var_assign(var, *value),
             e => {
                 println!("if you are a normal user please report this!, if you are a dev fix it!");
                 dbg!(e);
@@ -87,8 +88,8 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
 
         let mut lhs = self.mk_val(left);
         let mut rhs = self.mk_val(right);
-        let lhs_type = left.get_ty();
-        let rhs_type = right.get_ty();
+        let lhs_type = left.get_ty(self);
+        let rhs_type = right.get_ty(self);
 
         if lhs_type != rhs_type {
             // 0 int 1 float
@@ -140,5 +141,41 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         }
 
         builder.build_alloca(ty, name).unwrap()
+    }
+
+    fn compile_var_declare(&mut self, var: Ident, value: Expr) -> Result<StructValue<'ctx>, i8> {
+        let var_name = var.0;
+
+        if self.variables.contains_key(&var_name) {
+            self.err(ErrKind::VarAlreadyDeclared, format!("var {} already declared, covalent is dynamic so you can assign the var to a new type using the '=' operator.", var_name));
+            return Err(ErrKind::VarAlreadyDeclared as i8);
+        }
+
+        let init = self.compile(value)?;
+        let tt = init.get_type();
+        let alloca = self.create_entry_block_alloca(&var_name, tt);
+        let _ = self.builder.build_store(alloca, init);
+
+        self.variables.insert(var_name, alloca);
+
+        return Ok(init);
+    }
+
+    fn compile_var_assign(&mut self, var: Ident, value: Expr) -> Result<StructValue<'ctx>, i8> {
+        let var_name = var.0;
+        if !self.variables.contains_key(&var_name) {
+            self.err(
+                ErrKind::UndeclaredVar,
+                format!("cannot assign to {} because its not declared", var_name),
+            );
+            return Err(ErrKind::UndeclaredVar as i8);
+        }
+
+        let val = self.compile(value.clone())?;
+
+        let _ = self
+            .builder
+            .build_store(*self.variables.get(&var_name).unwrap(), val);
+        return Ok(val);
     }
 }

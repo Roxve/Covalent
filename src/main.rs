@@ -29,9 +29,14 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
             src.functions.clone()
         );
     }
-
+    src.build_mk_float();
+    src.build_mk_int();
+    src.build_use_int();
     let res = src.compile_prog(prog);
 
+    if is_debug {
+        println!("{:#?}", src.mk_val(res.unwrap()));
+    }
     let _ = src
         .builder
         .build_return(Some(&src.context.i32_type().const_int(0, true)));
@@ -50,10 +55,6 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
 
     let path = Path::new(byte_path.as_str());
     src.module.write_bitcode_to_path(path);
-
-    if is_debug {
-        println!("{:#?}", src.mk_val(res.unwrap()));
-    }
 
     // compiling
     let out = {
