@@ -52,7 +52,7 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
     src.module.write_bitcode_to_path(path);
 
     if is_debug {
-        println!("{:#?}", res);
+        println!("{:#?}", src.mk_val(res.unwrap()));
     }
 
     // compiling

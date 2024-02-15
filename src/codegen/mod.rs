@@ -1,5 +1,8 @@
-mod tools;
+mod gen;
+pub mod tools;
+use self::gen::Build;
 use crate::codegen::tools::*;
+
 use inkwell::types::BasicType;
 use inkwell::values::*;
 
@@ -79,14 +82,49 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
         left: Box<Expr>,
         right: Box<Expr>,
     ) -> Result<StructValue<'ctx>, i8> {
-        let lhs = self.compile(*left)?;
-        let rhs = self.compile(*right)?;
+        let left = self.compile(*left)?;
+        let right = self.compile(*right)?;
 
-        let left = self.mk_int(lhs.get_field_at_index(0).unwrap().into_array_value());
-        let right = self.mk_int(rhs.get_field_at_index(0).unwrap().into_array_value());
-        let value = self.use_int(self.builder.build_int_add(left, right, "iadd").unwrap());
+        let mut lhs = self.mk_val(left);
+        let mut rhs = self.mk_val(right);
+        let lhs_type = left.get_ty();
+        let rhs_type = right.get_ty();
 
-        Ok(value)
+        if lhs_type != rhs_type {
+            // 0 int 1 float
+            if lhs_type == 0 && rhs_type == 1 {
+                lhs = self
+                    .builder
+                    .build_signed_int_to_float(
+                        lhs.into_int_value(),
+                        rhs.get_type().into_float_type(),
+                        "fcon",
+                    )
+                    .unwrap()
+                    .as_basic_value_enum();
+            } else if lhs_type == 1 && rhs_type == 0 {
+                rhs = self
+                    .builder
+                    .build_signed_int_to_float(
+                        rhs.into_int_value(),
+                        lhs.get_type().into_float_type(),
+                        "fcon",
+                    )
+                    .unwrap()
+                    .as_basic_value_enum();
+            }
+        }
+
+        let result = match op.as_str() {
+            "+" => self.build_add(lhs, rhs),
+            "-" => self.build_sub(lhs, rhs),
+            "*" => self.build_mul(lhs, rhs),
+            "/" => self.build_div(lhs, rhs),
+            _ => todo!(),
+        }?;
+        dbg!(result.clone());
+
+        Ok(self.mk_basic_obj(result))
     }
 
     fn create_entry_block_alloca<T: BasicType<'ctx>>(
