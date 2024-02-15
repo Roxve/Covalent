@@ -314,7 +314,7 @@ impl<'ctx> Source<'ctx> {
                 .into_int_value();
             let byte_as32 = self
                 .builder
-                .build_int_s_extend_or_bit_cast(byte, self.context.i32_type(), "cast")
+                .build_int_z_extend_or_bit_cast(byte, self.context.i32_type(), "cast")
                 .unwrap();
             let shifted_byte = self
                 .builder
@@ -339,7 +339,7 @@ impl<'ctx> Source<'ctx> {
                 .into_int_value();
             let byte_as32 = self
                 .builder
-                .build_int_s_extend_or_bit_cast(byte, self.context.i32_type(), "cast")
+                .build_int_z_extend_or_bit_cast(byte, self.context.i32_type(), "cast")
                 .unwrap();
             let shifted_byte = self
                 .builder

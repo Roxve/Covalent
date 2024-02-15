@@ -122,8 +122,6 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             "/" => self.build_div(lhs, rhs),
             _ => todo!(),
         }?;
-        dbg!(result.clone());
-
         Ok(self.mk_basic_obj(result))
     }
 
