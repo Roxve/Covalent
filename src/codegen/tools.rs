@@ -1,6 +1,7 @@
 // use std::ffi::CStr;
 // use std::fmt::Display;
 
+use crate::codegen::gen::Build;
 use crate::source::ErrKind;
 use crate::source::Source;
 use inkwell::context::Context;
@@ -77,7 +78,7 @@ pub trait CovaLLVMObj<'ctx> {
     fn zero_arr(&self) -> BasicValueEnum<'ctx>;
     fn null(&self) -> BasicValueEnum<'ctx>;
     fn get_ty(&self, src: &Source<'ctx>) -> i8;
-    fn get_value(&self, builder: &Source<'ctx>) -> ArrayValue<'ctx>;
+    fn get_value(&self, src: &Source<'ctx>) -> ArrayValue<'ctx>;
     fn set_type(&mut self, ty: i8) -> Self;
     fn set_bytes(&mut self, bytes: ArrayValue<'ctx>) -> Self;
 }
@@ -113,16 +114,30 @@ impl<'ctx> CovaLLVMObj<'ctx> for StructValue<'ctx> {
             .const_null()
             .as_basic_value_enum()
     }
-
+    // get_ty and get_value is temp
     fn get_ty(&self, src: &Source<'ctx>) -> i8 {
-        let val = self.get_field_at_index(1).unwrap_or(self.zero());
+        let mut val = self.get_field_at_index(1).unwrap_or(self.zero());
         if val.is_pointer_value() {
-            let field =
-                src.builder
-                    .build_struct_gep(val.into_pointer_value(), 1, "gep")
-                    .unwrap_or(src.context.i32_type().const_int(0, false).const_to_pointer(
-                        src.context.i32_type().ptr_type(AddressSpace::default()),
-                    ));
+            src.module.print_to_stderr();
+
+            // if val is a pointer to a function...
+            if val.into_pointer_value().is_const() {
+                // we load val first
+                let alloca = src
+                    .builder
+                    .build_alloca(self.get_type(), "alloc_val")
+                    .unwrap();
+                let _ = src.builder.build_store(alloca, *self);
+                val = src.builder.build_load(alloca, "load_type").unwrap();
+                return val.into_struct_value().get_ty(src);
+            }
+
+            dbg!(val);
+            dbg!(self);
+            let field = src
+                .builder
+                .build_struct_gep(val.into_pointer_value(), 1, "gep")
+                .unwrap();
             let result = src
                 .builder
                 .build_load(field, "load_type")
@@ -132,16 +147,16 @@ impl<'ctx> CovaLLVMObj<'ctx> for StructValue<'ctx> {
         }
         val.into_int_value().get_sign_extended_constant().unwrap() as i8
     }
-    fn get_value(&self, builder: &Source<'ctx>) -> ArrayValue<'ctx> {
-        let val = self.get_field_at_index(0).unwrap_or(self.zero_arr());
+    fn get_value(&self, src: &Source<'ctx>) -> ArrayValue<'ctx> {
+        let mut val = self.get_field_at_index(0).unwrap_or(self.zero_arr());
         // handel variables...
         if val.is_pointer_value() {
-            let field = builder
+            let field = src
                 .builder
                 .build_struct_gep(val.into_pointer_value(), 0, "gep")
                 .unwrap();
 
-            let result = builder
+            let result = src
                 .builder
                 .build_load(field, "load_bytes")
                 .unwrap()
@@ -149,6 +164,23 @@ impl<'ctx> CovaLLVMObj<'ctx> for StructValue<'ctx> {
             return result;
         }
 
+        // handel non array moment
+        if !val.is_array_value() {
+            let alloca = src
+                .builder
+                .build_alloca(self.get_type(), "alloc_val")
+                .unwrap();
+            let _ = src.builder.build_store(alloca, *self);
+            val = src.builder.build_load(alloca, "load_bytes").unwrap();
+            let v = val
+                .into_struct_value()
+                .get_field_at_index(0)
+                .unwrap_or(self.zero_arr());
+            if v.is_pointer_value() {
+                return val.into_struct_value().get_value(src);
+            }
+            return v.into_array_value();
+        }
         return val.into_array_value();
     }
 

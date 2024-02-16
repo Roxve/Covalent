@@ -35,7 +35,7 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
     let res = src.compile_prog(prog);
 
     if is_debug {
-        println!("{:#?}", src.mk_val(res.unwrap()));
+        println!("{:#?}", res);
     }
     let _ = src
         .builder
