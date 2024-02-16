@@ -1,7 +1,6 @@
 // use std::ffi::CStr;
 // use std::fmt::Display;
 
-use crate::codegen::gen::Build;
 use crate::source::ErrKind;
 use crate::source::Source;
 use inkwell::context::Context;
@@ -356,7 +355,6 @@ impl<'ctx> Source<'ctx> {
     }
     pub fn mk_obj<T: CovaObj<'ctx>>(&mut self, obj: T) -> StructValue<'ctx> {
         let ptr_type = self.context.i8_type().ptr_type(AddressSpace::default());
-        let int_type = self.context.i32_type();
         let arr_type = self.context.i8_type();
 
         let (bytes, ty, str) = match obj.get_type() {
@@ -396,18 +394,23 @@ impl<'ctx> Source<'ctx> {
 
         let entry = self.context.append_basic_block(func, "entry");
         let _ = builder.position_at_end(entry);
+        let typ = self.context.i8_type();
 
         let mut bytes = vec![];
         for i in 0..4 {
+            dbg!(&intv);
             let shift = self.context.i32_type().const_int((i * 8) as u64, false);
+            dbg!(&shift);
             let shl = intv.const_shl(shift);
+            dbg!(&shl);
 
-            let byte = shl.const_truncate(self.context.i8_type());
+            let byte = shl;
 
+            dbg!(&byte);
             bytes.push(byte);
         }
         let array = self.context.i8_type().const_array(&bytes);
-
+        dbg!(&array);
         let obj_type = self.obj_type();
         let llvm_obj = obj_type.const_named_struct(&[
             array.into(),
