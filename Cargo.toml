@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 inkwell = { version = "0.3.0", features = ["llvm14-0"] }
-llvm-sys = "140.0"

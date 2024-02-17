@@ -29,6 +29,8 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
             src.functions.clone()
         );
     }
+
+    src.build_new_obj();
     src.build_mk_float();
     src.build_mk_int();
     src.build_use_int();
