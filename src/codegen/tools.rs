@@ -286,6 +286,83 @@ impl<'ctx> Source<'ctx> {
         let _ = builder.build_return(Some(&result));
     }
 
+    pub fn build_use_int(&mut self) {
+        let fn_ty = self
+            .obj_type()
+            .fn_type(&[self.context.i32_type().into()], false);
+        let func = self.module.add_function("use_int", fn_ty, None);
+
+        let builder = self.context.create_builder();
+        let intv = func.get_nth_param(0).unwrap().into_int_value();
+        intv.set_name("intv");
+
+        let entry = self.context.append_basic_block(func, "entry");
+        let _ = builder.position_at_end(entry);
+
+        let mut bytes = vec![];
+        for i in 0..4 {
+            let shift = self.context.i32_type().const_int((i * 8) as u64, false);
+            let byte = intv.const_shl(shift);
+
+            bytes.push(byte);
+        }
+        let array = self.context.i8_type().const_array(&bytes);
+
+        let obj_type = self.obj_type();
+        let llvm_obj = obj_type.const_named_struct(&[
+            array.into(),
+            self.context.i8_type().const_zero().into(),
+            self.context
+                .i8_type()
+                .ptr_type(AddressSpace::default())
+                .const_null()
+                .into(),
+        ]);
+        let _ = builder.build_return(Some(&llvm_obj));
+    }
+
+    pub fn build_use_float(&mut self) {
+        let fn_ty = self
+            .obj_type()
+            .fn_type(&[self.context.f32_type().into()], false);
+        let func = self.module.add_function("use_float", fn_ty, None);
+
+        let builder = self.context.create_builder();
+        let floatv = func.get_nth_param(0).unwrap().into_float_value();
+        floatv.set_name("floatv");
+
+        let entry = self.context.append_basic_block(func, "entry");
+        let _ = builder.position_at_end(entry);
+
+        let intv = builder
+            .build_bitcast(floatv, self.context.i32_type(), "ibitc")
+            .unwrap()
+            .into_int_value();
+
+        let mut array = self.context.i8_type().array_type(4).const_zero();
+
+        let mut bytes = vec![];
+        for i in 0..4 {
+            let shift = self.context.i32_type().const_int((i * 8) as u64, false);
+
+            let byte = intv.const_shl(shift);
+            array = builder
+                .build_insert_value(array, byte, i, "insert_byte")
+                .unwrap()
+                .into_array_value();
+
+            bytes.push(byte);
+        }
+
+        let struct_obj = self.obj_type().const_zero();
+        let llvm_obj = builder
+            .build_insert_value(struct_obj, array, 0, "insert_bytes")
+            .unwrap()
+            .into_struct_value();
+
+        let _ = builder.build_return(Some(&llvm_obj));
+    }
+
     pub fn conv_into(
         &mut self,
         from: BasicValueEnum<'ctx>,
@@ -382,47 +459,6 @@ impl<'ctx> Source<'ctx> {
             _ => todo!("basic type to obj"),
         }
     }
-    pub fn build_use_int(&mut self) {
-        let fn_ty = self
-            .obj_type()
-            .fn_type(&[self.context.i32_type().into()], false);
-        let func = self.module.add_function("use_int", fn_ty, None);
-
-        let builder = self.context.create_builder();
-        let intv = func.get_nth_param(0).unwrap().into_int_value();
-        intv.set_name("intv");
-
-        let entry = self.context.append_basic_block(func, "entry");
-        let _ = builder.position_at_end(entry);
-        let typ = self.context.i8_type();
-
-        let mut bytes = vec![];
-        for i in 0..4 {
-            dbg!(&intv);
-            let shift = self.context.i32_type().const_int((i * 8) as u64, false);
-            dbg!(&shift);
-            let shl = intv.const_shl(shift);
-            dbg!(&shl);
-
-            let byte = shl;
-
-            dbg!(&byte);
-            bytes.push(byte);
-        }
-        let array = self.context.i8_type().const_array(&bytes);
-        dbg!(&array);
-        let obj_type = self.obj_type();
-        let llvm_obj = obj_type.const_named_struct(&[
-            array.into(),
-            self.context.i8_type().const_zero().into(),
-            self.context
-                .i8_type()
-                .ptr_type(AddressSpace::default())
-                .const_null()
-                .into(),
-        ]);
-        let _ = builder.build_return(Some(&llvm_obj));
-    }
 
     pub fn use_int(&mut self, val: IntValue<'ctx>) -> StructValue<'ctx> {
         let fun = self.module.get_function("use_int").unwrap();
@@ -435,44 +471,13 @@ impl<'ctx> Source<'ctx> {
     }
 
     pub fn use_float(&mut self, val: FloatValue<'ctx>) -> StructValue<'ctx> {
-        let mut bytes = vec![];
-
-        let bit_cast_val = self
-            .builder
-            .build_bitcast(val, self.context.i32_type(), "icast")
+        let fun = self.module.get_function("use_float").unwrap();
+        self.builder
+            .build_call(fun, &[val.into()], "fuse")
             .unwrap()
-            .into_int_value();
-        for i in 0..4 {
-            let shift = self
-                .builder
-                .build_int_s_extend_or_bit_cast(
-                    self.context.i8_type().const_int((i * 8) as u64, false),
-                    self.context.i32_type(),
-                    "fcast",
-                )
-                .unwrap();
-
-            //idk why it works **i think**
-            let shifted_byte = self
-                .builder
-                .build_right_shift(bit_cast_val, shift, false, "shr")
-                .unwrap();
-            let byte = shifted_byte.const_truncate(self.context.i8_type());
-            bytes.push(byte.clone());
-        }
-        let array = self.context.i8_type().const_array(&bytes);
-
-        let obj_type = self.obj_type();
-        let llvm_obj = obj_type.const_named_struct(&[
-            array.into(),
-            self.context.i8_type().const_int(1, true).into(),
-            self.context
-                .i8_type()
-                .ptr_type(AddressSpace::default())
-                .const_null()
-                .into(),
-        ]);
-        llvm_obj
+            .try_as_basic_value()
+            .unwrap_left()
+            .into_struct_value()
     }
 
     pub fn mk_int(&mut self, val: ArrayValue<'ctx>) -> IntValue<'ctx> {

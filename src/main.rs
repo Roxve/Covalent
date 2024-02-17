@@ -32,10 +32,12 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
     src.build_mk_float();
     src.build_mk_int();
     src.build_use_int();
+    src.build_use_float();
+
     let res = src.compile_prog(prog);
 
     if is_debug {
-        println!("{:#?}", res);
+        println!("{:#?}", src.mk_val(res.unwrap()));
     }
     let _ = src
         .builder
