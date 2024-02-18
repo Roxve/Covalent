@@ -15,6 +15,7 @@ pub trait Parser {
     fn parse_declare(&mut self) -> Expr;
     fn parse_declare_fn(&mut self, id: Ident) -> Expr;
     fn parse_if_expr(&mut self) -> Expr;
+    fn parse_ret_expr(&mut self) -> Expr;
 
     fn parse_body(&mut self) -> Vec<Expr>;
     fn parse_list(&mut self) -> Vec<Expr>;
@@ -177,6 +178,7 @@ impl Parser for Source<'_> {
 
             Token::SetKw => self.parse_declare(),
             Token::IfKw => self.parse_if_expr(),
+            Token::RetKw => self.parse_ret_expr(),
             _ => {
                 self.err(
                     ErrKind::UnexceptedTokenE,
@@ -270,5 +272,11 @@ impl Parser for Source<'_> {
         self.except(Token::RightBracket);
 
         return body;
+    }
+
+    fn parse_ret_expr(&mut self) -> Expr {
+        self.tokenize();
+        let expr = self.parse_level(0);
+        Expr::RetExpr(Box::new(expr))
     }
 }

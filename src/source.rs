@@ -7,7 +7,7 @@ use inkwell::values::{FunctionValue, PointerValue};
 
 use crate::ast::Expr;
 use crate::ast::Ident;
-use crate::codegen::Codegen;
+
 use crate::cova_std::add_std;
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
@@ -31,6 +31,7 @@ pub enum Token {
     IfKw,
     ElseKw,
     SetKw,
+    RetKw,
     EOF,
 }
 

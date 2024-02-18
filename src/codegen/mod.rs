@@ -64,6 +64,11 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             Expr::VarDeclare(name, value) => self.compile_var_declare(name, *value),
             Expr::VarAssign(var, value) => self.compile_var_assign(var, *value),
             Expr::FnCall(name, args) => self.compile_fn_call(name, args),
+            Expr::RetExpr(expr) => {
+                let compiled = self.compile(*expr)?;
+                let _ = self.builder.build_return(Some(&compiled));
+                Ok(compiled)
+            }
             e => {
                 println!("if you are a normal user please report this!, if you are a dev fix it!");
                 dbg!(e);
@@ -219,6 +224,45 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
     }
 
     fn compile_fn_call(&mut self, name: Ident, args: Vec<Expr>) -> Result<StructValue<'ctx>, i8> {
-        todo!()
+        let compiled_args: Vec<BasicMetadataValueEnum> = args
+            .iter()
+            .map(|arg| {
+                self.compile(arg.clone())
+                    .unwrap()
+                    .as_basic_value_enum()
+                    .into()
+            })
+            .collect();
+
+        match self.module.get_function(name.clone().0.as_str()) {
+            Some(func) => Ok(self
+                .builder
+                .build_call(func, &compiled_args, name.0.as_str())
+                .unwrap()
+                .try_as_basic_value()
+                .unwrap_left()
+                .into_struct_value()),
+
+            None => match self.get_function(name.clone().0) {
+                Some(f) => {
+                    let func = self.compile_fn(f)?;
+                    Ok(self
+                        .builder
+                        .build_call(func, &compiled_args, name.0.as_str())
+                        .unwrap()
+                        .try_as_basic_value()
+                        .unwrap_left()
+                        .into_struct_value())
+                }
+
+                None => {
+                    self.err(
+                        ErrKind::UndeclaredVar,
+                        format!("undeclared function {}", name.0),
+                    );
+                    Err(ErrKind::UndeclaredVar as i8)
+                }
+            },
+        }
     }
 }

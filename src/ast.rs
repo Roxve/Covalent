@@ -39,4 +39,5 @@ pub enum Expr {
         /* alt */ Vec<Expr>,
     ),
     Block(Vec<Expr>),
+    RetExpr(Box<Expr>),
 }

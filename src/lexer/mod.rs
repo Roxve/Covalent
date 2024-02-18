@@ -150,6 +150,7 @@ impl Tokenizer for Source<'_> {
                         "set" => self.set(Token::SetKw),
                         "if" => self.set(Token::IfKw),
                         "else" => self.set(Token::ElseKw),
+                        "ret" => self.set(Token::RetKw),
                         // tags(types(old WIP))
                         "__int__" => self.set(Token::Tag("int".to_string())),
                         "__float__" => self.set(Token::Tag("float".to_string())),
