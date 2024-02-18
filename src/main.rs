@@ -16,7 +16,20 @@ use crate::source::*;
 use std::process::Command;
 
 use inkwell::context::Context;
+use inkwell::module::Module;
+use inkwell::passes::PassManager;
+fn run_passes_on(module: &Module) {
+    let fpm = PassManager::create(());
 
+    fpm.add_instruction_combining_pass();
+    fpm.add_reassociate_pass();
+    fpm.add_gvn_pass();
+    fpm.add_cfg_simplification_pass();
+    fpm.add_basic_alias_analysis_pass();
+    fpm.add_promote_memory_to_register_pass();
+
+    fpm.run_on(module);
+}
 fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
     let ctx = &Context::create();
     let mut src = Source::new(input, ctx);
@@ -53,7 +66,9 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
     if src.errors.len() >= 1 {
         panic!("exiting duo to previous errors");
     }
-    src.module.verify().expect("invaild module");
+    if !is_repl {
+        src.module.verify().expect("invaild module")
+    };
 
     let byte_path = format!("/tmp/{}.ll", name);
 
@@ -61,39 +76,57 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
     src.module.write_bitcode_to_path(path);
 
     // compiling
-    let out = {
-        // add is repl
-        if is_debug || is_repl {
-            format!("/tmp/{}", name)
-        } else {
-            format!("./{}", name)
-        }
-    };
-
-    let _ = Command::new("clang")
-        .arg("-Wno-everything")
-        .arg(byte_path)
-        .arg(format!(
-            "-L{}/libs",
-            env::current_exe()
-                .expect("no path to exe")
-                .parent()
-                .unwrap()
-                .to_str()
-                .expect("no path to exe dir"),
-        ))
-        .arg("-lstd")
-        .arg("-o")
-        .arg(&out)
-        .spawn()
-        .expect("failed compiling file(maybe you dont have clang installed in path)")
-        .wait();
     if is_repl {
-        let output = Command::new(out)
+        run_passes_on(&src.module);
+        let ee = src
+            .module
+            .create_jit_execution_engine(inkwell::OptimizationLevel::None)
+            .unwrap();
+        println!("module");
+
+        let main = unsafe {
+            ee.get_function::<unsafe extern "C" fn() -> i32>("main")
+                .expect("no main function")
+        };
+        println!("got majn");
+        unsafe {
+            println!("=> {}", main.call());
+        }
+    } else {
+        let out = {
+            // add is repl
+            if is_debug || is_repl {
+                format!("/tmp/{}", name)
+            } else {
+                format!("./{}", name)
+            }
+        };
+
+        let _ = Command::new("clang")
+            .arg("-Wno-everything")
+            .arg(byte_path)
+            .arg(format!(
+                "-L{}/libs",
+                env::current_exe()
+                    .expect("no path to exe")
+                    .parent()
+                    .unwrap()
+                    .to_str()
+                    .expect("no path to exe dir"),
+            ))
+            .arg("-lstd")
+            .arg("-o")
+            .arg(&out)
             .spawn()
-            .expect("failed running compiled prog")
+            .expect("failed compiling file(maybe you dont have clang installed in path)")
             .wait();
-        println!("output: {:?}", output);
+        if is_repl {
+            let output = Command::new(out)
+                .spawn()
+                .expect("failed running compiled prog")
+                .wait();
+            println!("output: {:?}", output);
+        }
     }
 }
 fn repl(is_debug: bool) {
