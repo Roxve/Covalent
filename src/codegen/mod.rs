@@ -3,6 +3,7 @@ pub mod tools;
 use self::gen::Build;
 use crate::codegen::tools::*;
 
+use inkwell::types::BasicMetadataTypeEnum;
 use inkwell::types::BasicType;
 use inkwell::values::*;
 
@@ -23,22 +24,15 @@ pub trait Codegen<'ctx> {
     ) -> Result<StructValue<'ctx>, i8>;
 
     fn create_entry_block_alloca<T: BasicType<'ctx>>(
-        &self,
+        &mut self,
         name: &str,
         ty: T,
     ) -> PointerValue<'ctx>;
     fn compile_var_assign(&mut self, var: Ident, value: Expr) -> Result<StructValue<'ctx>, i8>;
     fn compile_var_declare(&mut self, var: Ident, value: Expr) -> Result<StructValue<'ctx>, i8>;
 
-    // fn compile_fn(
-    //     &mut self,
-    //     name: String,
-    //     args_names: Vec<String>,
-    //     types: Vec<BasicMetadataTypeEnum<'ctx>>,
-    //     body: Vec<Expr>,
-    // );
-    // fn compile_fn_call(&mut self, name: Ident, args: Vec<Expr>)
-    //     -> Result<BasicValueEnum<'ctx>, i8>;
+    fn compile_fn(&mut self, func: Function) -> Result<FunctionValue<'ctx>, i8>;
+    fn compile_fn_call(&mut self, name: Ident, args: Vec<Expr>) -> Result<StructValue<'ctx>, i8>;
 }
 
 impl<'ctx> Codegen<'ctx> for Source<'ctx> {
@@ -69,6 +63,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             Expr::BinaryExpr(op, left, right) => self.compile_binary_expr(op, left, right),
             Expr::VarDeclare(name, value) => self.compile_var_declare(name, *value),
             Expr::VarAssign(var, value) => self.compile_var_assign(var, *value),
+            Expr::FnCall(name, args) => self.compile_fn_call(name, args),
             e => {
                 println!("if you are a normal user please report this!, if you are a dev fix it!");
                 dbg!(e);
@@ -127,7 +122,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
     }
 
     fn create_entry_block_alloca<T: BasicType<'ctx>>(
-        &self,
+        &mut self,
         name: &str,
         ty: T,
     ) -> PointerValue<'ctx> {
@@ -177,5 +172,53 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             .builder
             .build_store(*self.variables.get(&var_name).unwrap(), val);
         return Ok(val);
+    }
+    fn compile_fn(&mut self, func: Function) -> Result<FunctionValue<'ctx>, i8> {
+        let mut args: Vec<BasicMetadataTypeEnum> = vec![];
+
+        for _ in func.args.clone() {
+            args.push(self.obj_type().into());
+        }
+
+        let func_ty = self.obj_type().fn_type(&args, false);
+        let compiled = self
+            .module
+            .add_function(func.name.0.as_str(), func_ty, None);
+
+        let old_vars = self.variables.clone();
+        self.variables.clear();
+        self.variables.reserve(func.args.clone().len());
+
+        let prev_fn = self.fn_value;
+        self.fn_value = compiled;
+
+        let prev_block = self.builder.get_insert_block().unwrap();
+        let entry = self.context.append_basic_block(compiled, "entry");
+        self.builder.position_at_end(entry);
+
+        // set func args names and alloc them
+        let args_names: Vec<&str> = func.args.iter().map(|v| v.0.as_str()).collect();
+        for (i, param) in compiled.get_param_iter().enumerate() {
+            let name = args_names[i];
+            param.set_name(name);
+
+            let ty = self.obj_type();
+            let alloc = self.create_entry_block_alloca(name, ty);
+            let _ = self.builder.build_store(alloc, param);
+        }
+
+        for expr in func.body {
+            self.compile(expr)?;
+        }
+
+        self.fn_value = prev_fn;
+        self.variables = old_vars;
+
+        self.builder.position_at_end(prev_block);
+        Ok(compiled)
+    }
+
+    fn compile_fn_call(&mut self, name: Ident, args: Vec<Expr>) -> Result<StructValue<'ctx>, i8> {
+        todo!()
     }
 }
