@@ -286,40 +286,6 @@ impl<'ctx> Source<'ctx> {
         let _ = builder.build_return(Some(&result));
     }
 
-    pub fn build_use_int(&mut self) {
-        let fn_ty = self
-            .obj_type()
-            .fn_type(&[self.context.i32_type().into()], false);
-        let func = self.module.add_function("use_int", fn_ty, None);
-
-        let builder = self.context.create_builder();
-        let intv = func.get_nth_param(0).unwrap().into_int_value();
-        intv.set_name("intv");
-
-        let entry = self.context.append_basic_block(func, "entry");
-        let _ = builder.position_at_end(entry);
-
-        let mut bytes = vec![];
-        for i in 0..4 {
-            let shift = self.context.i32_type().const_int((i * 8) as u64, false);
-            let byte = intv.const_shl(shift);
-
-            bytes.push(byte);
-        }
-        let array = self.context.i8_type().const_array(&bytes);
-
-        let obj_type = self.obj_type();
-        let llvm_obj = obj_type.const_named_struct(&[
-            array.into(),
-            self.context.i8_type().const_zero().into(),
-            self.context
-                .i8_type()
-                .ptr_type(AddressSpace::default())
-                .const_null()
-                .into(),
-        ]);
-        let _ = builder.build_return(Some(&llvm_obj));
-    }
     pub fn build_new_obj(&mut self) {
         let fn_ty = self.obj_type().fn_type(
             &[
@@ -371,6 +337,61 @@ impl<'ctx> Source<'ctx> {
             .build_bitcast(floatv, self.context.i32_type(), "ibitc")
             .unwrap()
             .into_int_value();
+
+        let mut bytes = vec![];
+        for i in 0..4 {
+            let shift = self.context.i32_type().const_int((i * 8) as u64, false);
+
+            let byte = builder.build_left_shift(intv, shift, "shl").unwrap();
+            arr = builder
+                .build_insert_value(
+                    arr,
+                    builder
+                        .build_int_truncate(byte, self.context.i8_type(), "trunc")
+                        .unwrap(),
+                    i,
+                    "ins",
+                )
+                .unwrap()
+                .into_array_value();
+            bytes.push(byte);
+        }
+
+        let llvm_obj = builder
+            .build_call(
+                new_obj,
+                &[
+                    arr.into(),
+                    self.context.i8_type().const_zero().into(),
+                    self.context
+                        .i8_type()
+                        .ptr_type(AddressSpace::default())
+                        .const_null()
+                        .into(),
+                ],
+                "new_val",
+            )
+            .unwrap()
+            .try_as_basic_value()
+            .unwrap_left();
+
+        let _ = builder.build_return(Some(&llvm_obj));
+    }
+
+    pub fn build_use_int(&mut self) {
+        let fn_ty = self
+            .obj_type()
+            .fn_type(&[self.context.i32_type().into()], false);
+        let func = self.module.add_function("use_int", fn_ty, None);
+        let new_obj = self.module.get_function("new_obj").unwrap();
+
+        let builder = self.context.create_builder();
+        let intv = func.get_nth_param(0).unwrap().into_int_value();
+        intv.set_name("intv");
+
+        let entry = self.context.append_basic_block(func, "entry");
+        let _ = builder.position_at_end(entry);
+        let mut arr = self.context.i8_type().array_type(4).const_zero();
 
         let mut bytes = vec![];
         for i in 0..4 {
