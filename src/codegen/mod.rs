@@ -210,6 +210,7 @@ impl<'ctx> Codegen<'ctx> for Source<'ctx> {
             let ty = self.obj_type();
             let alloc = self.create_entry_block_alloca(name, ty);
             let _ = self.builder.build_store(alloc, param);
+            self.variables.insert(name.to_string(),alloc);
         }
 
         for expr in func.body {
