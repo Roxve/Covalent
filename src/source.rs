@@ -7,6 +7,7 @@ use inkwell::values::{FunctionValue, PointerValue};
 
 use crate::ast::Expr;
 use crate::ast::Ident;
+use crate::runtime::obj_type;
 use crate::runtime::Runtime;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -160,6 +161,8 @@ impl<'ctx> Source<'ctx> {
     pub fn build_runtime_funcs(&mut self) {
         let module = &self.module;
         let context = &self.context;
+        let test = obj_type(&context).fn_type(&[obj_type(&context).into()], false);
+        self.module.add_function("test", test, None);
 
         Self::build_new_obj(module, context);
         Source::build_mk_float(&module, context);
