@@ -7,8 +7,8 @@ use inkwell::values::{FunctionValue, PointerValue};
 
 use crate::ast::Expr;
 use crate::ast::Ident;
+use crate::runtime::Runtime;
 
-use crate::cova_std::add_std;
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
 pub enum Token {
@@ -155,5 +155,16 @@ impl<'ctx> Source<'ctx> {
 
     pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Expr>) {
         self.functions.push(Function { name, args, body });
+    }
+
+    pub fn build_runtime_funcs(&mut self) {
+        let module = &self.module;
+        let context = &self.context;
+
+        Self::build_new_obj(module, context);
+        Source::build_mk_float(&module, context);
+        Source::build_mk_int(&module, context);
+        Source::build_use_int(&module, context);
+        Source::build_use_float(&module, context);
     }
 }

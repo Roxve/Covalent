@@ -4,6 +4,7 @@ mod codegen;
 mod cova_std;
 mod lexer;
 mod parser;
+mod runtime;
 mod source;
 
 use std::path::Path;
@@ -12,14 +13,13 @@ use std::{env, fs};
 use crate::ast::*;
 use crate::codegen::*;
 use crate::parser::*;
+use crate::runtime::Runtime;
 use crate::source::*;
 use std::process::Command;
 
 use inkwell::context::Context;
-use inkwell::execution_engine::JitFunction;
 use inkwell::module::Module;
 use inkwell::passes::PassManager;
-use inkwell::targets::{InitializationConfig, Target};
 fn run_passes_on(module: &Module) {
     let fpm = PassManager::create(());
 
@@ -44,12 +44,7 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
             src.functions.clone()
         );
     }
-
-    src.build_new_obj();
-    src.build_mk_float();
-    src.build_mk_int();
-    src.build_use_int();
-    src.build_use_float();
+    src.build_runtime_funcs();
 
     let res = src.compile_prog(prog);
 
