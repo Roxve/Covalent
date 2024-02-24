@@ -1,15 +1,3 @@
-use std::collections::HashMap;
-
-use inkwell::builder::Builder;
-use inkwell::context::Context;
-use inkwell::module::Module;
-use inkwell::values::{FunctionValue, PointerValue};
-
-use crate::ast::Expr;
-use crate::ast::Ident;
-use crate::runtime::obj_type;
-use crate::runtime::Runtime;
-
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
 pub enum Token {
@@ -85,6 +73,7 @@ impl Function {
     }
 }
 
+// frontend generation -> feed into backend
 #[derive(Debug)]
 pub struct Source<'ctx> {
     pub code: String,
@@ -92,41 +81,20 @@ pub struct Source<'ctx> {
     pub column: u32,
     pub current_tok: Option<Token>,
     pub next_tok: Option<Token>,
-    pub context: &'ctx Context,
-    pub module: Module<'ctx>,
-    pub builder: Builder<'ctx>,
-    pub fn_value: FunctionValue<'ctx>,
     pub functions: Vec<Function>,
-    pub variables: HashMap<String, PointerValue<'ctx>>,
     pub errors: Vec<ATErr>,
     pub warnings: Vec<ATErr>, // program can continue error
 }
 
 impl<'ctx> Source<'ctx> {
-    pub fn new(code: String, context: &'ctx Context) -> Self {
-        // todo set codegen stuff as parameters
-        let module = context.create_module("temp");
-
-        let main_fn_type = context.i32_type().fn_type(&[], false);
-        let main_fn = module.add_function("main", main_fn_type, None);
-        let builder = context.create_builder();
-        let main = context.append_basic_block(main_fn, "entry");
-
-        // add_std(&module, &context);
-
-        builder.position_at_end(main);
+    pub fn new(code: String) -> Self {
         let src = Source {
             code,
             line: 1,
             column: 0,
             current_tok: None,
             next_tok: None,
-            context: &context,
-            module,
-            builder,
             functions: vec![],
-            fn_value: main_fn,
-            variables: HashMap::new(),
             errors: Vec::new(),
             warnings: Vec::new(),
         };
@@ -156,18 +124,5 @@ impl<'ctx> Source<'ctx> {
 
     pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Expr>) {
         self.functions.push(Function { name, args, body });
-    }
-
-    pub fn build_runtime_funcs(&mut self) {
-        let module = &self.module;
-        let context = &self.context;
-        let test = obj_type(&context).fn_type(&[obj_type(&context).into()], false);
-        self.module.add_function("test", test, None);
-
-        Self::build_new_obj(module, context);
-        Source::build_mk_float(&module, context);
-        Source::build_mk_int(&module, context);
-        Source::build_use_int(&module, context);
-        Source::build_use_float(&module, context);
     }
 }
