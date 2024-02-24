@@ -1,3 +1,5 @@
+use crate::ast::*;
+
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
 pub enum Token {
@@ -75,7 +77,7 @@ impl Function {
 
 // frontend generation -> feed into backend
 #[derive(Debug)]
-pub struct Source<'ctx> {
+pub struct Source {
     pub code: String,
     pub line: u32,
     pub column: u32,
@@ -86,7 +88,7 @@ pub struct Source<'ctx> {
     pub warnings: Vec<ATErr>, // program can continue error
 }
 
-impl<'ctx> Source<'ctx> {
+impl Source {
     pub fn new(code: String) -> Self {
         let src = Source {
             code,

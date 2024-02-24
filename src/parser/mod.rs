@@ -21,7 +21,7 @@ pub trait Parser {
     fn parse_list(&mut self) -> Vec<Expr>;
 }
 
-impl Parser for Source<'_> {
+impl Parser for Source {
     fn next(&mut self) -> Token {
         if self.next_tok.is_none() {
             if self.current_tok.is_none() {
@@ -239,8 +239,8 @@ impl Parser for Source<'_> {
         }
         let body = self.parse_body();
 
-        self.push_function(id, id_args, body);
-        return self.parse_level(0);
+        self.push_function(id.clone(), id_args, body);
+        return Expr::PosInfo(id.0, self.line, self.column);
     }
 
     fn parse_if_expr(&mut self) -> Expr {

@@ -15,7 +15,7 @@ pub trait Tokenizer {
     fn tokenize(&mut self) -> Token;
 }
 
-impl Tokenizer for Source<'_> {
+impl Tokenizer for Source {
     fn eat(&mut self) -> char {
         let p = self.at();
         self.code.remove(0);

@@ -1,7 +1,6 @@
 use std::io::{self, Write};
-mod IR;
 mod ast;
-mod cova_std;
+mod ir;
 mod lexer;
 mod parser;
 mod source;
@@ -18,7 +17,7 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
 
     let prog: Vec<Expr> = src.parse_prog();
     if is_debug {
-        println!("parsed prog:\n {:#?}\nsrc: \n{:#?}", prog, src.clone());
+        println!("parsed prog:\n {:#?}\nsrc: \n{:#?}", prog, src);
     }
 }
 

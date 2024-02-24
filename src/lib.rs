@@ -1,5 +1,5 @@
-pub mod IR;
 pub mod ast;
-pub mod cova_std;
+pub mod ir;
 pub mod lexer;
 pub mod parser;
+pub mod source;

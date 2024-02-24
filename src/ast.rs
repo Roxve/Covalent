@@ -39,5 +39,6 @@ pub enum Expr {
         /* alt */ Vec<Expr>,
     ),
     Block(Vec<Expr>),
+    PosInfo(String, u32, u32), // debugging
     RetExpr(Box<Expr>),
 }
