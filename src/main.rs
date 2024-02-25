@@ -8,6 +8,8 @@ mod source;
 use std::path::Path;
 use std::{env, fs};
 
+use ir::gen::IRGen;
+
 use crate::ast::*;
 use crate::parser::*;
 use crate::source::*;
@@ -19,6 +21,8 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
     if is_debug {
         println!("parsed prog:\n {:#?}\nsrc: \n{:#?}", prog, src);
     }
+    let _ = src.gen_prog(prog);
+    dbg!(&src.IR);
 }
 
 fn repl(is_debug: bool) {

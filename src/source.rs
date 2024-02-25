@@ -1,4 +1,5 @@
 use crate::ast::*;
+use crate::ir::IROp;
 
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
@@ -76,7 +77,7 @@ impl Function {
 }
 
 // frontend generation -> feed into backend
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Source {
     pub code: String,
     pub line: u32,
@@ -84,6 +85,7 @@ pub struct Source {
     pub current_tok: Option<Token>,
     pub next_tok: Option<Token>,
     pub functions: Vec<Function>,
+    pub IR: Vec<IROp>,
     pub errors: Vec<ATErr>,
     pub warnings: Vec<ATErr>, // program can continue error
 }
@@ -97,6 +99,7 @@ impl Source {
             current_tok: None,
             next_tok: None,
             functions: vec![],
+            IR: vec![],
             errors: Vec::new(),
             warnings: Vec::new(),
         };
