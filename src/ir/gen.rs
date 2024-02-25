@@ -67,6 +67,9 @@ impl IRGen for Source {
 
         res.append(&mut vec![match op.as_str() {
             "+" => IROp::Add(ty),
+            "-" => IROp::Sub(ty),
+            "*" => IROp::Mul(ty),
+            "/" => IROp::Div(ty),
             o => todo!("add op {}", o),
         }]);
         Ok(res)
