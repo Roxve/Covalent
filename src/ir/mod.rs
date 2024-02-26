@@ -26,6 +26,10 @@ pub enum IROp {
     Div(ConstType),
     Const(ConstType, Const),
     Conv(ConstType),
+    Alloc(ConstType, String),
+    Dealloc(ConstType, String), // when allocing a var with a new type we dealloc the old val
+    Store(ConstType, String),
+    Load(ConstType, String),
 }
 
 use crate::ast::Expr;
@@ -34,15 +38,20 @@ use self::IROp::*;
 use Expr::*;
 pub fn get_op_type(op: &IROp) -> ConstType {
     match op {
-        Def(t, _, ops) => t.clone(),
-        Ret(t) => t.clone(),
-        Add(t) => t.clone(),
-        Sub(t) => t.clone(),
-        Mul(t) => t.clone(),
-        Div(t) => t.clone(),
-        Const(t, _) => t.clone(),
-        Conv(t) => t.clone(),
+        Def(t, _, _) => t,
+        Ret(t) => t,
+        Add(t) => t,
+        Sub(t) => t,
+        Mul(t) => t,
+        Div(t) => t,
+        Const(t, _) => t,
+        Conv(t) => t,
+        Store(t, _) => t,
+        Load(t, _) => t,
+        Alloc(t, _) => t,
+        Dealloc(t, _) => t,
     }
+    .clone()
 }
 
 pub fn get_ops_type(ops: &Vec<IROp>) -> ConstType {

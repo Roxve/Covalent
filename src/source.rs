@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use crate::ast::*;
-use crate::ir::IROp;
+use crate::ir::{ConstType, IROp};
 
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
@@ -85,6 +87,7 @@ pub struct Source {
     pub current_tok: Option<Token>,
     pub next_tok: Option<Token>,
     pub functions: Vec<Function>,
+    pub vars: HashMap<String, ConstType>,
     pub IR: Vec<IROp>,
     pub errors: Vec<ATErr>,
     pub warnings: Vec<ATErr>, // program can continue error
@@ -99,6 +102,7 @@ impl Source {
             current_tok: None,
             next_tok: None,
             functions: vec![],
+            vars: HashMap::new(),
             IR: vec![],
             errors: Vec::new(),
             warnings: Vec::new(),
