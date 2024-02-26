@@ -1,7 +1,7 @@
 use super::{get_ops_type, Const, ConstType, IROp};
 use crate::{
     ast::{Expr, Literal},
-    source::Source,
+    source::{Function, Source},
 };
 
 type IR = Vec<IROp>;
@@ -9,6 +9,7 @@ type IRRes = Result<IR, u8>;
 
 pub trait IRGen {
     fn gen_prog(&mut self, exprs: Vec<Expr>) -> IR;
+    fn gen_func(&mut self, func: Function) -> IR;
     fn gen_expr(&mut self, expr: Expr) -> IRRes;
 
     fn gen_binary_expr(&mut self, op: String, left: Expr, right: Expr) -> IRRes;
@@ -23,6 +24,10 @@ impl IRGen for Source {
             }
         }
         self.IR.clone()
+    }
+
+    fn gen_func(&mut self, func: Function) -> IR {
+        todo!()
     }
 
     fn gen_expr(&mut self, expr: Expr) -> IRRes {
