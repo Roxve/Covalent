@@ -1,4 +1,4 @@
-use super::{get_ops_type, Const, ConstType, IROp};
+use super::{get_fn_type, get_ops_type, Const, ConstType, IROp};
 use crate::{
     ast::{Expr, Literal},
     source::{ErrKind, Function, Source},
@@ -9,7 +9,7 @@ type IRRes = Result<IR, u8>;
 
 pub trait IRGen {
     fn gen_prog(&mut self, exprs: Vec<Expr>) -> IR;
-    fn gen_func(&mut self, func: Function) -> IR;
+    fn gen_func(&mut self, func: Function) -> IRRes;
     fn gen_expr(&mut self, expr: Expr) -> IRRes;
 
     fn gen_var_declare(&mut self, name: String, expr: Expr) -> IRRes;
@@ -19,17 +19,44 @@ pub trait IRGen {
 
 impl IRGen for Source {
     fn gen_prog(&mut self, exprs: Vec<Expr>) -> IR {
+        for func in self.functions.clone() {
+            let compiled_func = self.gen_func(func);
+            if compiled_func.is_ok() {
+                self.IR.append(&mut compiled_func.unwrap());
+            }
+        }
+
         for expr in exprs {
-            let g = self.gen_expr(expr);
-            if g.is_ok() {
-                self.IR.append(&mut g.unwrap());
+            let compiled_expr = self.gen_expr(expr);
+            if compiled_expr.is_ok() {
+                self.IR.append(&mut compiled_expr.unwrap());
             }
         }
         self.IR.clone()
     }
 
-    fn gen_func(&mut self, func: Function) -> IR {
-        todo!()
+    fn gen_func(&mut self, func: Function) -> IRRes {
+        let mut body = vec![];
+        let args: Vec<String> = func.args.iter().map(|v| v.0.clone()).collect();
+
+        let old_vars = self.vars.clone();
+        self.vars.clear();
+        self.vars.reserve(args.len());
+
+        for arg in args.clone() {
+            // alloc dynamic type for arguments
+            body.push(IROp::Alloc(ConstType::Dynamic, arg.clone()));
+            self.vars.insert(arg, ConstType::Dynamic);
+        }
+
+        for expr in func.body {
+            let mut compiled_expr = self.gen_expr(expr)?;
+            body.append(&mut compiled_expr);
+        }
+
+        let ty = get_fn_type(&mut body);
+        self.vars = old_vars;
+        Ok(vec![IROp::Def(ty, func.name.0, args, body)])
     }
 
     fn gen_expr(&mut self, expr: Expr) -> IRRes {
@@ -54,6 +81,15 @@ impl IRGen for Source {
                     name.0,
                 )])
             }
+            Expr::RetExpr(expr) => {
+                let mut res = vec![];
+                let mut compiled_expr = self.gen_expr(*expr)?;
+                let ty = get_ops_type(&compiled_expr);
+                res.append(&mut compiled_expr);
+                res.push(IROp::Ret(ty));
+                Ok(res)
+            }
+            Expr::PosInfo(_, _, _) => Ok(vec![]),
             _ => todo!(),
         }
     }

@@ -18,7 +18,7 @@ pub enum Const {
 }
 #[derive(Debug, Clone, PartialEq)]
 pub enum IROp {
-    Def(ConstType, String, Vec<IROp>),
+    Def(Option<ConstType>, String, Vec<String>, Vec<IROp>),
     Ret(ConstType),
     Add(ConstType),
     Sub(ConstType),
@@ -32,13 +32,10 @@ pub enum IROp {
     Load(ConstType, String),
 }
 
-use crate::ast::Expr;
-
 use self::IROp::*;
-use Expr::*;
 pub fn get_op_type(op: &IROp) -> ConstType {
     match op {
-        Def(t, _, _) => t,
+        Def(t, _, _, _) => &t.as_ref().unwrap_or(&ConstType::Dynamic),
         Ret(t) => t,
         Add(t) => t,
         Sub(t) => t,
