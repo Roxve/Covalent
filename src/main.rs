@@ -1,5 +1,6 @@
 use std::io::{self, Write};
 mod ast;
+mod backend;
 mod ir;
 mod lexer;
 mod parser;
