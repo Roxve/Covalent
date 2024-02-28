@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::*;
-use crate::ir::{ConstType, IROp};
+use crate::ir::ConstType;
 
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
@@ -88,7 +88,6 @@ pub struct Source {
     pub next_tok: Option<Token>,
     pub functions: Vec<Function>,
     pub vars: HashMap<String, ConstType>,
-    pub IR: Vec<IROp>,
     pub errors: Vec<ATErr>,
     pub warnings: Vec<ATErr>, // program can continue error
 }
@@ -103,7 +102,6 @@ impl Source {
             next_tok: None,
             functions: vec![],
             vars: HashMap::new(),
-            IR: vec![],
             errors: Vec::new(),
             warnings: Vec::new(),
         };
@@ -122,14 +120,16 @@ impl Source {
         err.out_error();
     }
 
-    pub fn get_function(&self, name: String) -> Option<Function> {
-        for fun in self.functions.clone().into_iter() {
-            if fun.get_name() == name {
-                return Some(fun);
-            }
-        }
-        return None;
-    }
+    // TODO gen funcs for each arg type making args less dynamic for faster exe
+
+    // pub fn get_function(&self, name: String) -> Option<Function> {
+    //     for fun in self.functions.clone().into_iter() {
+    //         if fun.get_name() == name {
+    //             return Some(fun);
+    //         }
+    //     }
+    //     return None;
+    // }
 
     pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Expr>) {
         self.functions.push(Function { name, args, body });

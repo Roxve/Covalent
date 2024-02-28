@@ -21,8 +21,8 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
     if is_debug {
         println!("parsed prog:\n {:#?}\nsrc: \n{:#?}", prog, src);
     }
-    let _ = src.gen_prog(prog);
-    dbg!(&src.IR);
+    let gen = src.gen_prog(prog);
+    dbg!(&gen);
 }
 
 fn repl(is_debug: bool) {

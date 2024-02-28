@@ -19,20 +19,21 @@ pub trait IRGen {
 
 impl IRGen for Source {
     fn gen_prog(&mut self, exprs: Vec<Expr>) -> IR {
+        let mut gen = vec![];
         for func in self.functions.clone() {
             let compiled_func = self.gen_func(func);
             if compiled_func.is_ok() {
-                self.IR.append(&mut compiled_func.unwrap());
+                gen.append(&mut compiled_func.unwrap());
             }
         }
 
         for expr in exprs {
             let compiled_expr = self.gen_expr(expr);
             if compiled_expr.is_ok() {
-                self.IR.append(&mut compiled_expr.unwrap());
+                gen.append(&mut compiled_expr.unwrap());
             }
         }
-        self.IR.clone()
+        gen
     }
 
     fn gen_func(&mut self, func: Function) -> IRRes {
