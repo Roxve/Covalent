@@ -12,6 +12,7 @@ use std::{env, fs};
 use ir::gen::IRGen;
 
 use crate::ast::*;
+use crate::backend::wasm::*;
 use crate::parser::*;
 use crate::source::*;
 
@@ -22,8 +23,13 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
     if is_debug {
         println!("parsed prog:\n {:#?}\nsrc: \n{:#?}", prog, src);
     }
-    let gen = src.gen_prog(prog);
-    dbg!(&gen);
+    let ir = src.gen_prog(prog);
+    dbg!(&ir);
+    let mut codegen = Codegen::new(ir);
+    let module = codegen.codegen();
+    dbg!(&module);
+    let bytes = module.clone().finish();
+    fs::write("/tmp/test.wasm", bytes);
 }
 
 fn repl(is_debug: bool) {
