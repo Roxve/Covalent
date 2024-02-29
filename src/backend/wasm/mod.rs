@@ -69,6 +69,7 @@ impl<'a> Func<'a> {
 
 pub struct Codegen<'a> {
     current: Func<'a>,
+    funcs: HashMap<String, u32>,
     module: Module,
     section: Section,
     ir: Vec<IROp>,
@@ -82,6 +83,7 @@ impl<'a> Codegen<'a> {
         let module = Module::new();
         Codegen {
             current: Func::new(),
+            funcs: HashMap::new(),
             section,
             module,
             ir,
@@ -96,7 +98,7 @@ impl<'a> Codegen<'a> {
 
     pub fn codegen(&mut self) -> &mut Module {
         while self.ip <= self.ir.len() - 1 {
-            self.compile(self.ir[self.ip].clone());
+            self.bond(self.ir[self.ip].clone());
         }
         self.insert(Instruction::Return);
 
@@ -111,14 +113,14 @@ impl<'a> Codegen<'a> {
             .section(self.section.code.function(&self.current.finish()))
     }
 
-    pub fn compile(&mut self, op: IROp) {
+    pub fn bond(&mut self, op: IROp) {
         match op {
             IROp::Const(ConstType::Int, Const::Int(i)) => self.insert(Instruction::I32Const(i)),
             IROp::Const(ConstType::Float, Const::Float(f)) => {
                 self.insert(Instruction::F32Const(f));
             }
             IROp::Add(_) | IROp::Mul(_) | IROp::Div(_) | IROp::Sub(_) => {
-                return self.compile_binary(op);
+                return self.bond_binary_atoms(op);
             }
             IROp::Alloc(ty, name) => {
                 self.current.add_var(name, ty.into_val_type());
@@ -138,7 +140,7 @@ impl<'a> Codegen<'a> {
         }
     }
 
-    pub fn compile_binary(&mut self, op: IROp) {
+    pub fn bond_binary_atoms(&mut self, op: IROp) {
         match op {
             IROp::Add(ty) => match ty {
                 ConstType::Int => self.insert(Instruction::I32Add),
@@ -148,4 +150,6 @@ impl<'a> Codegen<'a> {
             _ => todo!(),
         }
     }
+
+    pub fn bond_func_atoms(&mut self, ty: Option<ConstType>, name: String, args: Vec<String>) {}
 }
