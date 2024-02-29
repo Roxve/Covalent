@@ -1,4 +1,6 @@
-use wasm_encoder::{CodeSection, ExportKind, ExportSection, FunctionSection, Module, TypeSection};
+use wasm_encoder::{
+    CodeSection, ExportKind, ExportSection, FunctionSection, Instruction, Module, TypeSection,
+};
 
 use crate::ir::{Const, ConstType, IROp};
 #[derive(Debug, Clone)]
@@ -41,17 +43,15 @@ impl Codegen {
             ip: 0,
         }
     }
+
+    fn insert(&mut self, inst: Instruction) {
+        self.current.instruction(&inst);
+        self.ip += 1;
+    }
+
     pub fn codegen(&mut self) -> &mut Module {
         while self.ip <= self.ir.len() - 1 {
-            match self.ir[self.ip].clone() {
-                IROp::Const(ConstType::Int, Const::Int(i)) => {
-                    self.current
-                        .instruction(&wasm_encoder::Instruction::I32Const(i));
-                    self.ip += 1;
-                }
-                IROp::Const(ConstType::Float, Const::Float(_)) => todo!(),
-                _ => todo!(),
-            }
+            self.compile(self.ir[self.ip].clone());
         }
         self.current.instruction(&wasm_encoder::Instruction::Return);
 
@@ -64,5 +64,30 @@ impl Codegen {
 
         self.module
             .section(self.section.code.function(&self.current))
+    }
+
+    pub fn compile(&mut self, op: IROp) {
+        match op {
+            IROp::Const(ConstType::Int, Const::Int(i)) => self.insert(Instruction::I32Const(i)),
+            IROp::Const(ConstType::Float, Const::Float(f)) => {
+                self.insert(Instruction::F32Const(f));
+            }
+            IROp::Add(_) | IROp::Mul(_) | IROp::Div(_) | IROp::Sub(_) => {
+                return self.compile_binary(op);
+            }
+
+            _ => todo!(),
+        }
+    }
+
+    pub fn compile_binary(&mut self, op: IROp) {
+        match op {
+            IROp::Add(ty) => match ty {
+                ConstType::Int => self.insert(Instruction::I32Add),
+                ConstType::Float => self.insert(Instruction::F32Add),
+                _ => todo!("add + for type {:?}", ty),
+            },
+            _ => todo!(),
+        }
     }
 }
