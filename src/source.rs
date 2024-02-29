@@ -122,14 +122,14 @@ impl Source {
 
     // TODO gen funcs for each arg type making args less dynamic for faster exe
 
-    // pub fn get_function(&self, name: String) -> Option<Function> {
-    //     for fun in self.functions.clone().into_iter() {
-    //         if fun.get_name() == name {
-    //             return Some(fun);
-    //         }
-    //     }
-    //     return None;
-    // }
+    pub fn get_function(&self, name: String) -> Option<Function> {
+        for fun in self.functions.clone().into_iter() {
+            if fun.get_name() == name {
+                return Some(fun);
+            }
+        }
+        return None;
+    }
 
     pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Expr>) {
         self.functions.push(Function { name, args, body });

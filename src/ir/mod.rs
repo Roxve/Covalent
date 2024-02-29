@@ -8,6 +8,7 @@ pub enum ConstType {
     Float = 2u8,
     Str = 3u8,
     Dynamic = 4u8, // once you go dynamic there is no turning back
+    Void = 5u8,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -19,6 +20,7 @@ pub enum Const {
 #[derive(Debug, Clone, PartialEq)]
 pub enum IROp {
     Def(Option<ConstType>, String, Vec<String>, Vec<IROp>),
+    Call(ConstType, String),
     Ret(ConstType),
     Add(ConstType),
     Sub(ConstType),
@@ -35,7 +37,8 @@ pub enum IROp {
 use self::IROp::*;
 pub fn get_op_type(op: &IROp) -> ConstType {
     match op {
-        Def(t, _, _, _) => &t.as_ref().unwrap_or(&ConstType::Dynamic),
+        Def(t, _, _, _) => &t.as_ref().unwrap_or(&ConstType::Void),
+        Call(t, _) => t,
         Ret(t) => t,
         Add(t) => t,
         Sub(t) => t,

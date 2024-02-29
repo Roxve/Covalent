@@ -57,6 +57,8 @@ impl IRGen for Source {
 
         let ty = get_fn_type(&mut body);
         self.vars = old_vars;
+        self.vars
+            .insert(func.name.0.clone(), ty.clone().unwrap_or(ConstType::Void));
         Ok(vec![IROp::Def(ty, func.name.0, args, body)])
     }
 
@@ -81,6 +83,42 @@ impl IRGen for Source {
                     self.vars.get(&name.0).unwrap().clone(),
                     name.0,
                 )])
+            }
+            Expr::FnCall(name, args) => {
+                let mut res: Vec<IROp> = vec![];
+                let fun = self.get_function(name.0.clone());
+                if fun.is_none() {
+                    self.err(
+                        ErrKind::UndeclaredVar,
+                        format!("undeclared function {}", name.0),
+                    );
+                    return Err(ErrKind::UndeclaredVar as u8);
+                }
+
+                if (&fun.as_ref()).unwrap().args.len() != (&args).len() {
+                    self.err(
+                        ErrKind::UnexceptedArgs,
+                        format!(
+                            "unexpected args number for function {}, got {} args expected {}",
+                            name.0,
+                            args.len(),
+                            fun.unwrap().args.len()
+                        ),
+                    );
+                    return Err(ErrKind::UnexceptedArgs as u8);
+                }
+
+                for arg in args {
+                    let mut compiled_arg = self.gen_expr(arg)?;
+                    res.append(&mut compiled_arg);
+                    res.push(IROp::Conv(ConstType::Dynamic));
+                }
+                res.push(IROp::Call(
+                    self.vars.get(&name.0).unwrap().to_owned(),
+                    name.0,
+                ));
+
+                Ok(res)
             }
             Expr::RetExpr(expr) => {
                 let mut res = vec![];
