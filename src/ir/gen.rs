@@ -45,8 +45,6 @@ impl IRGen for Source {
         self.vars.reserve(args.len());
 
         for arg in args.clone() {
-            // alloc dynamic type for arguments
-            body.push(IROp::Alloc(ConstType::Dynamic, arg.clone()));
             self.vars.insert(arg, ConstType::Dynamic);
         }
 

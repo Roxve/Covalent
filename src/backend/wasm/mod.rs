@@ -24,6 +24,7 @@ impl Section {
         }
     }
 }
+#[derive(Debug, Clone)]
 pub struct Func<'a> {
     body: Vec<Instruction<'a>>,
     vars: Vec<(String, ValType)>,
@@ -69,7 +70,7 @@ impl<'a> Func<'a> {
 
 pub struct Codegen<'a> {
     current: Func<'a>,
-    funcs: HashMap<String, u32>,
+    funcs: HashMap<String, (u32, Func<'a>)>,
     module: Module,
     section: Section,
     ir: Vec<IROp>,
@@ -108,9 +109,19 @@ impl<'a> Codegen<'a> {
 
         self.section.exports.export("_start", ExportKind::Func, 0);
         self.module.section(&self.section.exports);
+        // finnaly adding all functions indx by order
 
-        self.module
-            .section(self.section.code.function(&self.current.finish()))
+        // _start
+        self.section.code.function(&self.current.finish());
+
+        let mut funcs_ordered: Vec<(u32, Func)> = self.funcs.clone().into_values().collect();
+        funcs_ordered.sort_by_key(|k| k.0);
+
+        for (_, mut func) in funcs_ordered {
+            self.section.code.function(&func.finish());
+        }
+
+        self.module.section(&self.section.code)
     }
 
     pub fn bond(&mut self, op: IROp) {
@@ -135,8 +146,14 @@ impl<'a> Codegen<'a> {
                 let idx = self.current.get_var(name);
                 self.insert(Instruction::LocalGet(idx));
             }
+            IROp::Ret(_) => {
+                self.insert(Instruction::End);
+            }
+            IROp::Def(ty, name, args, body) => {
+                self.bond_func_atoms(ty.unwrap_or(ConstType::Void), name, args, body);
+            }
 
-            _ => todo!(),
+            _ => todo!("op not implented for the wasm backend {:?}", op),
         }
     }
 
@@ -147,9 +164,54 @@ impl<'a> Codegen<'a> {
                 ConstType::Float => self.insert(Instruction::F32Add),
                 _ => todo!("add + for type {:?}", ty),
             },
-            _ => todo!(),
+            _ => todo!("add operator {:?}", op),
         }
     }
 
-    pub fn bond_func_atoms(&mut self, ty: Option<ConstType>, name: String, args: Vec<String>) {}
+    pub fn bond_func_atoms(
+        &mut self,
+        ty: ConstType,
+        name: String,
+        args: Vec<String>,
+        body: Vec<IROp>,
+    ) {
+        let mut func = Func::new();
+
+        // all args are dynamic for now
+        for arg in &args {
+            func.add_var(arg.to_owned(), ValType::I32);
+        }
+        let params: Vec<ValType> = args.iter().map(|_| ValType::I32).collect();
+
+        let old = self.current.clone();
+        let old_ip = self.ip;
+        let old_instr = self.ir.clone();
+
+        self.current = func;
+        self.ir = body;
+        dbg!(&self.ir);
+        self.ip = 0;
+
+        // EXECUTE CODEGEN!!!!!
+
+        while self.ip <= self.ir.len() - 1 {
+            self.bond(self.ir[self.ip].clone());
+        }
+
+        let func_type = self
+            .section
+            .types
+            .function(params, vec![ty.into_val_type()])
+            .len()
+            - 1;
+        dbg!(&func_type);
+        self.funcs
+            .insert(name, (func_type.clone() as u32, self.current.clone()));
+
+        let _ = self.section.func.function(func_type);
+        // retreat fr
+        self.current = old;
+        self.ir = old_instr;
+        self.ip = old_ip + 1;
+    }
 }
