@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use wasm_encoder::{
-    CodeSection, ExportKind, ExportSection, FunctionSection, Instruction, Module, TypeSection,
+    CodeSection, ExportKind, ExportSection, Function, FunctionSection, Instruction, Module,
+    TypeSection, ValType,
 };
 
 use crate::ir::{Const, ConstType, IROp};
@@ -21,22 +24,64 @@ impl Section {
         }
     }
 }
-pub struct Codegen {
-    current: wasm_encoder::Function,
+pub struct Func<'a> {
+    body: Vec<Instruction<'a>>,
+    vars: Vec<(String, ValType)>,
+}
+
+impl ConstType {
+    fn into_val_type(self) -> ValType {
+        match self {
+            ConstType::Int => ValType::I32,
+            ConstType::Float => ValType::F32,
+            _ => todo!("const into val"),
+        }
+    }
+}
+
+impl<'a> Func<'a> {
+    fn new() -> Self {
+        Self {
+            body: vec![],
+            vars: vec![],
+        }
+    }
+
+    fn finish(&mut self) -> Function {
+        let mut fun = Function::new_with_locals_types({
+            let ve: Vec<ValType> = self.vars.clone().iter().map(|l| l.1).collect();
+            ve
+        });
+        for ins in self.body.clone() {
+            fun.instruction(&ins);
+        }
+        fun
+    }
+
+    fn add_var(&mut self, name: String, ty: ValType) {
+        self.vars.push((name, ty));
+    }
+
+    fn get_var(&mut self, name: String) -> u32 {
+        self.vars.iter().position(|k| k.0 == name).unwrap() as u32
+    }
+}
+
+pub struct Codegen<'a> {
+    current: Func<'a>,
     module: Module,
     section: Section,
     ir: Vec<IROp>,
     ip: usize,
 }
-impl Codegen {
+impl<'a> Codegen<'a> {
     pub fn new(ir: Vec<IROp>) -> Self {
         let mut section = Section::new();
         let _ty = section.types.function(vec![], vec![]);
         let _func = section.func.function(0);
-        let _start = wasm_encoder::Function::new(vec![]);
         let module = Module::new();
         Codegen {
-            current: _start,
+            current: Func::new(),
             section,
             module,
             ir,
@@ -44,8 +89,8 @@ impl Codegen {
         }
     }
 
-    fn insert(&mut self, inst: Instruction) {
-        self.current.instruction(&inst);
+    fn insert(&mut self, inst: Instruction<'a>) {
+        self.current.body.push(inst);
         self.ip += 1;
     }
 
@@ -53,9 +98,9 @@ impl Codegen {
         while self.ip <= self.ir.len() - 1 {
             self.compile(self.ir[self.ip].clone());
         }
-        self.current.instruction(&wasm_encoder::Instruction::Return);
+        self.insert(Instruction::Return);
 
-        self.current.instruction(&wasm_encoder::Instruction::End);
+        self.insert(Instruction::End);
         self.module.section(&self.section.types);
         self.module.section(&self.section.func);
 
@@ -63,7 +108,7 @@ impl Codegen {
         self.module.section(&self.section.exports);
 
         self.module
-            .section(self.section.code.function(&self.current))
+            .section(self.section.code.function(&self.current.finish()))
     }
 
     pub fn compile(&mut self, op: IROp) {
@@ -74,6 +119,19 @@ impl Codegen {
             }
             IROp::Add(_) | IROp::Mul(_) | IROp::Div(_) | IROp::Sub(_) => {
                 return self.compile_binary(op);
+            }
+            IROp::Alloc(ty, name) => {
+                self.current.add_var(name, ty.into_val_type());
+                self.ip += 1;
+            }
+            IROp::Dealloc(_, _) => self.insert(Instruction::Nop),
+            IROp::Store(_, name) => {
+                let idx = self.current.get_var(name);
+                self.insert(Instruction::LocalSet(idx));
+            }
+            IROp::Load(_, name) => {
+                let idx = self.current.get_var(name);
+                self.insert(Instruction::LocalGet(idx));
             }
 
             _ => todo!(),
