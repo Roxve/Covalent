@@ -107,9 +107,12 @@ impl IRGen for Source {
                 }
 
                 for arg in args {
+                    // loading the alloc var should
+                    res.push(IROp::Alloc(ConstType::Int, "alloc".to_string()));
+                    res.push(IROp::Load(ConstType::Int, "alloc".to_string()));
                     let mut compiled_arg = self.gen_expr(arg)?;
                     res.append(&mut compiled_arg);
-                    res.push(IROp::Conv(ConstType::Dynamic));
+                    res.push(IROp::Conv(ConstType::Dynamic, get_ops_type(&res)));
                 }
                 res.push(IROp::Call(
                     self.vars.get(&name.0).unwrap().to_owned(),
@@ -191,11 +194,11 @@ impl IRGen for Source {
             if lhs_ty == ConstType::Float && rhs_ty == ConstType::Int {
                 res.append(&mut lhs);
                 res.append(&mut rhs);
-                res.append(&mut vec![IROp::Conv(ConstType::Float)]);
+                res.append(&mut vec![IROp::Conv(ConstType::Float, rhs_ty)]);
                 ty = lhs_ty;
             } else if lhs_ty == ConstType::Int && rhs_ty == ConstType::Float {
                 res.append(&mut lhs);
-                res.append(&mut vec![IROp::Conv(ConstType::Float)]);
+                res.append(&mut vec![IROp::Conv(ConstType::Float, lhs_ty)]);
                 res.append(&mut rhs);
                 ty = rhs_ty;
             } else {

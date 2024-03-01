@@ -27,7 +27,7 @@ pub enum IROp {
     Mul(ConstType),
     Div(ConstType),
     Const(ConstType, Const),
-    Conv(ConstType),
+    Conv(ConstType, ConstType),
     Alloc(ConstType, String),
     Dealloc(ConstType, String), // when allocing a var with a new type we dealloc the old val
     Store(ConstType, String),
@@ -45,7 +45,7 @@ pub fn get_op_type(op: &IROp) -> ConstType {
         Mul(t) => t,
         Div(t) => t,
         Const(t, _) => t,
-        Conv(t) => t,
+        Conv(t, _) => t,
         Store(t, _) => t,
         Load(t, _) => t,
         Alloc(t, _) => t,
@@ -55,6 +55,7 @@ pub fn get_op_type(op: &IROp) -> ConstType {
 }
 
 pub fn get_ops_type(ops: &Vec<IROp>) -> ConstType {
+    dbg!(&ops);
     get_op_type(ops.last().unwrap())
 }
 

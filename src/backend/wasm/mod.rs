@@ -1,16 +1,19 @@
 use std::collections::HashMap;
 
 use wasm_encoder::{
-    CodeSection, ExportKind, ExportSection, Function, FunctionSection, Instruction, Module,
-    TypeSection, ValType,
+    CodeSection, ExportKind, ExportSection, Function, FunctionSection, Instruction, MemArg,
+    MemorySection, MemoryType, Module, TypeSection, ValType,
 };
 
 use crate::ir::{Const, ConstType, IROp};
+
+pub const TYPE_INT: i32 = 0;
 #[derive(Debug, Clone)]
 pub struct Section {
     types: TypeSection,
     code: CodeSection,
     func: FunctionSection,
+    mem: MemorySection,
     exports: ExportSection,
 }
 
@@ -21,6 +24,14 @@ impl Section {
             code: CodeSection::new(),
             func: FunctionSection::new(),
             exports: ExportSection::new(),
+            mem: MemorySection::new()
+                .memory(MemoryType {
+                    minimum: 1,
+                    maximum: None,
+                    memory64: false,
+                    shared: false,
+                })
+                .to_owned(),
         }
     }
 }
@@ -97,6 +108,9 @@ impl<'a> Codegen<'a> {
         self.ip += 1;
     }
 
+    fn insertp(&mut self, inst: Instruction<'a>) {
+        self.current.body.push(inst);
+    }
     pub fn codegen(&mut self) -> &mut Module {
         while self.ip <= self.ir.len() - 1 {
             self.bond(self.ir[self.ip].clone());
@@ -104,11 +118,14 @@ impl<'a> Codegen<'a> {
         self.insert(Instruction::Return);
 
         self.insert(Instruction::End);
+
         self.module.section(&self.section.types);
         self.module.section(&self.section.func);
 
+        self.module.section(&self.section.mem);
         self.section.exports.export("_start", ExportKind::Func, 0);
         self.module.section(&self.section.exports);
+
         // finnaly adding all functions indx by order
 
         // _start
@@ -151,6 +168,36 @@ impl<'a> Codegen<'a> {
             }
             IROp::Def(ty, name, args, body) => {
                 self.bond_func_atoms(ty.unwrap_or(ConstType::Void), name, args, body);
+            }
+            IROp::Conv(into, from) => {
+                match into {
+                    ConstType::Dynamic => match from {
+                        ConstType::Int => {
+                            self.insert(Instruction::I32Store(MemArg {
+                                offset: 1,
+                                align: 2,
+                                memory_index: 0,
+                            }));
+                            // first we write the type
+                            let idx = self.current.get_var("alloc".to_string());
+                            self.insertp(Instruction::LocalGet(idx));
+                            self.insertp(Instruction::I32Const(TYPE_INT));
+                            self.insertp(Instruction::I32Store8(MemArg {
+                                offset: 0,
+                                align: 0,
+                                memory_index: 0,
+                            }));
+                            self.insertp(Instruction::LocalGet(idx));
+                        }
+                        _ => todo!("add conv {:?} into dynamic", from),
+                    },
+                    _ => todo!("add whole conv {:?}", into),
+                }
+            }
+            IROp::Call(_, name) => {
+                let idx = self.funcs.get(&name).unwrap().0;
+                dbg!(&idx);
+                self.insert(Instruction::Call(idx));
             }
 
             _ => todo!("op not implented for the wasm backend {:?}", op),
@@ -204,7 +251,6 @@ impl<'a> Codegen<'a> {
             .function(params, vec![ty.into_val_type()])
             .len()
             - 1;
-        dbg!(&func_type);
         self.funcs
             .insert(name, (func_type.clone() as u32, self.current.clone()));
 
