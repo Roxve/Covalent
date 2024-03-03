@@ -168,29 +168,5 @@
 
 		local.get $address
 		global.set $ptr
-		;; local.get $address
-		;; i32.load8_s offset=1
-		;; i32.const 1
-		;; i32.le_s
-		;; if
-		;; 	;; overwrite is_used type and data
-		;; 	local.get $address
-		;; 	i32.const 0
-		;; 	i32.store8
-			
-		;; 	local.get $address
-		;; 	i32.const 0
-		;; 	i32.store8 offset=1
-
-		;; 	local.get $address
-		;; 	i32.const 0
-		;; 	i32.store offset=2
-
-		;; 	local.get $address
-		;; 	global.set $ptr
-		;; 	return
-		;; else
-		;; 	return
-		;; end
 	)
 )
