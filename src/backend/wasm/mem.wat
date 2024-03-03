@@ -1,28 +1,110 @@
 (module
 	(memory (export "memory") 1)
+	;; init first page
+	(data (i32.const 0) "\00\00\ff\ff")
 	(global $ptr (export "ptr") (mut i32) (i32.const 0))
 	(global $pages (export "pages") (mut i32) (i32.const 1))
-	
-	(func $move_ptr (export "move_ptr") (param $size i32)
-		local.get $size
+
+	(func $size_of (export "size_of") (param $address i32) (result i32)
+		;; its free address?
+		local.get $address
+		i32.load8_s
+		i32.const 0
+		i32.eq
+
+		if (result i32)
+			local.get $address
+			i32.load16_u offset=1
+		else
+			;; 0-1 4byte types
+			local.get $address
+			i32.load8_s offset=1
+			i32.const 1
+			i32.le_s
+
+			if (result i32)
+				i32.const 6
+			else
+				i32.const -1
+			end
+		end
+	)
+	(func $move_ptr (export "move_ptr") (param $size i32) (result i32)
+		(local $size_ptr i32)
+		(local $size_block i32)
+		(local $result i32)
+		
 		global.get $ptr
-		i32.add
-		global.set $ptr
+		call $size_of
+		local.set $size_ptr
 		
 		global.get $ptr
 		i32.load8_s
 		i32.const 0
 		i32.eq
-		if
-			return
-		else
-			i32.const 6
+		if (result i32)
+	
+			local.get $size_ptr
+			local.get $size
+			i32.eq
+			if (result i32)
+				global.get $ptr
+			else
+			;; size_ptr > size && (size_ptr - 2) >= size
+			local.get $size_ptr
+			local.get $size
+			i32.ge_s
+
+			local.get $size_ptr
+			i32.const 3
+			i32.sub
+			local.get $size
+			i32.ge_s
+			i32.and
+			if (result i32)
+				global.get $ptr
+				local.set $result
+				;; we divide our block the new block is going to be free and its size is a u16
+				;; size of our new block
+				local.get $size_ptr
+				local.get $size
+				i32.sub
+				local.set $size_block
+				;; add size to ptr and create new block
+				global.get $ptr
+				local.get $size
+				i32.add
+				global.set $ptr
+
+				global.get $ptr
+				local.get $size_block
+				i32.store16 offset=1
+				local.get $result
+			else
+			;; we gotta find a new block
+			global.get $ptr
+			local.get $size_ptr
+			i32.add
+			global.set $ptr
+			
+			local.get $size
 			call $move_ptr
+		end
+		end
+		else
+		global.get $ptr
+		local.get $size_ptr
+		i32.add
+		global.set $ptr
+		
+		local.get $size
+		call $move_ptr
 		end
 	)
 	;; type-alloc
 	(func (export "talloc") (param $ty i32) (result i32)
 		(local $result i32)
+		(local $address i32)
 		;;right now there is two 6 byte types
 		local.get $ty
 		i32.const 1
@@ -45,24 +127,23 @@
 				memory.grow
 				drop
 			end
-			;; ptr should point to an area of free 6 bytes...
-			global.get $ptr
+			i32.const 6
+			call $move_ptr
+			local.set $address
+
+			local.get $address
 			i32.const 1
 			
 			i32.store8
 
-			global.get $ptr
+			local.get $address
 			local.get $ty
 			i32.store8 offset=1
 
-			;; now we should move our $ptr to an empty area of 6 bytes
-			global.get $ptr
+			local.get $address
 			local.set $result
 
-			i32.const 6
-			call $move_ptr
-
-			
+	
 			local.get $result
 		else
 			i32.const -1
