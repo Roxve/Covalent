@@ -1,7 +1,9 @@
 (module
 	(memory (export "memory") 1)
 	;; init first page
-	(data (i32.const 0) "\00\00\ff\ff")
+	(data (i32.const 0) "\00")
+	(data (i32.const 1) "\FF\FF")
+	
 	(global $ptr (export "ptr") (mut i32) (i32.const 0))
 	(global $pages (export "pages") (mut i32) (i32.const 1))
 
@@ -102,7 +104,7 @@
 		end
 	)
 	;; type-alloc
-	(func (export "talloc") (param $ty i32) (result i32)
+	(func $talloc (export "talloc") (param $ty i32) (result i32)
 		(local $result i32)
 		(local $address i32)
 		;;right now there is two 6 byte types
@@ -150,29 +152,45 @@
 		end
 	)
 	(func $addrfree (export "addrfree") (param $address i32)
+		(local $size i32)
 		local.get $address
-		i32.load8_s offset=1
-		i32.const 1
-		i32.le_s
-		if
-			;; overwrite is_used type and data
-			local.get $address
-			i32.const 0
-			i32.store8
+		call $size_of
+		local.set $size
+
+		;; overwrite the is_used and the next two bytes
+		local.get $address
+		i32.const 0
+		i32.store8
+		
+		local.get $address
+		local.get $size
+		i32.store16 offset=1
+
+		local.get $address
+		global.set $ptr
+		;; local.get $address
+		;; i32.load8_s offset=1
+		;; i32.const 1
+		;; i32.le_s
+		;; if
+		;; 	;; overwrite is_used type and data
+		;; 	local.get $address
+		;; 	i32.const 0
+		;; 	i32.store8
 			
-			local.get $address
-			i32.const 0
-			i32.store8 offset=1
+		;; 	local.get $address
+		;; 	i32.const 0
+		;; 	i32.store8 offset=1
 
-			local.get $address
-			i32.const 0
-			i32.store offset=2
+		;; 	local.get $address
+		;; 	i32.const 0
+		;; 	i32.store offset=2
 
-			local.get $address
-			global.set $ptr
-			return
-		else
-			return
-		end
+		;; 	local.get $address
+		;; 	global.set $ptr
+		;; 	return
+		;; else
+		;; 	return
+		;; end
 	)
 )
