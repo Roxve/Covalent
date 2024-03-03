@@ -96,7 +96,7 @@ impl<'a> Func<'a> {
 
 pub struct Codegen<'a> {
     current: Func<'a>,
-    funcs: HashMap<String, (u32, Func<'a>)>,
+    funcs: HashMap<String, (u32, Option<Func<'a>>)>,
     module: Module,
     section: Section,
     ir: Vec<IROp>,
