@@ -1,6 +1,6 @@
 use super::*;
 use std::collections::HashMap;
-use wasm_encoder::{ExportKind, MemArg};
+use wasm_encoder::{ExportKind, MemArg, SymbolTable};
 
 impl<'a> Codegen<'a> {
     pub fn add_extern(&mut self, name: String) {
@@ -33,6 +33,16 @@ impl<'a> Codegen<'a> {
 
         res.import("mem", "talloc");
         res.add_extern("_start".to_string());
+
+        // linking our _start
+        // weak and exported!!!
+        res.section
+            .linking
+            .symbol_table(&SymbolTable::new().function(
+                SymbolTable::WASM_SYM_BINDING_WEAK | SymbolTable::WASM_SYM_EXPORTED,
+                res.get_fun("_start".to_string()),
+                Some("_start"),
+            ));
 
         res
     }
@@ -80,7 +90,8 @@ impl<'a> Codegen<'a> {
             }
         }
 
-        self.module.section(&self.section.code)
+        self.module.section(&self.section.code);
+        self.module.section(&self.section.linking)
     }
 
     pub fn bond(&mut self, op: IROp) {

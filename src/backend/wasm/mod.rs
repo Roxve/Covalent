@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use wasm_encoder::{
     CodeSection, EntityType, ExportSection, Function, FunctionSection, ImportSection, Instruction,
-    MemorySection, MemoryType, Module, TypeSection, ValType,
+    LinkingSection, MemoryType, Module, TypeSection, ValType,
 };
 
 use crate::ir::{Const, ConstType, IROp};
@@ -15,9 +15,9 @@ pub struct Section {
     types: TypeSection,
     code: CodeSection,
     func: FunctionSection,
-    mem: MemorySection,
     imports: ImportSection,
     exports: ExportSection,
+    linking: LinkingSection,
 }
 
 impl Section {
@@ -39,14 +39,7 @@ impl Section {
                 )
                 .to_owned(),
             exports: ExportSection::new(),
-            mem: MemorySection::new()
-                .memory(MemoryType {
-                    minimum: 1,
-                    maximum: None,
-                    memory64: false,
-                    shared: false,
-                })
-                .to_owned(),
+            linking: LinkingSection::new(),
         }
     }
 }
