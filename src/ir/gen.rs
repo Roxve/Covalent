@@ -107,9 +107,6 @@ impl IRGen for Source {
                 }
 
                 for arg in args {
-                    // loading the alloc var should
-                    res.push(IROp::Alloc(ConstType::Int, "alloc".to_string()));
-                    res.push(IROp::Load(ConstType::Int, "alloc".to_string()));
                     let mut compiled_arg = self.gen_expr(arg)?;
                     res.append(&mut compiled_arg);
                     res.push(IROp::Conv(ConstType::Dynamic, get_ops_type(&res)));

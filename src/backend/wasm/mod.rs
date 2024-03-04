@@ -54,7 +54,8 @@ impl ConstType {
         match self {
             ConstType::Int => ValType::I32,
             ConstType::Float => ValType::F32,
-            _ => todo!("const into val"),
+            ConstType::Dynamic => ValType::I32,
+            _ => todo!("const into valtype"),
         }
     }
 }

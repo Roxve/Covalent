@@ -32,6 +32,7 @@ impl<'a> Codegen<'a> {
         };
 
         res.import("mem", "talloc");
+        res.import("mem", "mk_int");
         res.add_extern("_start".to_string());
 
         // linking our _start
@@ -120,34 +121,20 @@ impl<'a> Codegen<'a> {
             IROp::Def(ty, name, args, body) => {
                 self.bond_func_atoms(ty.unwrap_or(ConstType::Void), name, args, body);
             }
-            IROp::Conv(into, from) => {
-                match into {
-                    ConstType::Dynamic => match from {
-                        ConstType::Int => {
-                            self.insert(Instruction::I32Store(MemArg {
-                                offset: 1,
-                                align: 2,
-                                memory_index: 0,
-                            }));
-                            // first we write the type
-                            let idx = self.current.get_var("alloc".to_string());
-                            self.insertp(Instruction::LocalGet(idx));
-                            self.insertp(Instruction::I32Const(TYPE_INT));
-                            self.insertp(Instruction::I32Store8(MemArg {
-                                offset: 0,
-                                align: 0,
-                                memory_index: 0,
-                            }));
-                            self.insertp(Instruction::LocalGet(idx));
-                        }
-                        _ => todo!("add conv {:?} into dynamic", from),
-                    },
-                    _ => todo!("add whole conv {:?}", into),
-                }
-            }
+            IROp::Conv(into, from) => match into {
+                ConstType::Dynamic => match from {
+                    ConstType::Int => {
+                        self.insert(Instruction::Call(self.get_fun("mk_int".to_string())));
+                    }
+                    ConstType::Float => {
+                        self.insert(Instruction::Call(self.get_fun("mk_float".to_string())));
+                    }
+                    _ => todo!("add conv {:?} into dynamic", from),
+                },
+                _ => todo!("add whole conv {:?}", into),
+            },
             IROp::Call(_, name) => {
                 let idx = self.funcs.get(&name).unwrap().0;
-                dbg!(&idx);
                 self.insert(Instruction::Call(idx));
             }
 
@@ -187,7 +174,6 @@ impl<'a> Codegen<'a> {
 
         self.current = func;
         self.ir = body;
-        dbg!(&self.ir);
         self.ip = 0;
 
         // EXECUTE CODEGEN!!!!!

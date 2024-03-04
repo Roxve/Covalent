@@ -1,4 +1,5 @@
 (module
+	(import "wasi_snapshot_preview1" "fd_write" (func $fd_write (param i32 i32 i32 i32) (result i32)))
 	(memory (export "memory") 1)
 	;; init first page
 	(data (i32.const 0) "\00")
@@ -82,6 +83,10 @@
 				local.get $size_block
 				i32.store16 offset=1
 				local.get $result
+				local.get $size
+				i32.store16 offset=1
+
+				local.get $result
 			else
 			;; we gotta find a new block
 			global.get $ptr
@@ -151,6 +156,27 @@
 			i32.const -1
 		end
 	)
+	(func $mk_int (export "mk_int") (param $val i32) (result i32)
+		(local $res i32)
+		i32.const 0
+		call $talloc
+		local.tee $res
+		
+		local.get $val
+		i32.store offset=2
+
+		local.get $res
+	)
+	(func $mk_float (export "mk_float") (param $val f32) (result i32)
+		(local $res i32)
+		i32.const 1
+		call $talloc
+		local.tee $res
+		
+		local.get $val
+		f32.store offset=2
+		local.get $res
+	)
 	(func $addrfree (export "addrfree") (param $address i32)
 		(local $size i32)
 		local.get $address
@@ -168,5 +194,53 @@
 
 		local.get $address
 		global.set $ptr
+	)
+	(func $print_digit (export "print_digit") (param $digit i32)
+		(local $old_ptr i32)
+
+		global.get $ptr
+		local.set $old_ptr
+
+		;; go to area with 3+1+8+4 bytes (info + iovec struct + digit + written)
+		i32.const 16
+		call $move_ptr
+
+		global.get $ptr
+		i32.const 48 ;; digit to ascii
+		local.get $digit
+		i32.add
+		i32.store8 offset=3
+
+		global.get $ptr
+		global.get $ptr
+		i32.const 3
+		i32.add
+		
+		i32.store offset=4
+
+		global.get $ptr
+		i32.const 1
+		i32.store offset=8
+
+		i32.const 1 ;; write
+		global.get $ptr
+		i32.const 4 ;; ivoec
+		i32.add
+		i32.const 1
+		
+		global.get $ptr ;; write to
+		i32.const 12
+		i32.add
+
+		call $fd_write
+		drop
+		;; clean ptr
+		global.get $ptr
+		call $addrfree
+
+		;; finaly
+		local.get $old_ptr
+		global.set $ptr
+		drop
 	)
 )
