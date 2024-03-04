@@ -9,6 +9,13 @@ impl<'a> Codegen<'a> {
     pub fn get_fun(&self, name: String) -> u32 {
         self.funcs.get(&name).unwrap().0
     }
+    pub fn import(&mut self, module: &str, name: &str) -> &mut Self {
+        self.section
+            .imports
+            .import(module, name, EntityType::Function(self.funcs.len() as u32));
+        self.add_extern(name.to_string());
+        self
+    }
 
     pub fn new(ir: Vec<IROp>) -> Self {
         let mut section = Section::new();
@@ -23,6 +30,8 @@ impl<'a> Codegen<'a> {
             ir,
             ip: 0,
         };
+
+        res.import("mem", "talloc");
         res.add_extern("_start".to_string());
 
         res
@@ -80,9 +89,7 @@ impl<'a> Codegen<'a> {
             IROp::Const(ConstType::Float, Const::Float(f)) => {
                 self.insert(Instruction::F32Const(f));
             }
-            IROp::Add(_) | IROp::Mul(_) | IROp::Div(_) | IROp::Sub(_) => {
-                return self.bond_binary_atoms(op);
-            }
+            IROp::Add(_) | IROp::Mul(_) | IROp::Div(_) | IROp::Sub(_) => self.bond_binary_atoms(op),
             IROp::Alloc(ty, name) => {
                 self.current.add_var(name, ty.into_val_type());
                 self.ip += 1;
