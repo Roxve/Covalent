@@ -9,41 +9,73 @@ impl<'a> Codegen<'a> {
     pub fn get_fun(&self, name: String) -> u32 {
         self.funcs.get(&name).unwrap().0
     }
-    pub fn import(&mut self, module: &str, name: &str) -> &mut Self {
+    pub fn import(
+        &mut self,
+        module: &str,
+        name: &str,
+        args: Vec<ValType>,
+        res: Vec<ValType>,
+    ) -> &mut Self {
         self.section
             .imports
             .import(module, name, EntityType::Function(self.funcs.len() as u32));
+        self.table.function(
+            SymbolTable::WASM_SYM_UNDEFINED | SymbolTable::WASM_SYM_EXPLICIT_NAME,
+            self.funcs.len() as u32,
+            Some(name),
+        );
+
+        self.section.types.function(args, res);
+
         self.add_extern(name.to_string());
         self
     }
 
     pub fn new(ir: Vec<IROp>) -> Self {
-        let mut section = Section::new();
-        let _ty = section.types.function(vec![], vec![]);
-        let _func = section.func.function(0);
+        let section = Section::new();
+
         let module = Module::new();
         let mut res = Self {
             current: Func::new(),
             funcs: HashMap::new(),
             section,
+            table: SymbolTable::new(),
             module,
             ir,
             ip: 0,
         };
 
-        res.import("mem", "talloc");
-        res.import("mem", "mk_int");
+        res.import("mem", "talloc", vec![ValType::I32], vec![ValType::I32]);
+        res.import("mem", "mk_int", vec![ValType::I32], vec![ValType::I32]);
+        for import in res.ir.clone() {
+            if let IROp::Import(ty, modu, name, args) = import {
+                res.ir.remove(0);
+                let resu = {
+                    if ty == ConstType::Void {
+                        vec![]
+                    } else {
+                        vec![ty.into_val_type()]
+                    }
+                };
+                res.import(
+                    modu.as_str(),
+                    name.as_str(),
+                    args.into_iter().map(|k| k.into_val_type()).collect(),
+                    resu,
+                );
+            } else {
+                break;
+            }
+        }
         res.add_extern("_start".to_string());
-
+        res.section.types.function(vec![], vec![]);
         // linking our _start
         // weak and exported!!!
-        res.section
-            .linking
-            .symbol_table(&SymbolTable::new().function(
-                SymbolTable::WASM_SYM_BINDING_WEAK | SymbolTable::WASM_SYM_EXPORTED,
-                res.get_fun("_start".to_string()),
-                Some("_start"),
-            ));
+        res.table.function(
+            SymbolTable::WASM_SYM_BINDING_WEAK | SymbolTable::WASM_SYM_EXPORTED,
+            res.get_fun("_start".to_string()),
+            Some("_start"),
+        );
 
         res
     }
@@ -67,6 +99,9 @@ impl<'a> Codegen<'a> {
         self.module.section(&self.section.types);
 
         self.module.section(&self.section.imports);
+        self.section
+            .func
+            .function(self.get_fun("_start".to_string()));
         self.module.section(&self.section.func);
 
         self.section.exports.export(
@@ -79,11 +114,16 @@ impl<'a> Codegen<'a> {
         // finnaly adding all functions indx by order
 
         // _start
-        self.section.code.function(&self.current.finish());
 
         let mut funcs_ordered: Vec<(u32, Option<Func>)> =
             self.funcs.clone().into_values().collect();
         funcs_ordered.sort_by_key(|k| k.0);
+
+        // giving start a body
+        funcs_ordered[self.get_fun("_start".to_string()) as usize] = (
+            self.get_fun("_start".to_string()),
+            Some(self.current.clone()),
+        );
 
         for (_, func) in funcs_ordered {
             if func.is_some() {
@@ -92,6 +132,7 @@ impl<'a> Codegen<'a> {
         }
 
         self.module.section(&self.section.code);
+        self.section.linking.symbol_table(&self.table);
         self.module.section(&self.section.linking)
     }
 
@@ -188,9 +229,14 @@ impl<'a> Codegen<'a> {
             .function(params, vec![ty.into_val_type()])
             .len()
             - 1;
+        let idx = self.funcs.len();
         self.funcs
-            .insert(name, (func_type.clone() as u32, Some(self.current.clone())));
-
+            .insert(name.clone(), (idx as u32, Some(self.current.clone())));
+        self.table.function(
+            SymbolTable::WASM_SYM_BINDING_LOCAL,
+            idx as u32,
+            Some(name.as_str()),
+        );
         let _ = self.section.func.function(func_type);
         // retreat fr
         self.current = old;

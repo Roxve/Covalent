@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use wasm_encoder::{
     CodeSection, EntityType, ExportSection, Function, FunctionSection, ImportSection, Instruction,
-    LinkingSection, MemoryType, Module, TypeSection, ValType,
+    LinkingSection, MemoryType, Module, SymbolTable, TypeSection, ValType,
 };
 
 use crate::ir::{Const, ConstType, IROp};
@@ -93,6 +93,7 @@ pub struct Codegen<'a> {
     funcs: HashMap<String, (u32, Option<Func<'a>>)>,
     module: Module,
     section: Section,
+    table: SymbolTable,
     ir: Vec<IROp>,
     ip: usize,
 }

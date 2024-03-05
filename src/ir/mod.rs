@@ -19,6 +19,7 @@ pub enum Const {
 }
 #[derive(Debug, Clone, PartialEq)]
 pub enum IROp {
+    Import(ConstType, String, String, Vec<ConstType>), // ty mod fun arg count
     Def(Option<ConstType>, String, Vec<String>, Vec<IROp>),
     Call(ConstType, String),
     Ret(ConstType),
@@ -37,6 +38,7 @@ pub enum IROp {
 use self::IROp::*;
 pub fn get_op_type(op: &IROp) -> ConstType {
     match op {
+        Import(t, _, _, _) => t,
         Def(t, _, _, _) => &t.as_ref().unwrap_or(&ConstType::Void),
         Call(t, _) => t,
         Ret(t) => t,

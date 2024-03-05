@@ -1,6 +1,6 @@
 use super::{get_fn_type, get_ops_type, Const, ConstType, IROp};
 use crate::{
-    ast::{Expr, Literal},
+    ast::{Expr, Ident, Literal},
     source::{ErrKind, Function, Source},
 };
 
@@ -8,6 +8,14 @@ type IR = Vec<IROp>;
 type IRRes = Result<IR, u8>;
 
 pub trait IRGen {
+    fn import(
+        &mut self,
+        ty: ConstType,
+        module: &str,
+        name: &str,
+        args: Vec<ConstType>,
+        ir: &mut IR,
+    );
     fn gen_prog(&mut self, exprs: Vec<Expr>) -> IR;
     fn gen_func(&mut self, func: Function) -> IRRes;
     fn gen_expr(&mut self, expr: Expr) -> IRRes;
@@ -18,8 +26,27 @@ pub trait IRGen {
 }
 
 impl IRGen for Source {
+    fn import(
+        &mut self,
+        ty: ConstType,
+        module: &str,
+        name: &str,
+        args: Vec<ConstType>,
+        ir: &mut IR,
+    ) {
+        ir.reverse();
+        ir.push(IROp::Import(ty, module.to_string(), name.to_string(), args));
+        self.push_function(
+            Ident(name.to_string()),
+            vec![Ident("...data".to_string())],
+            vec![],
+        );
+
+        self.vars.insert(name.to_string(), ConstType::Dynamic);
+    }
     fn gen_prog(&mut self, exprs: Vec<Expr>) -> IR {
         let mut gen = vec![];
+
         for func in self.functions.clone() {
             let compiled_func = self.gen_func(func);
             if compiled_func.is_ok() {
@@ -27,6 +54,13 @@ impl IRGen for Source {
             }
         }
 
+        self.import(
+            ConstType::Void,
+            "std",
+            "writeln",
+            vec![ConstType::Dynamic],
+            &mut gen,
+        );
         for expr in exprs {
             let compiled_expr = self.gen_expr(expr);
             if compiled_expr.is_ok() {
