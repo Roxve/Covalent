@@ -201,9 +201,17 @@
 		global.get $ptr
 		local.set $old_ptr
 
-		;; go to area with 3+1+8+4 bytes (info + iovec struct + digit + written)
+		;; go to area with 3+1+8+4 bytes (info + iovec struct + digit + written
 		i32.const 16
 		call $move_ptr
+		;; info
+		global.get $ptr
+		i32.const 1
+		i32.store8
+
+		global.get $ptr
+		i32.const 16
+		i32.store16 offset=1
 
 		global.get $ptr
 		i32.const 48 ;; digit to ascii
@@ -234,6 +242,11 @@
 
 		call $fd_write
 		drop
+
+		;; set as free
+		global.get $ptr
+		i32.const 0
+		i32.store8
 		;; clean ptr
 		global.get $ptr
 		call $addrfree

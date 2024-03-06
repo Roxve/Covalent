@@ -41,6 +41,8 @@
 
 	(func $write_i (export "write_i") (param $num i32)
 		(local $reversed i32)
+		(local $zeros i32)
+		
 		(block $zero
 			(local.get $num)
 			(i32.const 0)
@@ -69,7 +71,20 @@
 				(i32.rem_u)
 
 				(i32.add)
-				(local.set $reversed)
+				(local.tee $reversed)
+				(i32.eqz)
+				if
+					local.get $zeros
+					i32.const 1
+					i32.add
+					local.set $zeros
+					
+					(local.get $num)
+					(i32.const 10)
+					(i32.div_s)
+					(local.set $num)
+					(br $reverse)
+				end
 
 				(local.get $num)
 				(i32.const 10)
@@ -96,6 +111,24 @@
 			(i32.ne)
 			(br_if $loop)
 		)
+		local.get $zeros
+		i32.const 0
+		i32.ne
+		if
+		(loop $print_zeros
+			(i32.const 0)
+			(call $print_digit)
+		
+			(local.get $zeros)
+			(i32.const 1)	
+			(i32.sub)
+
+			(local.tee $zeros)
+			(i32.const 0)
+			(i32.ne)
+			(br_if $print_zeros)
+		)
+		end
 	)
 
 	(func $write_f (export "write_f") (param $num f32)
@@ -117,7 +150,7 @@
 		f32.sub
 
 		;; format here is the first 3 digits
-		f32.const 100.0
+		f32.const 1000.0
 		f32.mul
 		i32.trunc_f32_s
 
