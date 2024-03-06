@@ -15,6 +15,11 @@ use crate::ast::*;
 use crate::backend::wasm::*;
 use crate::parser::*;
 use crate::source::*;
+#[test]
+fn test() {
+    let prog = fs::read_to_string("TestProg/main.atoms").unwrap();
+    run(prog, true, false, "test".to_string());
+}
 
 fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
     let mut src = Source::new(input);

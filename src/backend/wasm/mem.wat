@@ -53,7 +53,7 @@
 			if (result i32)
 				global.get $ptr
 			else
-			;; size_ptr > size && (size_ptr - 2) >= size
+			;; size_ptr > size && (size_ptr - 3) >= size
 			local.get $size_ptr
 			local.get $size
 			i32.ge_s
@@ -82,6 +82,11 @@
 				global.get $ptr
 				local.get $size_block
 				i32.store16 offset=1
+				;; ;; make sure its free
+				;; global.get $ptr
+				;; i32.const 0
+				;; i32.store8
+			
 				local.get $result
 				local.get $size
 				i32.store16 offset=1
@@ -179,6 +184,7 @@
 	)
 	(func $addrfree (export "addrfree") (param $address i32)
 		(local $size i32)
+		(local $free i32)
 		local.get $address
 		call $size_of
 		local.set $size
@@ -194,19 +200,51 @@
 
 		local.get $address
 		global.set $ptr
+
+		;; overwrite everything
+				
+		local.get $size
+		i32.const 3
+		i32.sub
+		local.tee $free
+		i32.eqz
+		if
+		return
+		else
+		
+		local.get $address
+		i32.const 2
+		i32.add
+		local.set $address
+		(loop $loop
+			(local.get $address)
+			(i32.const 1)
+			(i32.add)
+			(local.tee $address)
+			(i32.const 0)
+			(i32.store8)
+			
+			(local.get $free)
+			(i32.const 1)
+			(i32.sub)
+			(local.tee $free)
+			(i32.const 0)
+			(i32.ne)
+			(br_if $loop)
+		)
+		end
+		
 	)
 	(func $print_digit (export "print_digit") (param $digit i32)
 		(local $old_ptr i32)
-
 		global.get $ptr
 		local.set $old_ptr
-
 		;; go to area with 3+1+8+4 bytes (info + iovec struct + digit + written
 		i32.const 16
 		call $move_ptr
 		;; info
 		global.get $ptr
-		i32.const 1
+		i32.const 0
 		i32.store8
 
 		global.get $ptr
@@ -250,10 +288,8 @@
 		;; clean ptr
 		global.get $ptr
 		call $addrfree
-
-		;; finaly
+		drop
 		local.get $old_ptr
 		global.set $ptr
-		drop
 	)
 )
