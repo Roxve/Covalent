@@ -3,11 +3,13 @@
 	(memory (export "memory") 1)
 	;; init first page
 	(data (i32.const 0) "\00")
-	(data (i32.const 1) "\FF\FF")
+	(data (i32.const 1) "\FD\FF")
 	
 	(global $ptr (export "ptr") (mut i32) (i32.const 0))
 	(global $pages (export "pages") (mut i32) (i32.const 1))
-
+	
+	
+	
 	(func $size_of (export "size_of") (param $address i32) (result i32)
 		;; its free address?
 		local.get $address
@@ -32,6 +34,57 @@
 			end
 		end
 	)
+	
+	(func $combine_free (export "combine_free") (param $addr i32)
+		(local $next i32)
+		(local $size_addr i32)
+		
+		local.get $addr
+		;; addr + size = next
+		local.get $addr
+		call $size_of
+		local.tee $size_addr
+		i32.add
+		local.tee $next
+
+		;; check if free
+		i32.load8_s
+		i32.eqz
+
+		;; also check if its not end of memory
+		local.get $next
+
+		i32.const 65533
+		global.get $pages
+		i32.mul
+		
+		i32.ne
+		i32.and
+		if
+			local.get $addr
+			
+			local.get $next
+			
+			call $size_of
+			local.get $size_addr
+			i32.add
+
+			;; store results in addr 2 info
+			i32.store16 offset=1
+
+			;; ovveride next
+			local.get $next
+			i32.const 0
+			i32.store16 offset=1
+
+			;; combine next block
+			local.get $addr
+			call $combine_free
+		else
+			return
+		end
+	)
+
 	(func $move_ptr (export "move_ptr") (param $size i32) (result i32)
 		(local $size_ptr i32)
 		(local $size_block i32)
@@ -233,7 +286,10 @@
 			(br_if $loop)
 		)
 		end
-		
+
+		;; combine our block
+		global.get $ptr
+		call $combine_free
 	)
 	(func $print_digit (export "print_digit") (param $digit i32)
 		(local $old_ptr i32)
@@ -291,5 +347,8 @@
 		drop
 		local.get $old_ptr
 		global.set $ptr
+	)
+	(func $pos (export "pos") (result i32)
+		global.get $ptr
 	)
 )
