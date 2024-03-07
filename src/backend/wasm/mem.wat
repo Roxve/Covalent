@@ -52,13 +52,14 @@
 		i32.eqz
 
 		;; also check if its not end of memory
+		;; next >= max
 		local.get $next
 
 		i32.const 65533
 		global.get $pages
 		i32.mul
 		
-		i32.ne
+		i32.lt_s
 		i32.and
 		if
 			local.get $addr
@@ -76,7 +77,8 @@
 			local.get $next
 			i32.const 0
 			i32.store16 offset=1
-
+			;; local.get $addr
+			;; call $print_digit
 			;; combine next block
 			local.get $addr
 			call $combine_free
@@ -264,7 +266,7 @@
 		if
 		return
 		else
-		
+		;; 13 
 		local.get $address
 		i32.const 2
 		i32.add
@@ -292,45 +294,44 @@
 		call $combine_free
 	)
 	(func $print_digit (export "print_digit") (param $digit i32)
-		(local $old_ptr i32)
-		global.get $ptr
-		local.set $old_ptr
+		(local $new i32)
 		;; go to area with 3+1+8+4 bytes (info + iovec struct + digit + written
-		i32.const 16
+		i32.const 20
 		call $move_ptr
+		local.set $new
 		;; info
-		global.get $ptr
+		local.get $new
 		i32.const 0
 		i32.store8
 
-		global.get $ptr
-		i32.const 16
+		local.get $new
+		i32.const 20
 		i32.store16 offset=1
 
-		global.get $ptr
+		local.get $new
 		i32.const 48 ;; digit to ascii
 		local.get $digit
 		i32.add
 		i32.store8 offset=3
 
-		global.get $ptr
-		global.get $ptr
+		local.get $new
+		local.get $new
 		i32.const 3
 		i32.add
 		
 		i32.store offset=4
 
-		global.get $ptr
+		local.get $new
 		i32.const 1
 		i32.store offset=8
 
 		i32.const 1 ;; write
-		global.get $ptr
+		local.get $new
 		i32.const 4 ;; ivoec
 		i32.add
 		i32.const 1
 		
-		global.get $ptr ;; write to
+		local.get $new ;; write to
 		i32.const 12
 		i32.add
 
@@ -338,15 +339,13 @@
 		drop
 
 		;; set as free
-		global.get $ptr
+		local.get $new
 		i32.const 0
 		i32.store8
+		
 		;; clean ptr
-		global.get $ptr
+		local.get $new
 		call $addrfree
-		drop
-		local.get $old_ptr
-		global.set $ptr
 	)
 	(func $pos (export "pos") (result i32)
 		global.get $ptr
