@@ -45,8 +45,14 @@ impl<'a> Codegen<'a> {
             ip: 0,
         };
 
-        res.import("mem", "talloc", vec![ValType::I32], vec![ValType::I32]);
-        res.import("mem", "mk_int", vec![ValType::I32], vec![ValType::I32]);
+        res.import("mem", "talloc", vec![ValType::I32], vec![ValType::I32])
+            .import("mem", "mk_int", vec![ValType::I32], vec![ValType::I32])
+            .import(
+                "runtime",
+                "__add__",
+                vec![ValType::I32, ValType::I32],
+                vec![ValType::I32],
+            );
         for import in res.ir.clone() {
             if let IROp::Import(ty, modu, name, args) = import {
                 res.ir.remove(0);
@@ -67,8 +73,11 @@ impl<'a> Codegen<'a> {
                 break;
             }
         }
-        res.add_extern("_start".to_string());
+
         res.section.types.function(vec![], vec![]);
+        res.add_extern("_start".to_string());
+
+        res.section.func.function(res.get_fun("_start".to_string()));
         // linking our _start
         // weak and exported!!!
         res.table.function(
@@ -85,8 +94,12 @@ impl<'a> Codegen<'a> {
         self.ip += 1;
     }
 
-    fn insertp(&mut self, inst: Instruction<'a>) {
-        self.current.body.push(inst);
+    // fn insertp(&mut self, inst: Instruction<'a>) {
+    //     self.current.body.push(inst);
+    // }
+
+    fn call(&mut self, name: &str) {
+        self.insert(Instruction::Call(self.get_fun(name.to_string())))
     }
     pub fn codegen(&mut self) -> &mut Module {
         while self.ip <= self.ir.len() - 1 {
@@ -99,9 +112,7 @@ impl<'a> Codegen<'a> {
         self.module.section(&self.section.types);
 
         self.module.section(&self.section.imports);
-        self.section
-            .func
-            .function(self.get_fun("_start".to_string()));
+
         self.module.section(&self.section.func);
 
         self.section.exports.export(
@@ -164,12 +175,9 @@ impl<'a> Codegen<'a> {
             }
             IROp::Conv(into, from) => match into {
                 ConstType::Dynamic => match from {
-                    ConstType::Int => {
-                        self.insert(Instruction::Call(self.get_fun("mk_int".to_string())));
-                    }
-                    ConstType::Float => {
-                        self.insert(Instruction::Call(self.get_fun("mk_float".to_string())));
-                    }
+                    ConstType::Int => self.call("mk_int"),
+                    ConstType::Float => self.call("mk_float"),
+                    ConstType::Dynamic => self.ip += 1,
                     _ => todo!("add conv {:?} into dynamic", from),
                 },
                 _ => todo!("add whole conv {:?}", into),
@@ -188,6 +196,7 @@ impl<'a> Codegen<'a> {
             IROp::Add(ty) => match ty {
                 ConstType::Int => self.insert(Instruction::I32Add),
                 ConstType::Float => self.insert(Instruction::F32Add),
+                ConstType::Dynamic => self.call("__add__"),
                 _ => todo!("add + for type {:?}", ty),
             },
             _ => todo!("add operator {:?}", op),

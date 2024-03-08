@@ -197,8 +197,6 @@
 			)
 			br $default
 		)
-	;; moving res back in
-	
 		local.get $res
 	)
 )

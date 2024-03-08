@@ -41,6 +41,7 @@ impl IRGen for Source {
             vec![Ident("...data".to_string())],
             vec![],
         );
+        ir.reverse();
 
         self.vars.insert(name.to_string(), ConstType::Dynamic);
     }
