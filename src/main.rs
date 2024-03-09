@@ -6,7 +6,11 @@ mod lexer;
 mod parser;
 mod source;
 
+use wasm3::Environment;
+use wasm3::Module;
+
 use std::path::Path;
+use std::process::Command;
 use std::{env, fs};
 
 use ir::gen::IRGen;
@@ -34,7 +38,56 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
     let module = codegen.codegen();
     dbg!(&module);
     let bytes = module.clone().finish();
-    fs::write("/tmp/test.wasm", bytes);
+    let path = "/tmp/test.wasm";
+    let _ = fs::write(path, bytes);
+
+    // generate relocs
+    let _ = Command::new("wasm2wat")
+        .arg(path)
+        .arg("-o")
+        .arg(format!("{}.wat", path))
+        .spawn()
+        .unwrap()
+        .wait();
+    let _ = Command::new("wat2wasm")
+        .arg("--relocatable")
+        .arg(format!("{}.wat", path))
+        .arg("-o")
+        .arg(path)
+        .spawn()
+        .unwrap()
+        .wait();
+
+    let libdir = env::current_exe()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .replace("covalent", "lib");
+    // links with std runtime mem
+    let _ = Command::new("wasm-ld")
+        .arg("--relocatable")
+        .arg(format!("{}/{}", libdir, "std.wasm"))
+        .arg(format!("{}/{}", libdir, "runtime.wasm"))
+        .arg(format!("{}/{}", libdir, "mem.wasm"))
+        .arg(path)
+        .arg("-o")
+        .arg(path)
+        .spawn()
+        .unwrap()
+        .wait();
+    if is_repl {
+        let env = Environment::new().expect("unable to create repl enviroment");
+        let runtime = env
+            .create_runtime(1024)
+            .expect("unable to create repl runtime");
+        let bytes = fs::read(path).unwrap();
+        let module = Module::parse(&env, bytes).expect("cannot load generated repl");
+        let module = runtime.load_module(module).unwrap();
+        let func = module
+            .find_function::<(), ()>("_start")
+            .expect("cannot find start in results");
+        func.call().expect("failed to run prog");
+    }
 }
 
 fn repl(is_debug: bool) {
