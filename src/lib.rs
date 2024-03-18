@@ -32,10 +32,27 @@ impl CSettings {
     }
 }
 
+#[allow(unused)]
+pub struct WASMSettings {}
+
+impl WASMSettings {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
 pub enum BackendSettings {
-    WASM,
+    WASM(WASMSettings),
     C(CSettings),
     Custom(Vec<String>),
+}
+
+macro_rules! unwarp {
+    ($back: expr, $vari: path) => {
+        match $back {
+            $vari(i) => i,
+            _ => panic!(),
+        }
+    };
 }
 pub struct CompilerConfig {
     input: String,
@@ -43,6 +60,7 @@ pub struct CompilerConfig {
     settings: BackendSettings,
     debug: bool,
     repl: bool,
+    output: String,
 }
 impl CompilerConfig {
     pub fn new(
@@ -51,6 +69,7 @@ impl CompilerConfig {
         settings: BackendSettings,
         debug: bool,
         repl: bool,
+        output: String,
     ) -> Self {
         Self {
             input,
@@ -58,6 +77,7 @@ impl CompilerConfig {
             settings,
             debug,
             repl,
+            output,
         }
     }
     pub fn run(&self) {
@@ -69,15 +89,15 @@ impl CompilerConfig {
         }
         let ir = src.gen_prog(prog);
         dbg!(&ir);
-        let mut codegen = wasm::Codegen::new(ir);
-        let module = codegen.codegen();
-        dbg!(&module);
-        let bytes = module.clone().finish();
-        let path = "/tmp/test.wasm";
-        let _ = fs::write(path, bytes);
 
         match self.backend {
             Backend::WASM => {
+                let mut codegen = wasm::Codegen::new(ir);
+                let module = codegen.codegen();
+                dbg!(&module);
+                let bytes = module.clone().finish();
+                let path = self.output;
+                let _ = fs::write(path, bytes);
                 // generate relocs
                 let _ = Command::new("wasm2wat")
                     .arg(path)

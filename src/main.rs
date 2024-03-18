@@ -29,6 +29,7 @@ fn test() {
         covalent::BackendSettings::WASM,
         true,
         true,
+        "/tmp/covalent/test.wasm".to_string(),
     )
     .run();
 }
@@ -48,9 +49,10 @@ fn repl(is_debug: bool) {
         CompilerConfig::new(
             buffer.clone(),
             covalent::Backend::WASM,
-            covalent::BackendSettings::WASM,
+            covalent::BackendSettings::WASM(covalent::WASMSettings::new()),
             true,
             true,
+            "/tmp/covalent/repl.wasm".to_string(),
         )
         .run();
     }
@@ -90,6 +92,7 @@ fn main() {
         covalent::BackendSettings::WASM,
         is_debug,
         false,
+        "/tmp/covalent/test.wasm".to_string(),
     )
     .run();
 }

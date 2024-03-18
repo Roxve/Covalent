@@ -7,13 +7,12 @@ pub enum Literal {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum Tag {}
+#[derive(Debug, Clone, PartialEq)]
 pub struct Ident {
     pub val: String,
-    pub tag: Option<String>,
+    pub tag: Option<Tag>,
 }
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Tag(pub String);
 
 pub fn get_operator_level(op: &str) -> u8 {
     match op {
