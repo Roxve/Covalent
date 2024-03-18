@@ -1,6 +1,9 @@
 pub mod codegen;
-
+use crate::CompilerConfig;
 use std::collections::HashMap;
+use std::env;
+use std::fs;
+use std::process::Command;
 
 use wasm_encoder::{
     CodeSection, EntityType, ExportSection, Function, FunctionSection, ImportSection, Instruction,
@@ -96,4 +99,50 @@ pub struct Codegen<'a> {
     table: SymbolTable,
     ir: Vec<IROp>,
     ip: usize,
+}
+
+pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
+    let mut codegen = Codegen::new(ir);
+    let module = codegen.codegen();
+    dbg!(&module);
+    let bytes = module.clone().finish();
+    let path = config.output.as_str();
+    let _ = fs::write(path, bytes);
+    // generate relocs
+    let _ = Command::new("wasm2wat")
+        .arg(path)
+        .arg("-o")
+        .arg(format!("{}.wat", path))
+        .spawn()
+        .unwrap()
+        .wait();
+    let _ = Command::new("wat2wasm")
+        .arg("--relocatable")
+        .arg(format!("{}.wat", path))
+        .arg("-o")
+        .arg(path)
+        .spawn()
+        .unwrap()
+        .wait();
+
+    let libdir = env::current_exe()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .replace("covalent", "lib");
+    // links with std runtime mem
+    let _ = Command::new("wasm-ld")
+        .arg("--relocatable")
+        .arg(format!("{}/{}", libdir, "std.wasm"))
+        .arg(format!("{}/{}", libdir, "runtime.wasm"))
+        .arg(format!("{}/{}", libdir, "mem.wasm"))
+        .arg(path)
+        .arg("-o")
+        .arg(path)
+        .spawn()
+        .unwrap()
+        .wait();
+    if config.repl {
+        let bytes = fs::read(path).unwrap();
+    }
 }

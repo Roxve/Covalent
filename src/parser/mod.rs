@@ -170,18 +170,17 @@ impl Parser for Source {
                 self.tokenize();
                 Expr::Ident(Ident { val: id, tag: None })
             }
-            Token::Tag(tag) => {
-                self.tokenize();
-                if let Token::Ident(id) = self.current() {
-                    self.tokenize();
-                    return Expr::Ident(Ident {
-                        tag: Some(tag.to_string()),
-                        val: id,
-                    });
-                }
-                todo!()
-            }
-
+            // Token::Tag(tag) => {
+            //     self.tokenize();
+            //     if let Token::Ident(id) = self.current() {
+            //         self.tokenize();
+            //         return Expr::Ident(Ident {
+            //             tag: Some(tag.to_string()),
+            //             val: id,
+            //         });
+            //     }
+            //     todo!()
+            // }
             Token::LeftParen => {
                 self.tokenize();
                 let expr = self.parse_level(0);

@@ -1,6 +1,3 @@
-use std::env;
-use std::fs;
-use std::process::Command;
 pub mod ast;
 pub mod backend;
 pub mod ir;
@@ -57,10 +54,10 @@ macro_rules! unwarp {
 pub struct CompilerConfig {
     input: String,
     backend: Backend,
-    settings: BackendSettings,
-    debug: bool,
-    repl: bool,
-    output: String,
+    pub settings: BackendSettings,
+    pub debug: bool,
+    pub repl: bool,
+    pub output: String,
 }
 impl CompilerConfig {
     pub fn new(
@@ -92,49 +89,7 @@ impl CompilerConfig {
 
         match self.backend {
             Backend::WASM => {
-                let mut codegen = wasm::Codegen::new(ir);
-                let module = codegen.codegen();
-                dbg!(&module);
-                let bytes = module.clone().finish();
-                let path = self.output;
-                let _ = fs::write(path, bytes);
-                // generate relocs
-                let _ = Command::new("wasm2wat")
-                    .arg(path)
-                    .arg("-o")
-                    .arg(format!("{}.wat", path))
-                    .spawn()
-                    .unwrap()
-                    .wait();
-                let _ = Command::new("wat2wasm")
-                    .arg("--relocatable")
-                    .arg(format!("{}.wat", path))
-                    .arg("-o")
-                    .arg(path)
-                    .spawn()
-                    .unwrap()
-                    .wait();
-
-                let libdir = env::current_exe()
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .replace("covalent", "lib");
-                // links with std runtime mem
-                let _ = Command::new("wasm-ld")
-                    .arg("--relocatable")
-                    .arg(format!("{}/{}", libdir, "std.wasm"))
-                    .arg(format!("{}/{}", libdir, "runtime.wasm"))
-                    .arg(format!("{}/{}", libdir, "mem.wasm"))
-                    .arg(path)
-                    .arg("-o")
-                    .arg(path)
-                    .spawn()
-                    .unwrap()
-                    .wait();
-                if self.repl {
-                    let bytes = fs::read(path).unwrap();
-                }
+                wasm::compile(&self, ir);
             }
 
             _ => todo!(),

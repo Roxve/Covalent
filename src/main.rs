@@ -26,7 +26,7 @@ fn test() {
     CompilerConfig::new(
         prog,
         covalent::Backend::WASM,
-        covalent::BackendSettings::WASM,
+        covalent::BackendSettings::WASM(covalent::WASMSettings::new()),
         true,
         true,
         "/tmp/covalent/test.wasm".to_string(),
@@ -89,7 +89,7 @@ fn main() {
     CompilerConfig::new(
         prog.expect("invaild file name"),
         covalent::Backend::WASM,
-        covalent::BackendSettings::WASM,
+        covalent::BackendSettings::WASM(covalent::WASMSettings::new()),
         is_debug,
         false,
         "/tmp/covalent/test.wasm".to_string(),
