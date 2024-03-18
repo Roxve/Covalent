@@ -37,8 +37,14 @@ impl IRGen for Source {
         ir.reverse();
         ir.push(IROp::Import(ty, module.to_string(), name.to_string(), args));
         self.push_function(
-            Ident(name.to_string()),
-            vec![Ident("...data".to_string())],
+            Ident {
+                val: name.to_string(),
+                tag: None,
+            },
+            vec![Ident {
+                val: "...data".to_string(),
+                tag: None,
+            }],
             vec![],
         );
         ir.reverse();
@@ -73,7 +79,7 @@ impl IRGen for Source {
 
     fn gen_func(&mut self, func: Function) -> IRRes {
         let mut body = vec![];
-        let args: Vec<String> = func.args.iter().map(|v| v.0.clone()).collect();
+        let args: Vec<String> = func.args.iter().map(|v| v.val.clone()).collect();
 
         let old_vars = self.vars.clone();
         self.vars.clear();
@@ -91,8 +97,8 @@ impl IRGen for Source {
         let ty = get_fn_type(&mut body);
         self.vars = old_vars;
         self.vars
-            .insert(func.name.0.clone(), ty.clone().unwrap_or(ConstType::Void));
-        Ok(vec![IROp::Def(ty, func.name.0, args, body)])
+            .insert(func.name.val.clone(), ty.clone().unwrap_or(ConstType::Void));
+        Ok(vec![IROp::Def(ty, func.name.val, args, body)])
     }
 
     fn gen_expr(&mut self, expr: Expr) -> IRRes {
@@ -101,29 +107,29 @@ impl IRGen for Source {
             Expr::Literal(Literal::Float(f)) => {
                 Ok(vec![IROp::Const(ConstType::Float, Const::Float(f))])
             }
-            Expr::BinaryExpr(op, left, right) => self.gen_binary_expr(op, *left, *right),
-            Expr::VarDeclare(name, expr) => self.gen_var_declare(name.0, *expr),
-            Expr::VarAssign(name, expr) => self.gen_var_assign(name.0, *expr),
+            Expr::BinaryExpr { op, left, right } => self.gen_binary_expr(op, *left, *right),
+            Expr::VarDeclare { name, val } => self.gen_var_declare(name.val, *val),
+            Expr::VarAssign { name, val } => self.gen_var_assign(name.val, *val),
             Expr::Ident(name) => {
-                if !self.vars.contains_key(&name.0) {
+                if !self.vars.contains_key(&name.val) {
                     self.err(
                         ErrKind::UndeclaredVar,
-                        format!("var {} is not declared", name.0.clone()),
+                        format!("var {} is not declared", name.val.clone()),
                     );
                     return Err(ErrKind::UndeclaredVar as u8);
                 }
                 Ok(vec![IROp::Load(
-                    self.vars.get(&name.0).unwrap().clone(),
-                    name.0,
+                    self.vars.get(&name.val).unwrap().clone(),
+                    name.val,
                 )])
             }
-            Expr::FnCall(name, args) => {
+            Expr::FnCall { name, args } => {
                 let mut res: Vec<IROp> = vec![];
-                let fun = self.get_function(name.0.clone());
+                let fun = self.get_function(name.val.clone());
                 if fun.is_none() {
                     self.err(
                         ErrKind::UndeclaredVar,
-                        format!("undeclared function {}", name.0),
+                        format!("undeclared function {}", name.val),
                     );
                     return Err(ErrKind::UndeclaredVar as u8);
                 }
@@ -133,7 +139,7 @@ impl IRGen for Source {
                         ErrKind::UnexceptedArgs,
                         format!(
                             "unexpected args number for function {}, got {} args expected {}",
-                            name.0,
+                            name.val,
                             args.len(),
                             fun.unwrap().args.len()
                         ),
@@ -147,8 +153,8 @@ impl IRGen for Source {
                     res.push(IROp::Conv(ConstType::Dynamic, get_ops_type(&res)));
                 }
                 res.push(IROp::Call(
-                    self.vars.get(&name.0).unwrap().to_owned(),
-                    name.0,
+                    self.vars.get(&name.val).unwrap().to_owned(),
+                    name.val,
                 ));
 
                 Ok(res)

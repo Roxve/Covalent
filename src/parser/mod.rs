@@ -74,12 +74,15 @@ impl Parser for Source {
             // 5 (2*) 5 nothing (1+) 5
             if let Token::Operator(c) = self.current() {
                 if c == "=" {
-                    if let Expr::Ident(id) = left {
+                    if let Expr::Ident(name) = left {
                         self.tokenize();
 
                         let right = self.parse_level(0);
 
-                        left = Expr::VarAssign(id, Box::new(right));
+                        left = Expr::VarAssign {
+                            name,
+                            val: Box::new(right),
+                        };
                         break;
                     }
 
@@ -98,7 +101,11 @@ impl Parser for Source {
                 self.tokenize();
                 right = self.parse_level(current_op_level + 1);
 
-                left = Expr::BinaryExpr(c, Box::new(left), Box::new(right));
+                left = Expr::BinaryExpr {
+                    op: c,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                };
             } else {
                 break;
             }
@@ -114,7 +121,10 @@ impl Parser for Source {
             if self.current() == Token::Colon {
                 self.tokenize();
                 let args = self.parse_list();
-                return Expr::FnCall(id.to_owned(), args);
+                return Expr::FnCall {
+                    name: id.to_owned(),
+                    args,
+                };
             }
         }
         return call;
@@ -158,13 +168,16 @@ impl Parser for Source {
 
             Token::Ident(id) => {
                 self.tokenize();
-                Expr::Ident(Ident(id))
+                Expr::Ident(Ident { val: id, tag: None })
             }
             Token::Tag(tag) => {
                 self.tokenize();
                 if let Token::Ident(id) = self.current() {
                     self.tokenize();
-                    return Expr::TaggedIdent(Tag(tag.to_string()), Ident(id));
+                    return Expr::Ident(Ident {
+                        tag: Some(tag.to_string()),
+                        val: id,
+                    });
                 }
                 todo!()
             }
@@ -197,15 +210,18 @@ impl Parser for Source {
 
         let left = self.parse_expr();
 
-        if let Expr::Ident(id) = left {
+        if let Expr::Ident(name) = left {
             if Token::Operator("=".to_string()) == self.current() {
                 self.tokenize();
 
                 let expr = self.parse_level(0);
-                return Expr::VarDeclare(id, Box::new(expr));
+                return Expr::VarDeclare {
+                    name,
+                    val: Box::new(expr),
+                };
             }
 
-            return self.parse_declare_fn(id);
+            return self.parse_declare_fn(name);
         } else {
             self.err(
                 ErrKind::UnexceptedTokenE,
@@ -240,7 +256,7 @@ impl Parser for Source {
         let body = self.parse_body();
 
         self.push_function(id.clone(), id_args, body);
-        return Expr::PosInfo(id.0, self.line, self.column);
+        return Expr::PosInfo(id.val, self.line, self.column);
     }
 
     fn parse_if_expr(&mut self) -> Expr {
@@ -258,7 +274,11 @@ impl Parser for Source {
             }
         }
 
-        return Expr::IfExpr(Box::new(condition), body, alts);
+        return Expr::IfExpr {
+            condition: Box::new(condition),
+            body,
+            alts,
+        };
     }
 
     #[inline]

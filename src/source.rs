@@ -74,7 +74,7 @@ pub struct Function {
 
 impl Function {
     pub fn get_name(&self) -> String {
-        self.name.0.clone()
+        self.name.val.clone()
     }
 }
 
