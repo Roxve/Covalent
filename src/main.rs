@@ -6,9 +6,6 @@ mod lexer;
 mod parser;
 mod source;
 
-use wasm3::Environment;
-use wasm3::Module;
-
 use std::path::Path;
 use std::process::Command;
 use std::{env, fs};
@@ -76,17 +73,7 @@ fn run(input: String, is_debug: bool, is_repl: bool, name: String) {
         .unwrap()
         .wait();
     if is_repl {
-        let env = Environment::new().expect("unable to create repl enviroment");
-        let runtime = env
-            .create_runtime(1024)
-            .expect("unable to create repl runtime");
         let bytes = fs::read(path).unwrap();
-        let module = Module::parse(&env, bytes).expect("cannot load generated repl");
-        let module = runtime.load_module(module).unwrap();
-        let func = module
-            .find_function::<(), ()>("_start")
-            .expect("cannot find start in results");
-        func.call().expect("failed to run prog");
     }
 }
 
