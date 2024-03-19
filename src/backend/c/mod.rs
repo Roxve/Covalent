@@ -3,6 +3,12 @@ use std::collections::VecDeque;
 
 use crate::ir::{Const, ConstType};
 
+pub fn TypeToC(ty: ConstType) -> String {
+    match ty {
+        ConstType::Int => "int".to_string(),
+        _ => todo!("convert type into c {:?}", ty),
+    }
+}
 // or ir is stack based so we need to simulate a stack
 #[derive(Debug, Clone)]
 pub enum Item {
