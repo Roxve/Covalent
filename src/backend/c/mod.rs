@@ -1,20 +1,35 @@
 pub mod gen;
-use std::collections::VecDeque;
-
 use crate::ir::{Const, ConstType};
+use std::collections::HashMap;
+use std::collections::VecDeque;
 
 pub fn TypeToC(ty: ConstType) -> String {
     match ty {
         ConstType::Int => "int".to_string(),
+        ConstType::Float => "float".to_string(),
         _ => todo!("convert type into c {:?}", ty),
     }
+}
+
+pub fn TypesToCNamed(tys: Vec<(ConstType, String)>) -> String {
+    let mut str = String::from("");
+    let tys_len = tys.len();
+    for (i, ty) in tys.into_iter().enumerate() {
+        str += TypeToC(ty.0).as_str();
+        str += ty.1.as_str();
+
+        if i != tys_len - 1 {
+            str += ", ";
+        }
+    }
+    str
 }
 // or ir is stack based so we need to simulate a stack
 #[derive(Debug, Clone)]
 pub enum Item {
     Const(Const),
     Var(Option<ConstType>, String),
-    Call(String), // we generate func call as string then we push it into the stack
+    Expr(String), // push into stack except if the op doesnt push ig
 }
 
 #[derive(Debug, Clone)]
@@ -56,7 +71,8 @@ impl Module {
 #[derive(Debug, Clone)]
 pub struct Codegen {
     stack: VecDeque<Item>,
-    pub module: Module, // code we are generating
+    variables: HashMap<String, i32>, // c doesnt allow redeclaration of vars with different types
+    pub module: Module,              // code we are generating
 }
 
 impl Codegen {
@@ -71,15 +87,44 @@ impl Codegen {
         match item {
             Item::Const(con) => match con {
                 Const::Int(i) => i.to_string(),
+                Const::Float(f) => f.to_string(),
                 _ => todo!("conv a const item into string {:?}", con),
             },
+            Item::Expr(expr) => expr,
             _ => todo!("conv an item into a string {:?}", item),
         }
     }
     pub fn new() -> Self {
         Self {
             stack: VecDeque::new(),
+            variables: HashMap::new(),
             module: Module::new(),
+        }
+    }
+
+    pub fn get_var(&mut self, name: String) -> String {
+        let count = self.variables.get(&name);
+
+        if count.is_none() {
+            self.variables.insert(name.clone(), 0);
+            name
+        } else if count.unwrap() == &0 {
+            name
+        } else {
+            name + count.unwrap().to_string().as_str()
+        }
+    }
+
+    pub fn var(&mut self, name: String) -> String {
+        let count = self.variables.get(&name);
+        if count.is_none() {
+            self.variables.insert(name.clone(), 0);
+            name
+        } else {
+            let count = count.unwrap().to_owned() + 1;
+            self.variables.remove(&name);
+            self.variables.insert(name.clone(), count);
+            self.get_var(name)
         }
     }
 }
