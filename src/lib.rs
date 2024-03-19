@@ -11,13 +11,6 @@ use crate::parser::Parser;
 use crate::source::Source;
 
 #[allow(unused)]
-pub enum Backend {
-    WASM,
-    C,
-    Custom(String),
-}
-
-#[allow(unused)]
 pub struct CSettings {
     compiler: Option<String>,
     flags: Vec<String>,
@@ -37,11 +30,6 @@ impl WASMSettings {
         Self {}
     }
 }
-pub enum BackendSettings {
-    WASM(WASMSettings),
-    C(CSettings),
-    Custom(Vec<String>),
-}
 
 macro_rules! unwarp {
     ($back: expr, $vari: path) => {
@@ -51,27 +39,25 @@ macro_rules! unwarp {
         }
     };
 }
+
+#[allow(unused)]
+pub enum Backend {
+    WASM(WASMSettings),
+    C(CSettings),
+    Custom { name: String, settings: Vec<String> },
+}
 pub struct CompilerConfig {
     input: String,
-    backend: Backend,
-    pub settings: BackendSettings,
+    pub backend: Backend,
     pub debug: bool,
     pub repl: bool,
     pub output: String,
 }
 impl CompilerConfig {
-    pub fn new(
-        input: String,
-        backend: Backend,
-        settings: BackendSettings,
-        debug: bool,
-        repl: bool,
-        output: String,
-    ) -> Self {
+    pub fn new(input: String, backend: Backend, debug: bool, repl: bool, output: String) -> Self {
         Self {
             input,
             backend,
-            settings,
             debug,
             repl,
             output,
@@ -88,7 +74,7 @@ impl CompilerConfig {
         dbg!(&ir);
 
         match self.backend {
-            Backend::WASM => {
+            Backend::WASM(_) => {
                 wasm::compile(&self, ir);
             }
 

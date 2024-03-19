@@ -10,14 +10,9 @@ use std::path::Path;
 // use std::process::Command;
 use std::{env, fs};
 
+use covalent::Backend;
 use covalent::CompilerConfig;
-
-// use ir::gen::IRGen;
-
-// use crate::ast::*;
-// use crate::backend::wasm::*;
-// use crate::parser::*;
-// use crate::source::*;
+use covalent::WASMSettings;
 
 #[test]
 fn test() {
@@ -25,8 +20,7 @@ fn test() {
 
     CompilerConfig::new(
         prog,
-        covalent::Backend::WASM,
-        covalent::BackendSettings::WASM(covalent::WASMSettings::new()),
+        Backend::WASM(WASMSettings::new()),
         true,
         true,
         "/tmp/covalent/test.wasm".to_string(),
@@ -48,8 +42,7 @@ fn repl(is_debug: bool) {
         let _ = stdin.read_line(&mut buffer);
         CompilerConfig::new(
             buffer.clone(),
-            covalent::Backend::WASM,
-            covalent::BackendSettings::WASM(covalent::WASMSettings::new()),
+            Backend::WASM(WASMSettings::new()),
             true,
             true,
             "/tmp/covalent/repl.wasm".to_string(),
@@ -88,8 +81,7 @@ fn main() {
     let filename = path.file_name().expect("file passed is a folder");
     CompilerConfig::new(
         prog.expect("invaild file name"),
-        covalent::Backend::WASM,
-        covalent::BackendSettings::WASM(covalent::WASMSettings::new()),
+        Backend::WASM(WASMSettings::new()),
         is_debug,
         false,
         "/tmp/covalent/test.wasm".to_string(),
