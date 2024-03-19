@@ -1,4 +1,6 @@
 pub mod gen;
+use std::collections::VecDeque;
+
 use crate::ir::{Const, ConstType};
 
 // or ir is stack based so we need to simulate a stack
@@ -29,6 +31,9 @@ impl Module {
         let last = self.functions.len() - 1;
         self.functions[last].push(line);
     }
+    pub fn func(&mut self, func: Vec<String>) {
+        self.functions.push(func);
+    }
 
     pub fn finish(&mut self) -> String {
         let mut func_lines: Vec<String> = (&self.functions)
@@ -44,14 +49,30 @@ impl Module {
 }
 #[derive(Debug, Clone)]
 pub struct Codegen {
-    stack: Vec<Item>,
-    module: Module, // code we are generating
+    stack: VecDeque<Item>,
+    pub module: Module, // code we are generating
 }
 
 impl Codegen {
-    fn new() -> Self {
+    pub fn push(&mut self, item: Item) {
+        self.stack.push_back(item);
+    }
+    pub fn pop(&mut self) -> Item {
+        self.stack.pop_front().expect("no stack item")
+    }
+    pub fn pop_str(&mut self) -> String {
+        let item = self.pop();
+        match item {
+            Item::Const(con) => match con {
+                Const::Int(i) => i.to_string(),
+                _ => todo!("conv a const item into string {:?}", con),
+            },
+            _ => todo!("conv an item into a string {:?}", item),
+        }
+    }
+    pub fn new() -> Self {
         Self {
-            stack: Vec::new(),
+            stack: VecDeque::new(),
             module: Module::new(),
         }
     }

@@ -10,9 +10,9 @@ use std::path::Path;
 // use std::process::Command;
 use std::{env, fs};
 
-use covalent::Backend;
 use covalent::CompilerConfig;
 use covalent::WASMSettings;
+use covalent::{Backend, CSettings};
 
 #[test]
 fn test() {
@@ -20,10 +20,10 @@ fn test() {
 
     CompilerConfig::new(
         prog,
-        Backend::WASM(WASMSettings::new()),
+        Backend::C(CSettings::new(None, Vec::new())),
         true,
         true,
-        "/tmp/covalent/test.wasm".to_string(),
+        "/tmp/covalent/test.c".to_string(),
     )
     .run();
 }
@@ -42,10 +42,10 @@ fn repl(is_debug: bool) {
         let _ = stdin.read_line(&mut buffer);
         CompilerConfig::new(
             buffer.clone(),
-            Backend::WASM(WASMSettings::new()),
+            Backend::C(CSettings::new(None, Vec::new())),
             true,
             true,
-            "/tmp/covalent/repl.wasm".to_string(),
+            "/tmp/covalent/repl.c".to_string(),
         )
         .run();
     }

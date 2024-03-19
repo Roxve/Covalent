@@ -5,6 +5,7 @@ pub mod lexer;
 pub mod parser;
 pub mod source;
 use crate::ast::Expr;
+use crate::backend::c;
 use crate::backend::wasm;
 use crate::ir::gen::IRGen;
 use crate::parser::Parser;
@@ -77,7 +78,11 @@ impl CompilerConfig {
             Backend::WASM(_) => {
                 wasm::compile(&self, ir);
             }
-
+            Backend::C(_) => {
+                let mut codegen = c::Codegen::new();
+                let str = codegen.codegen(ir);
+                println!("{}", str);
+            }
             _ => todo!(),
         }
     }
