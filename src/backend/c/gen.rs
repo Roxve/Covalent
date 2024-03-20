@@ -37,7 +37,9 @@ impl Codegen {
         match op {
             IROp::Alloc(_, _) => return None,
             IROp::Dealloc(_, _) => return None,
+
             IROp::Const(_, con) => self.push(Item::Const(con)),
+
             IROp::Store(ty, name) => {
                 let val = self.pop_str();
                 let ty = TypeToC(ty);
@@ -45,7 +47,23 @@ impl Codegen {
 
                 return Some(format!("{} {} = {}", ty, name, val));
             }
+            IROp::Load(_, name) => {
+                let name = self.get_var(name);
+                self.push(Item::Expr(name));
+            }
+
             IROp::Import(_, _, _, _) => return None,
+            IROp::Call(ty, name) => {
+                let args = self.pop_all().join(", ");
+                let call = format!("{}({})", name, args);
+                if ty == ConstType::Void {
+                    return Some(call);
+                } else {
+                    self.push(Item::Expr(call));
+                }
+            }
+
+            IROp::Conv(_, _) => {}
             _ => return self.bond_binary(op), // attempt to bond binary expr instead
         }
         None
@@ -53,7 +71,7 @@ impl Codegen {
 
     pub fn bond_binary(&mut self, op: IROp) -> Option<String> {
         let item = match op {
-            IROp::Add(_) => Item::Expr(format!("{} {} {}", self.pop_str(), "+", self.pop_str())),
+            IROp::Add(_) => Item::Expr(format!("{2} {1} {0}", self.pop_str(), "+", self.pop_str())),
             _ => todo!("unimplented op {:#?}", op),
         };
         self.push(item);

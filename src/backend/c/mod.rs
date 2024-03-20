@@ -77,7 +77,7 @@ pub struct Codegen {
 
 impl Codegen {
     pub fn push(&mut self, item: Item) {
-        self.stack.push_back(item);
+        self.stack.push_front(item);
     }
     pub fn pop(&mut self) -> Item {
         self.stack.pop_front().expect("no stack item")
@@ -93,6 +93,13 @@ impl Codegen {
             Item::Expr(expr) => expr,
             _ => todo!("conv an item into a string {:?}", item),
         }
+    }
+    pub fn pop_all(&mut self) -> Vec<String> {
+        let mut results = Vec::new();
+        for i in self.stack.clone() {
+            results.push(self.pop_str());
+        }
+        results
     }
     pub fn new() -> Self {
         Self {

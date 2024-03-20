@@ -49,7 +49,7 @@ impl IRGen for Source {
         );
         ir.reverse();
 
-        self.vars.insert(name.to_string(), ConstType::Dynamic);
+        self.vars.insert(name.to_string(), ConstType::Void);
     }
     fn gen_prog(&mut self, exprs: Vec<Expr>) -> IR {
         let mut gen = vec![];
