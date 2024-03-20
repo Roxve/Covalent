@@ -57,6 +57,7 @@ impl Codegen {
                 let args = self.pop_all().join(", ");
                 let call = format!("{}({})", name, args);
                 if ty == ConstType::Void {
+                    // our compiler only insert a line when the stack is empty, void functions doesnt push anything to the stack
                     return Some(call);
                 } else {
                     self.push(Item::Expr(call));
