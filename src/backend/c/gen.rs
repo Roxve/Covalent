@@ -6,7 +6,7 @@ use super::types_to_cnamed;
 use crate::ir::{ConstType, IROp};
 
 impl Codegen {
-    pub fn codegen(&mut self, ir: Vec<IROp>) -> String {
+    pub fn codegen(&mut self, ir: Vec<IROp>) -> (String, String) {
         let main = self.bond_fn("main".to_string(), Vec::new(), ConstType::Int, ir);
         self.module.func(main);
         self.module.finish()
