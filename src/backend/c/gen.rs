@@ -65,7 +65,7 @@ impl Codegen {
             }
 
             IROp::Conv(into, from) => {
-                
+                self.bond_conv(into, from);
             }
             _ => return self.bond_binary(op), // attempt to bond binary expr instead
         }
@@ -89,7 +89,8 @@ impl Codegen {
         let conv = match into { 
             ConstType::Dynamic => {
                 match from { 
-                    Int => self.call_one("__int__", item),
+                    ConstType::Int => self.call_one("__int__", item), 
+                    ConstType::Float => self.call_one("__float__", item),
                     _ => todo!("add conv dynamic from {:?}", from)
                 }
             }
