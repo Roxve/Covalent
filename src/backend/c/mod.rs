@@ -80,7 +80,7 @@ impl Codegen {
         self.stack.push_front(item);
     }
     pub fn pop(&mut self) -> Item {
-        self.stack.pop_front().expect("no stack item")
+        self.stack.pop_back().expect("no stack item")
     }
     pub fn pop_str(&mut self) -> String {
         let item = self.pop();

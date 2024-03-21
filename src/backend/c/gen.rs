@@ -72,7 +72,7 @@ impl Codegen {
 
     pub fn bond_binary(&mut self, op: IROp) -> Option<String> {
         let item = match op {
-            IROp::Add(_) => Item::Expr(format!("{2} {1} {0}", self.pop_str(), "+", self.pop_str())),
+            IROp::Add(_) => Item::Expr(format!("{} {} {}", self.pop_str(), "+", self.pop_str())),
             _ => todo!("unimplented op {:#?}", op),
         };
         self.push(item);
