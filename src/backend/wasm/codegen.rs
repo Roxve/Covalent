@@ -1,6 +1,6 @@
 use super::*;
 use std::collections::HashMap;
-use wasm_encoder::{ExportKind, MemArg, SymbolTable};
+use wasm_encoder::{ExportKind, SymbolTable};
 
 impl<'a> Codegen<'a> {
     pub fn add_extern(&mut self, name: String) {

@@ -5,15 +5,11 @@ mod ir;
 mod lexer;
 mod parser;
 mod source;
-
+mod compiler;
 use std::path::Path;
 // use std::process::Command;
-use std::{env, fs};
-
-use covalent::CompilerConfig;
-use covalent::WASMSettings;
-use covalent::{Backend, CSettings};
-
+use std::{env, fs}; 
+use crate::compiler::{CompilerConfig, CSettings, Backend, WASMSettings};
 #[test]
 fn test() {
     let prog = fs::read_to_string("TestProg/main.atoms").unwrap();
@@ -78,7 +74,7 @@ fn main() {
 
     let path = Path::new(file.as_str());
 
-    let filename = path.file_name().expect("file passed is a folder");
+    let _filename = path.file_name().expect("file passed is a folder");
     CompilerConfig::new(
         prog.expect("invaild file name"),
         Backend::WASM(WASMSettings::new()),

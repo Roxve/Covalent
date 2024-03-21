@@ -3,7 +3,8 @@ use crate::ir::{Const, ConstType};
 use std::collections::HashMap;
 use std::collections::VecDeque;
 
-pub fn TypeToC(ty: ConstType) -> String {
+
+pub fn type_to_c(ty: ConstType) -> String {
     match ty {
         ConstType::Int => "int".to_string(),
         ConstType::Float => "float".to_string(),
@@ -11,11 +12,11 @@ pub fn TypeToC(ty: ConstType) -> String {
     }
 }
 
-pub fn TypesToCNamed(tys: Vec<(ConstType, String)>) -> String {
+pub fn types_to_cnamed(tys: Vec<(ConstType, String)>) -> String {
     let mut str = String::from("");
     let tys_len = tys.len();
     for (i, ty) in tys.into_iter().enumerate() {
-        str += TypeToC(ty.0).as_str();
+        str += type_to_c(ty.0).as_str();
         str += ty.1.as_str();
 
         if i != tys_len - 1 {
@@ -45,8 +46,11 @@ impl Module {
             functions: Vec::new(),
         }
     }
-    pub fn include(&mut self, include: String) {
-        self.includes.push(include);
+    pub fn include(&mut self, include: String) { 
+        let include_line = format!("#include \"{}.h\"", include); 
+        if !self.includes.contains(&include_line) {
+            self.includes.push(include_line);
+        }
     }
     pub fn line(&mut self, line: String) {
         let last = self.functions.len() - 1;

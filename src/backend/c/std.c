@@ -3,8 +3,9 @@
 #include "std.h"
 
 #define INT_TYPE 0
-#define FLOAT_TYPE 1
-void writeln(void* arg, ...) {
+#define FLOAT_TYPE 1 
+
+void writeln(void* arg) {
   char ty = ((Obj*) arg)->ty;
   
   switch(ty) {

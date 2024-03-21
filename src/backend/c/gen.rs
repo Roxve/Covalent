@@ -1,8 +1,8 @@
-use super::TypeToC;
+use super::type_to_c;
 
 use super::Codegen;
 use super::Item;
-use super::TypesToCNamed;
+use super::types_to_cnamed;
 use crate::ir::{ConstType, IROp};
 
 impl Codegen {
@@ -19,8 +19,8 @@ impl Codegen {
         body: Vec<IROp>,
     ) -> Vec<String> {
         let mut lines = Vec::new();
-        let ty = TypeToC(ret);
-        let args = TypesToCNamed(args);
+        let ty = type_to_c(ret);
+        let args = types_to_cnamed(args);
 
         lines.push(format!("{} {}({}) {{", ty, name, args));
         for op in body {
@@ -42,7 +42,7 @@ impl Codegen {
 
             IROp::Store(ty, name) => {
                 let val = self.pop_str();
-                let ty = TypeToC(ty);
+                let ty = type_to_c(ty);
                 let name = self.var(name);
 
                 return Some(format!("{} {} = {}", ty, name, val));
@@ -52,7 +52,7 @@ impl Codegen {
                 self.push(Item::Expr(name));
             }
 
-            IROp::Import(_, _, _, _) => return None,
+            IROp::Import(_, module, _, _) => self.module.include(module),
             IROp::Call(ty, name) => {
                 let args = self.pop_all().join(", ");
                 let call = format!("{}({})", name, args);
@@ -64,7 +64,9 @@ impl Codegen {
                 }
             }
 
-            IROp::Conv(_, _) => {}
+            IROp::Conv(into, from) => {
+                
+            }
             _ => return self.bond_binary(op), // attempt to bond binary expr instead
         }
         None
@@ -78,5 +80,22 @@ impl Codegen {
         self.push(item);
 
         None
+    } 
+    pub fn call_one(&self, name: &str, arg: String) -> String{
+        format!("{}({})", name, arg)
+    }
+    pub fn bond_conv(&mut self, into: ConstType, from: ConstType) {
+        let item = self.pop_str(); 
+        let conv = match into { 
+            ConstType::Dynamic => {
+                match from { 
+                    Int => self.call_one("__int__", item),
+                    _ => todo!("add conv dynamic from {:?}", from)
+                }
+            }
+            _ => todo!("add conv into {:?}", into)
+        }; 
+
+        self.push(Item::Expr(conv));
     }
 }

@@ -1,5 +1,5 @@
 pub mod codegen;
-use crate::CompilerConfig;
+use crate::compiler::CompilerConfig;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -12,7 +12,7 @@ use wasm_encoder::{
 
 use crate::ir::{Const, ConstType, IROp};
 
-pub const TYPE_INT: i32 = 0;
+pub const _TYPE_INT: i32 = 0;
 #[derive(Debug, Clone)]
 pub struct Section {
     types: TypeSection,
@@ -143,6 +143,6 @@ pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
         .unwrap()
         .wait();
     if config.repl {
-        let bytes = fs::read(path).unwrap();
+        let _bytes = fs::read(path).unwrap();
     }
 }

@@ -10,6 +10,6 @@ typedef struct Float {
   char ty;
   float val;
 } Float;
-void writeln(void* args, ...);
+void writeln(void* arg);
 void* __int__(int i);
 void* __float__(float f);
