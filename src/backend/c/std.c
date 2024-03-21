@@ -39,8 +39,3 @@ void* __float__(float f) {
   return obj;
 }
 
-
-int main() {
-  writeln(__int__(5));
-  writeln(__float__(3.14));
-}
