@@ -35,6 +35,16 @@ impl Codegen {
     }
     pub fn bond(&mut self, op: IROp) -> Option<String> {
         match op {
+            IROp::Def(ret, name, args, body) => {
+                let func = self.bond_fn(
+                    name,
+                    args.into_iter().map(|i| (ConstType::Dynamic, i)).collect(),
+                    ret,
+                    body,
+                );
+                self.module.func(func, false);
+            }
+
             IROp::Alloc(_, _) => return None,
             IROp::Dealloc(_, _) => return None,
 
@@ -66,6 +76,11 @@ impl Codegen {
 
             IROp::Conv(into, from) => {
                 self.bond_conv(into, from);
+            }
+
+            IROp::Ret(_) => {
+                let val = self.pop_str();
+                return Some(format!("return {}", val));
             }
             _ => return self.bond_binary(op), // attempt to bond binary expr instead
         }

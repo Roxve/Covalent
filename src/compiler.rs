@@ -75,9 +75,9 @@ impl CompilerConfig {
             Backend::C(_) => {
                 let mut codegen = c::Codegen::new();
                 let str = codegen.codegen(ir);
-                println!("{}\n\n headers:\n {}", str.0, str.1);
+                println!("{}\n\nheaders:\n {}", str.0, str.1);
             }
             _ => todo!(),
         }
     }
-} 
+}

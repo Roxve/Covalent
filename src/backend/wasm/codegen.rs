@@ -171,7 +171,7 @@ impl<'a> Codegen<'a> {
                 self.insert(Instruction::End);
             }
             IROp::Def(ty, name, args, body) => {
-                self.bond_func_atoms(ty.unwrap_or(ConstType::Void), name, args, body);
+                self.bond_func_atoms(ty, name, args, body);
             }
             IROp::Conv(into, from) => match into {
                 ConstType::Dynamic => match from {

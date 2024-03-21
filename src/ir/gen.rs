@@ -96,8 +96,7 @@ impl IRGen for Source {
 
         let ty = get_fn_type(&mut body);
         self.vars = old_vars;
-        self.vars
-            .insert(func.name.val.clone(), ty.clone().unwrap_or(ConstType::Void));
+        self.vars.insert(func.name.val.clone(), ty.clone());
         Ok(vec![IROp::Def(ty, func.name.val, args, body)])
     }
 

@@ -39,3 +39,40 @@ void* __float__(float f) {
   return obj;
 }
 
+
+void* __add__(void *a, void *b) {
+  char a_ty = ((Obj*) a)->ty;
+  char b_ty = ((Obj*) b)->ty;
+  if(a_ty != b_ty) {
+    err("cannot add a, and b", 5);
+  }
+
+  switch(a_ty) {
+    case INT_TYPE:
+      return __int__(((Int*) a)->val + ((Int*) b)->val);
+  }
+}
+
+void err(char* err, int code) {
+  printf("covalent runtime error: %s", err);
+  exit(code);
+}
+
+int main() {
+  int x = 5;
+
+  void* addr0 = __int__(5);
+  void* obj = addr0;
+
+  void* addr1 = __int__(4);
+  void* obj1 = addr1;
+
+  void* addr2 = __add__(obj, obj1);
+  void* obj2 = addr2;
+
+  // track all the  addresss to free them
+  free(addr0);
+  free(addr1);
+  writeln(obj2);
+  free(addr2);
+}

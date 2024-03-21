@@ -20,7 +20,7 @@ pub enum Const {
 #[derive(Debug, Clone, PartialEq)]
 pub enum IROp {
     Import(ConstType, String, String, Vec<ConstType>), // ty mod fun arg count
-    Def(Option<ConstType>, String, Vec<String>, Vec<IROp>),
+    Def(ConstType, String, Vec<String>, Vec<IROp>),
     Call(ConstType, String),
     Ret(ConstType),
     Add(ConstType),
@@ -39,7 +39,7 @@ use self::IROp::*;
 pub fn get_op_type(op: &IROp) -> ConstType {
     match op {
         Import(t, _, _, _) => t,
-        Def(t, _, _, _) => &t.as_ref().unwrap_or(&ConstType::Void),
+        Def(t, _, _, _) => t,
         Call(t, _) => t,
         Ret(t) => t,
         Add(t) => t,
@@ -61,7 +61,7 @@ pub fn get_ops_type(ops: &Vec<IROp>) -> ConstType {
     get_op_type(ops.last().unwrap())
 }
 
-pub fn get_fn_type(ops: &mut Vec<IROp>) -> Option<ConstType> {
+pub fn get_fn_type(ops: &mut Vec<IROp>) -> ConstType {
     let mut ty: Option<ConstType> = None;
     for op in ops.clone() {
         if let IROp::Ret(t) = op {
@@ -75,10 +75,10 @@ pub fn get_fn_type(ops: &mut Vec<IROp>) -> Option<ConstType> {
                     })
                     .collect();
                 _mod_op.clone_into(ops);
-                return Some(ConstType::Dynamic);
+                return ConstType::Dynamic;
             }
             ty = Some(t.clone());
         }
     }
-    ty
+    ty.unwrap_or(ConstType::Void)
 }
