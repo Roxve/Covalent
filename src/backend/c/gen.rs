@@ -1,14 +1,14 @@
 use super::type_to_c;
 
+use super::types_to_cnamed;
 use super::Codegen;
 use super::Item;
-use super::types_to_cnamed;
 use crate::ir::{ConstType, IROp};
 
 impl Codegen {
     pub fn codegen(&mut self, ir: Vec<IROp>) -> (String, String) {
         let main = self.bond_fn("main".to_string(), Vec::new(), ConstType::Int, ir);
-        self.module.func(main);
+        self.module.func(main, false);
         self.module.finish()
     }
     pub fn bond_fn(
@@ -80,22 +80,22 @@ impl Codegen {
         self.push(item);
 
         None
-    } 
-    pub fn call_one(&self, name: &str, arg: String) -> String{
+    }
+
+    pub fn call_one(&self, name: &str, arg: String) -> String {
         format!("{}({})", name, arg)
     }
+
     pub fn bond_conv(&mut self, into: ConstType, from: ConstType) {
-        let item = self.pop_str(); 
-        let conv = match into { 
-            ConstType::Dynamic => {
-                match from { 
-                    ConstType::Int => self.call_one("__int__", item), 
-                    ConstType::Float => self.call_one("__float__", item),
-                    _ => todo!("add conv dynamic from {:?}", from)
-                }
-            }
-            _ => todo!("add conv into {:?}", into)
-        }; 
+        let item = self.pop_str();
+        let conv = match into {
+            ConstType::Dynamic => match from {
+                ConstType::Int => self.call_one("__int__", item),
+                ConstType::Float => self.call_one("__float__", item),
+                _ => todo!("add conv dynamic from {:?}", from),
+            },
+            _ => todo!("add conv into {:?}", into),
+        };
 
         self.push(Item::Expr(conv));
     }

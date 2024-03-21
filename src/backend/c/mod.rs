@@ -3,7 +3,6 @@ use crate::ir::{Const, ConstType};
 use std::collections::HashMap;
 use std::collections::VecDeque;
 
-
 pub fn type_to_c(ty: ConstType) -> String {
     match ty {
         ConstType::Int => "int".to_string(),
@@ -35,7 +34,7 @@ pub enum Item {
 
 #[derive(Debug, Clone)]
 pub struct Module {
-    includes: Vec<String>, 
+    includes: Vec<String>,
     header: Vec<String>, // contains all the pub funcs
     functions: Vec<Vec<String>>,
 }
@@ -43,13 +42,13 @@ pub struct Module {
 impl Module {
     pub fn new() -> Self {
         Self {
-            includes: Vec::new(), 
+            includes: Vec::new(),
             header: Vec::new(),
             functions: Vec::new(),
         }
     }
-    pub fn include(&mut self, include: String) { 
-        let include_line = format!("#include \"{}.h\"", include); 
+    pub fn include(&mut self, include: String) {
+        let include_line = format!("#include \"{}.h\"", include);
         if !self.includes.contains(&include_line) {
             self.includes.push(include_line);
         }
@@ -58,10 +57,11 @@ impl Module {
         let last = self.functions.len() - 1;
         self.functions[last].push(line);
     }
-    pub fn func(&mut self, func: Vec<String>, is_pub: bool) { 
+    pub fn func(&mut self, func: Vec<String>, is_pub: bool) {
         if is_pub {
-        let head = func[0].replace(" {", ";"); }
-        self.header.push(head);
+            let head = func[0].replace(" {", ";");
+            self.header.push(head);
+        }
         self.functions.push(func);
     }
 
@@ -71,12 +71,12 @@ impl Module {
         let mut lines = Vec::new();
         lines.append(&mut self.includes);
         lines.append(&mut func_lines);
-        let code = lines.join("\n"); 
+        let code = lines.join("\n");
 
-        let mut header_lines = Vec::new(); 
+        let mut header_lines = Vec::new();
         header_lines.append(&mut self.includes);
-        header_lines.append(&mut self.header); 
-        
+        header_lines.append(&mut self.header);
+
         let header = header_lines.join("\n");
         (code, header)
     }
