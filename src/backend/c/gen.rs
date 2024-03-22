@@ -79,7 +79,7 @@ impl Codegen {
             }
 
             IROp::Ret(_) => {
-                let val = self.pop_str();
+                let val = self.pop_str(); 
                 return Some(format!("return {}", val));
             }
             _ => return self.bond_binary(op), // attempt to bond binary expr instead

@@ -1,7 +1,8 @@
-use super::{get_fn_type, get_ops_type, Const, ConstType, IROp};
+use super::{get_fn_type, get_ops_type, Codegen, Const, ConstType, IROp};
 use crate::{
     ast::{Expr, Ident, Literal},
-    source::{ErrKind, Function, Source},
+    parser::{Function, Parser},
+    source::ErrKind,
 };
 
 type IR = Vec<IROp>;
@@ -16,7 +17,7 @@ pub trait IRGen {
         args: Vec<ConstType>,
         ir: &mut IR,
     );
-    fn gen_prog(&mut self, exprs: Vec<Expr>) -> IR;
+    fn gen_prog(&mut self, exprs: Vec<Expr>, funcs: Vec<Function>) -> IR;
     fn gen_func(&mut self, func: Function) -> IRRes;
     fn gen_expr(&mut self, expr: Expr) -> IRRes;
 
@@ -25,7 +26,7 @@ pub trait IRGen {
     fn gen_binary_expr(&mut self, op: String, left: Expr, right: Expr) -> IRRes;
 }
 
-impl IRGen for Source {
+impl IRGen for Codegen {
     fn import(
         &mut self,
         ty: ConstType,
@@ -45,16 +46,15 @@ impl IRGen for Source {
                 val: "...data".to_string(),
                 tag: None,
             }],
-            vec![],
         );
         ir.reverse();
 
         self.vars.insert(name.to_string(), ConstType::Void);
     }
-    fn gen_prog(&mut self, exprs: Vec<Expr>) -> IR {
+    fn gen_prog(&mut self, exprs: Vec<Expr>, funcs: Vec<Function>) -> IR {
         let mut gen = vec![];
 
-        for func in self.functions.clone() {
+        for func in funcs {
             let compiled_func = self.gen_func(func);
             if compiled_func.is_ok() {
                 gen.append(&mut compiled_func.unwrap());

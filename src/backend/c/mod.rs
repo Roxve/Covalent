@@ -30,7 +30,7 @@ pub fn types_to_cnamed(tys: Vec<(ConstType, String)>) -> String {
 #[derive(Debug, Clone)]
 pub enum Item {
     Const(Const),
-    Var(Option<ConstType>, String),
+    //  TypedExpr(Option<ConstType>, String),
     Expr(String), // push into stack except if the op doesnt push ig
 }
 
@@ -111,7 +111,7 @@ impl Codegen {
     }
     pub fn pop_all(&mut self) -> Vec<String> {
         let mut results = Vec::new();
-        for i in self.stack.clone() {
+        for _ in self.stack.clone() {
             results.push(self.pop_str());
         }
         results

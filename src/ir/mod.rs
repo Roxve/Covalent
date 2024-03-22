@@ -35,6 +35,10 @@ pub enum IROp {
     Load(ConstType, String),
 }
 
+use std::collections::HashMap;
+use crate::ast::Ident; 
+use crate::source::{ATErr, ErrKind};
+
 use self::IROp::*;
 pub fn get_op_type(op: &IROp) -> ConstType {
     match op {
@@ -81,4 +85,55 @@ pub fn get_fn_type(ops: &mut Vec<IROp>) -> ConstType {
         }
     }
     ty.unwrap_or(ConstType::Void)
+}
+
+#[derive(Debug, Clone)]
+pub struct CompiledFunction {
+    name: Ident,
+    args: Vec<Ident>,
+}
+pub struct Codegen { 
+    functions: Vec<CompiledFunction>,
+    vars: HashMap<String, ConstType>,
+    
+    errors: Vec<ATErr>,
+    warnings: Vec<ATErr>, // program can continue error
+} 
+
+impl Codegen { 
+    pub fn new() -> Self {
+        Self {
+            functions: Vec::new(),
+            vars: HashMap::new(), 
+            errors: Vec::new(), 
+            warnings: Vec::new(),
+        }
+    }
+    pub fn push_function(&mut self, name: Ident, args: Vec<Ident>) {
+        self.functions.push(CompiledFunction {
+            name,
+            args
+        })
+    }
+    
+    
+    pub fn get_function(&self, name: String) -> Option<CompiledFunction> {
+        for fun in self.functions.clone().into_iter() {
+            if fun.name.val == name {
+                return Some(fun);
+            }
+        }
+        return None;
+    }
+    
+    pub fn err(&mut self, kind: ErrKind, msg: String) {
+        let err = ATErr {
+            kind,
+            msg,
+            line: 0,
+            column: 0,
+        };
+        self.errors.push(err.clone());
+        err.out_error();
+    }
 }

@@ -1,5 +1,5 @@
 use crate::source::*;
-
+use super::parser::Parser;
 pub fn is_num(c: char) -> bool {
     return "01234.56789".contains(c);
 }
@@ -7,31 +7,13 @@ pub fn is_id(c: char) -> bool {
     return !(" \t\n+-*/<&|>=@#%:!?$,[{('`)}]").contains(c);
 }
 
-pub trait Tokenizer {
-    fn eat(&mut self) -> char;
-    fn at(&self) -> char;
-    fn set(&mut self, tok: Token) -> Token;
+pub trait Tokenize {
     fn parse_num(&mut self, x: String) -> Token;
     fn tokenize(&mut self) -> Token;
 }
 
-impl Tokenizer for Source {
-    fn eat(&mut self) -> char {
-        let p = self.at();
-        self.code.remove(0);
-        self.column += 1;
-        return p;
-    }
+impl Tokenize for Parser {
 
-    fn at(&self) -> char {
-        return self.code.as_bytes()[0] as char;
-    }
-
-    fn set(&mut self, tok: Token) -> Token {
-        self.current_tok = self.next_tok.clone();
-        self.next_tok = Some(tok.clone());
-        return tok;
-    }
 
     fn parse_num(&mut self, x: String) -> Token {
         if x.contains('.') {
@@ -42,7 +24,7 @@ impl Tokenizer for Source {
 
     fn tokenize(&mut self) -> Token {
         loop {
-            if self.code.len() <= 0 {
+            if !self.not_eof() {
                 return self.set(Token::EOF);
             }
             match self.at() {
@@ -75,11 +57,11 @@ impl Tokenizer for Source {
 
                 let mut res = String::from("");
 
-                while self.code.len() > 0 && self.at() != op {
+                while self.not_eof() && self.at() != op {
                     res.push(self.eat());
                 }
 
-                if self.code.len() > 0 && self.at() == op {
+                if self.not_eof() && self.at() == op {
                     self.eat();
                 } else {
                     self.err(
@@ -96,7 +78,7 @@ impl Tokenizer for Source {
             }
             '=' => {
                 self.eat();
-                if self.code.len() > 0 && self.at() == '=' {
+                if self.not_eof() && self.at() == '=' {
                     self.eat();
                     return self.set(Token::Operator("==".to_string()));
                 }

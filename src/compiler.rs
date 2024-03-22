@@ -1,9 +1,12 @@
+use std::intrinsics::drop_in_place;
+
 use crate::ast::Expr;
 use crate::backend::c;
 use crate::backend::wasm;
 use crate::ir::gen::IRGen;
+use crate::ir::Codegen;
 use crate::parser::Parser;
-use crate::source::Source;
+use crate::parser::parse::Parse;
 
 #[allow(unused)]
 pub struct CSettings {
@@ -59,15 +62,17 @@ impl CompilerConfig {
         }
     }
     pub fn run(&self) {
-        let mut src = Source::new(self.input.clone());
+        let mut parser = Parser::new(self.input.clone());
 
-        let prog: Vec<Expr> = src.parse_prog();
+        let prog: Vec<Expr> = parser.parse_prog();
         if self.debug {
-            println!("parsed prog:\n {:#?}\nsrc: \n{:#?}", prog, src);
-        }
-        let ir = src.gen_prog(prog);
-        dbg!(&ir);
+            println!("parsed prog:\n {:#?}\nsrc: \n{:#?}", prog, parser);
+        } 
 
+        let mut codegen = Codegen::new();
+        let ir = codegen.gen_prog(prog, parser.functions);
+        dbg!(&ir);
+        drop(codegen);
         match self.backend {
             Backend::WASM(_) => {
                 wasm::compile(&self, ir);
