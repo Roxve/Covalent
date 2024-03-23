@@ -1,8 +1,8 @@
 pub mod parse;
-use crate::source::{ATErr, ErrKind};
-use crate::source::Token;
-use crate::ast::{Ident, Expr};
+use crate::ast::Expr;
 use crate::lexer::Tokenize;
+use crate::source::Token;
+use crate::source::{ATErr, ErrKind, Ident};
 #[derive(Debug, Clone)]
 
 pub struct Function {
@@ -16,7 +16,6 @@ impl Function {
         self.name.val.clone()
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Parser {
@@ -87,7 +86,7 @@ impl Parser {
         self.current_tok = self.next_tok.clone();
         self.next_tok = Some(tok.clone());
         return tok;
-    } 
+    }
 
     pub fn next(&mut self) -> Token {
         if self.next_tok.is_none() {

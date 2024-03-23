@@ -1,8 +1,9 @@
-use super::{get_fn_type, get_ops_type, Codegen, Const, ConstType, IROp};
+use super::{get_fn_type, get_ops_type, Codegen, Const, IROp};
+
 use crate::{
-    ast::{Expr, Ident, Literal},
-    parser::{Function, Parser},
-    source::ErrKind,
+    ast::{Expr, Literal},
+    parser::Function,
+    source::{ConstType, ErrKind, Ident},
 };
 
 type IR = Vec<IROp>;
@@ -97,6 +98,8 @@ impl IRGen for Codegen {
         let ty = get_fn_type(&mut body);
         self.vars = old_vars;
         self.vars.insert(func.name.val.clone(), ty.clone());
+
+        self.push_function(func.name.clone(), func.args);
         Ok(vec![IROp::Def(ty, func.name.val, args, body)])
     }
 
@@ -124,7 +127,7 @@ impl IRGen for Codegen {
             }
             Expr::FnCall { name, args } => {
                 let mut res: Vec<IROp> = vec![];
-                let fun = self.get_function(name.val.clone());
+                let fun = self.get_function(&name);
                 if fun.is_none() {
                     self.err(
                         ErrKind::UndeclaredVar,

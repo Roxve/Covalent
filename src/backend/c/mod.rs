@@ -1,5 +1,6 @@
 pub mod gen;
-use crate::ir::{Const, ConstType};
+use crate::ir::Const;
+use crate::source::ConstType;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 

@@ -1,8 +1,12 @@
-use std::collections::HashMap;
-
-use crate::ast::*;
-use crate::ir::ConstType;
-
+#[derive(Debug, Clone, PartialEq)]
+#[repr(u8)]
+pub enum ConstType {
+    Int = 0u8,
+    Float = 2u8,
+    Str = 3u8,
+    Dynamic = 4u8, // once you go dynamic there is no turning back
+    Void = 5u8,
+}
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
 pub enum Token {
@@ -64,6 +68,10 @@ impl ATErr {
     }
 }
 
-
+#[derive(Debug, Clone, PartialEq)]
+pub struct Ident {
+    pub val: String,
+    pub tag: Option<ConstType>,
+}
 
 // frontend generation -> feed into backend

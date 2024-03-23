@@ -1,17 +1,10 @@
+use crate::source::Ident;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Int(i32),
     Float(f32),
     Str(String),
     Bool(bool),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Tag {}
-#[derive(Debug, Clone, PartialEq)]
-pub struct Ident {
-    pub val: String,
-    pub tag: Option<Tag>,
 }
 
 pub fn get_operator_level(op: &str) -> u8 {
