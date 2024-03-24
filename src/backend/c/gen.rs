@@ -79,6 +79,12 @@ impl Codegen {
                 self.bond_conv(into, from);
             }
 
+            IROp::Pop => {
+                if self.stack.len() > 0 {
+                    return Some(self.pop_str());
+                }
+            }
+
             IROp::Ret(_) => {
                 let val = self.pop_str();
                 return Some(format!("return {}", val));

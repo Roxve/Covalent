@@ -25,6 +25,7 @@ pub enum IROp {
     Dealloc(ConstType, String), // when allocing a var with a new type we dealloc the old val
     Store(ConstType, String),
     Load(ConstType, String),
+    Pop,
 }
 
 use crate::source::{ATErr, ErrKind, Ident};
@@ -47,6 +48,7 @@ pub fn get_op_type(op: &IROp) -> ConstType {
         Load(t, _) => t,
         Alloc(t, _) => t,
         Dealloc(t, _) => t,
+        Pop => &ConstType::Void,
     }
     .clone()
 }

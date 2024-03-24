@@ -170,6 +170,11 @@ impl IRGen for Codegen {
                 Ok(res)
             }
             Expr::PosInfo(_, _, _) => Ok(vec![]),
+            Expr::Discard(dis) => {
+                let mut compiled = self.gen_expr(*dis)?;
+                compiled.append(&mut vec![IROp::Pop]);
+                Ok(compiled)
+            }
             _ => todo!(),
         }
     }

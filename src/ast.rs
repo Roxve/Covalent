@@ -45,6 +45,7 @@ pub enum Expr {
         body: Vec<Expr>,
         alts: Vec<Expr>,
     },
+    Discard(Box<Expr>),
     Block(Vec<Expr>),
     PosInfo(String, u32, u32), // debugging
     RetExpr(Box<Expr>),
