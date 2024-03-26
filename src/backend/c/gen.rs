@@ -3,7 +3,8 @@ use super::type_to_c;
 use super::types_to_cnamed;
 use super::Codegen;
 use super::Item;
-use crate::ir::{ConstType, IROp};
+use crate::ir::IROp;
+use crate::source::ConstType;
 
 impl Codegen {
     pub fn codegen(&mut self, ir: Vec<IROp>) -> String {
@@ -78,8 +79,14 @@ impl Codegen {
                 self.bond_conv(into, from);
             }
 
+            IROp::Pop => {
+                if self.stack.len() > 0 {
+                    return Some(self.pop_str());
+                }
+            }
+
             IROp::Ret(_) => {
-                let val = self.pop_str(); 
+                let val = self.pop_str();
                 return Some(format!("return {}", val));
             }
             _ => return self.bond_binary(op), // attempt to bond binary expr instead

@@ -10,7 +10,8 @@ use wasm_encoder::{
     LinkingSection, MemoryType, Module, SymbolTable, TypeSection, ValType,
 };
 
-use crate::ir::{Const, ConstType, IROp};
+use crate::ir::{Const, IROp};
+use crate::source::ConstType;
 
 pub const _TYPE_INT: i32 = 0;
 #[derive(Debug, Clone)]

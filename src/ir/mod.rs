@@ -1,15 +1,7 @@
+use crate::source::ConstType;
+
 pub mod gen;
 pub mod tools;
-
-#[derive(Debug, Clone, PartialEq)]
-#[repr(u8)]
-pub enum ConstType {
-    Int = 0u8,
-    Float = 2u8,
-    Str = 3u8,
-    Dynamic = 4u8, // once you go dynamic there is no turning back
-    Void = 5u8,
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Const {
@@ -33,11 +25,11 @@ pub enum IROp {
     Dealloc(ConstType, String), // when allocing a var with a new type we dealloc the old val
     Store(ConstType, String),
     Load(ConstType, String),
+    Pop,
 }
 
+use crate::source::{ATErr, ErrKind, Ident};
 use std::collections::HashMap;
-use crate::ast::Ident; 
-use crate::source::{ATErr, ErrKind};
 
 use self::IROp::*;
 pub fn get_op_type(op: &IROp) -> ConstType {
@@ -56,6 +48,7 @@ pub fn get_op_type(op: &IROp) -> ConstType {
         Load(t, _) => t,
         Alloc(t, _) => t,
         Dealloc(t, _) => t,
+        Pop => &ConstType::Void,
     }
     .clone()
 }
@@ -92,40 +85,36 @@ pub struct CompiledFunction {
     name: Ident,
     args: Vec<Ident>,
 }
-pub struct Codegen { 
+pub struct Codegen {
     functions: Vec<CompiledFunction>,
     vars: HashMap<String, ConstType>,
-    
+
     errors: Vec<ATErr>,
     warnings: Vec<ATErr>, // program can continue error
-} 
+}
 
-impl Codegen { 
+impl Codegen {
     pub fn new() -> Self {
         Self {
             functions: Vec::new(),
-            vars: HashMap::new(), 
-            errors: Vec::new(), 
+            vars: HashMap::new(),
+            errors: Vec::new(),
             warnings: Vec::new(),
         }
     }
     pub fn push_function(&mut self, name: Ident, args: Vec<Ident>) {
-        self.functions.push(CompiledFunction {
-            name,
-            args
-        })
+        self.functions.push(CompiledFunction { name, args })
     }
-    
-    
-    pub fn get_function(&self, name: String) -> Option<CompiledFunction> {
+
+    pub fn get_function(&self, name: &Ident) -> Option<CompiledFunction> {
         for fun in self.functions.clone().into_iter() {
-            if fun.name.val == name {
+            if &fun.name == name {
                 return Some(fun);
             }
         }
         return None;
     }
-    
+
     pub fn err(&mut self, kind: ErrKind, msg: String) {
         let err = ATErr {
             kind,

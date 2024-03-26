@@ -1,7 +1,9 @@
+use super::Scope;
+
+use super::Parser;
 use crate::ast::*;
 use crate::lexer::Tokenize;
 use crate::source::*;
-use super::Parser;
 
 pub trait ParserError {}
 
@@ -20,12 +22,17 @@ pub trait Parse {
 }
 
 impl Parse for Parser {
-
-
     fn parse_prog(&mut self) -> Vec<Expr> {
         let mut body: Vec<Expr> = Vec::new();
         while self.current() != Token::EOF {
-            body.push(self.parse_level(0));
+            self.current_scope = Scope::Top;
+            let mut expr = self.parse_level(0);
+
+            if !self.current_scope.is_used() {
+                expr = Expr::Discard(Box::new(expr));
+            }
+
+            body.push(expr);
         }
 
         return body;
@@ -41,7 +48,7 @@ impl Parse for Parser {
                 if c == "=" {
                     if let Expr::Ident(name) = left {
                         self.tokenize();
-
+                        self.current_scope = Scope::Value;
                         let right = self.parse_level(0);
 
                         left = Expr::VarAssign {
@@ -173,7 +180,7 @@ impl Parse for Parser {
         self.tokenize(); // n->t
 
         let left = self.parse_expr();
-
+        self.current_scope = Scope::Value;
         if let Expr::Ident(name) = left {
             if Token::Operator("=".to_string()) == self.current() {
                 self.tokenize();
@@ -220,11 +227,13 @@ impl Parse for Parser {
         let body = self.parse_body();
 
         self.push_function(id.clone(), id_args, body);
+        self.current_scope = Scope::Value;
         return Expr::PosInfo(id.val, self.line, self.column);
     }
 
     fn parse_if_expr(&mut self) -> Expr {
         self.tokenize(); // remove if
+        self.current_scope = Scope::Value;
         let condition = self.parse_level(0);
         let body = self.parse_body();
 
@@ -251,7 +260,14 @@ impl Parse for Parser {
 
         self.except(Token::LeftBracket);
         while self.current() != Token::RightBracket && self.current() != Token::EOF {
-            body.push(self.parse_level(0));
+            self.current_scope = Scope::Top;
+            let mut expr = self.parse_level(0);
+
+            if !self.current_scope.is_used() {
+                expr = Expr::Discard(Box::new(expr));
+            }
+
+            body.push(expr);
         }
         self.except(Token::RightBracket);
 
@@ -260,6 +276,7 @@ impl Parse for Parser {
 
     fn parse_ret_expr(&mut self) -> Expr {
         self.tokenize();
+        self.current_scope = Scope::Value;
         let expr = self.parse_level(0);
         Expr::RetExpr(Box::new(expr))
     }
