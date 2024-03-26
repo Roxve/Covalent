@@ -1,13 +1,14 @@
 # Covalent 
 (WIP Language)
 ```
-covalent path/to/file # outputs exe with file name in current dir
+covalent path/to/file # builds results in ./
 ```
 
 to enter the repl
 ```
 covalent
 ```
+for now it only prints result C code
 (REPEL IS VERY WIP IT BUILDS EXE EVERY RUN IN CURRENT DIR)
 
 **you need clang installed in path to compile**
