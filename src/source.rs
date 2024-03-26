@@ -1,14 +1,12 @@
-use std::collections::HashMap;
-
-use inkwell::builder::Builder;
-use inkwell::context::Context;
-use inkwell::module::Module;
-use inkwell::values::{FunctionValue, PointerValue};
-
-use crate::ast::Expr;
-use crate::ast::Ident;
-use crate::cova_std::add_std;
-
+#[derive(Debug, Clone, PartialEq)]
+#[repr(u8)]
+pub enum ConstType {
+    Int = 0u8,
+    Float = 2u8,
+    Str = 3u8,
+    Dynamic = 4u8, // once you go dynamic there is no turning back
+    Void = 5u8,
+}
 #[derive(Debug, Clone, PartialEq)]
 // open file as current -> tokenize
 pub enum Token {
@@ -31,6 +29,7 @@ pub enum Token {
     IfKw,
     ElseKw,
     SetKw,
+    RetKw,
     EOF,
 }
 
@@ -69,90 +68,10 @@ impl ATErr {
     }
 }
 
-#[derive(Debug, Clone)]
-
-pub struct Function {
-    pub name: Ident,
-    pub args: Vec<Ident>,
-    pub body: Vec<Expr>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Ident {
+    pub val: String,
+    pub tag: Option<ConstType>,
 }
 
-impl Function {
-    pub fn get_name(&self) -> String {
-        self.name.0.clone()
-    }
-}
-
-#[derive(Debug)]
-pub struct Source<'ctx> {
-    pub code: String,
-    pub line: u32,
-    pub column: u32,
-    pub current_tok: Option<Token>,
-    pub next_tok: Option<Token>,
-    pub context: &'ctx Context,
-    pub module: Module<'ctx>,
-    pub builder: Builder<'ctx>,
-    pub fn_value: FunctionValue<'ctx>,
-    pub functions: Vec<Function>,
-    pub variables: HashMap<String, PointerValue<'ctx>>,
-    pub errors: Vec<ATErr>,
-    pub warnings: Vec<ATErr>, // program can continue error
-}
-
-impl<'ctx> Source<'ctx> {
-    pub fn new(code: String, context: &'ctx Context) -> Self {
-        // todo set codegen stuff as parameters
-        let module = context.create_module("temp");
-
-        let main_fn_type = context.i32_type().fn_type(&[], false);
-        let main_fn = module.add_function("main", main_fn_type, None);
-        let builder = context.create_builder();
-        let main = context.append_basic_block(main_fn, "entry");
-
-        add_std(&module, &context);
-
-        builder.position_at_end(main);
-        let src = Source {
-            code,
-            line: 1,
-            column: 0,
-            current_tok: None,
-            next_tok: None,
-            context: &context,
-            module,
-            builder,
-            functions: vec![],
-            fn_value: main_fn,
-            variables: HashMap::new(),
-            errors: Vec::new(),
-            warnings: Vec::new(),
-        };
-
-        return src;
-    }
-
-    pub fn err(&mut self, kind: ErrKind, msg: String) {
-        let err = ATErr {
-            kind,
-            msg,
-            line: self.line,
-            column: self.column,
-        };
-        self.errors.push(err.clone());
-        err.out_error();
-    }
-
-    pub fn get_function(&self, name: String) -> Option<Function> {
-        for fun in self.functions.clone().into_iter() {
-            if fun.get_name() == name {
-                return Some(fun);
-            }
-        }
-        return None;
-    }
-
-    pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Expr>) {
-        self.functions.push(Function { name, args, body });
-    }
-}
+// frontend generation -> feed into backend
