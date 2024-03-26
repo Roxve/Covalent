@@ -9,7 +9,7 @@ mod compiler;
 use std::path::Path;
 // use std::process::Command;
 use std::{env, fs}; 
-use crate::compiler::{CompilerConfig, CSettings, Backend, WASMSettings};
+use crate::compiler::{CompilerConfig, CSettings, Backend};
 #[test]
 fn test() {
     let prog = fs::read_to_string("TestProg/main.atoms").unwrap();
@@ -77,10 +77,10 @@ fn main() {
     let _filename = path.file_name().expect("file passed is a folder");
     CompilerConfig::new(
         prog.expect("invaild file name"),
-        Backend::WASM(WASMSettings::new()),
+        Backend::C(CSettings::new(None, Vec::new())),
         is_debug,
         false,
-        "/tmp/covalent/test.wasm".to_string(),
+        "/tmp/covalent/test.c".to_string(),
     )
     .run();
 }

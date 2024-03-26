@@ -1,8 +1,5 @@
-use std::intrinsics::drop_in_place;
-
 use crate::ast::Expr;
 use crate::backend::c;
-use crate::backend::wasm;
 use crate::ir::gen::IRGen;
 use crate::ir::Codegen;
 use crate::parser::Parser;
@@ -20,27 +17,18 @@ impl CSettings {
     }
 }
 
-#[allow(unused)]
-pub struct WASMSettings {}
 
-impl WASMSettings {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-macro_rules! unwarp {
+/* macro_rules! unwarp {
     ($back: expr, $vari: path) => {
         match $back {
             $vari(i) => i,
             _ => panic!(),
         }
     };
-}
+}*/
 
 #[allow(unused)]
 pub enum Backend {
-    WASM(WASMSettings),
     C(CSettings),
     Custom { name: String, settings: Vec<String> },
 }
@@ -74,9 +62,6 @@ impl CompilerConfig {
         dbg!(&ir);
         drop(codegen);
         match self.backend {
-            Backend::WASM(_) => {
-                wasm::compile(&self, ir);
-            }
             Backend::C(_) => {
                 let mut codegen = c::Codegen::new();
                 let str = codegen.codegen(ir);
