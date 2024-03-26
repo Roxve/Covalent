@@ -1,5 +1,6 @@
-pub mod parse;
-use crate::ast::Expr;
+pub mod parse; 
+pub mod ast;
+use ast::Expr;
 use crate::lexer::Tokenize;
 use crate::source::Token;
 use crate::source::{ATErr, ErrKind, Ident};

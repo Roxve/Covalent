@@ -1,7 +1,7 @@
 use super::{get_fn_type, get_ops_type, Codegen, Const, IROp};
 
 use crate::{
-    ast::{Expr, Literal},
+    parser::ast::{Expr, Literal},
     parser::Function,
     source::{ConstType, ErrKind, Ident},
 };

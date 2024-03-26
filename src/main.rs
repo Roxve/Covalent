@@ -1,5 +1,4 @@
 use std::io::{self, Write};
-mod ast;
 mod backend;
 mod ir;
 mod lexer;
@@ -39,9 +38,9 @@ fn repl(is_debug: bool) {
         CompilerConfig::new(
             buffer.clone(),
             Backend::C(CSettings::new(None, Vec::new())),
+            is_debug,
             true,
-            true,
-            "/tmp/covalent/repl.c".to_string(),
+            "repl".to_string(),
         )
         .run();
     }
@@ -80,7 +79,7 @@ fn main() {
         Backend::C(CSettings::new(None, Vec::new())),
         is_debug,
         false,
-        "/tmp/covalent/test.c".to_string(),
+        "test".to_string(),
     )
     .run();
 }

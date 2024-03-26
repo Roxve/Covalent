@@ -58,21 +58,4 @@ void err(char* err, int code) {
   exit(code);
 }
 
-int main() {
-  int x = 5;
-
-  void* addr0 = __int__(5);
-  void* obj = addr0;
-
-  void* addr1 = __int__(4);
-  void* obj1 = addr1;
-
-  void* addr2 = __add__(obj, obj1);
-  void* obj2 = addr2;
-
-  // track all the  addresss to free them
-  free(addr0);
-  free(addr1);
-  writeln(obj2);
-  free(addr2);
 }

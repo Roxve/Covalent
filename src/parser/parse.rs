@@ -1,7 +1,7 @@
 use super::Scope;
 
 use super::Parser;
-use crate::ast::*;
+use super::ast::*;
 use crate::lexer::Tokenize;
 use crate::source::*;
 

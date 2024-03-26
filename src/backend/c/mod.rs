@@ -1,8 +1,32 @@
 pub mod gen;
+use crate::compiler::CompilerConfig;
+use crate::ir::IROp;
 use crate::ir::Const;
 use crate::source::ConstType;
 use std::collections::HashMap;
 use std::collections::VecDeque;
+
+use std::fs; 
+use std::process::Command;
+
+pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
+    let mut codegen = Codegen::new();
+    let code = codegen.codegen(ir);
+    drop(codegen); 
+    let outpath = format!("/tmp/covalent/'{}'.c", &config.output);
+
+
+    fs::write(&outpath, code).expect(format!("err writing to /tmp/covalent make sure covalent can access that path!").as_str());
+    let _ = Command::new("gcc")
+    .arg(format!("-I{}", &config.libdir))
+    .arg(format!("-o{}", &config.output))
+    .arg(outpath)
+    .arg(format!("-L{}", &config.libdir))
+    .arg("-lstd")
+    .spawn()
+    .unwrap()
+    .wait();
+}
 
 pub fn type_to_c(ty: ConstType) -> String {
     match ty {
@@ -54,10 +78,7 @@ impl Module {
             self.includes.push(include_line);
         }
     }
-    pub fn line(&mut self, line: String) {
-        let last = self.functions.len() - 1;
-        self.functions[last].push(line);
-    }
+
     pub fn func(&mut self, func: Vec<String>) {
         self.functions.push(func);
     }

@@ -1,4 +1,6 @@
-use crate::ast::Expr;
+use std::env::current_exe;
+
+use crate::parser::ast::Expr;
 use crate::backend::c;
 use crate::ir::gen::IRGen;
 use crate::ir::Codegen;
@@ -33,7 +35,8 @@ pub enum Backend {
     Custom { name: String, settings: Vec<String> },
 }
 pub struct CompilerConfig {
-    input: String,
+    input: String, 
+    pub libdir: String,
     pub backend: Backend,
     pub debug: bool,
     pub repl: bool,
@@ -42,7 +45,8 @@ pub struct CompilerConfig {
 impl CompilerConfig {
     pub fn new(input: String, backend: Backend, debug: bool, repl: bool, output: String) -> Self {
         Self {
-            input,
+            input, 
+            libdir: format!("{}/lib", current_exe().unwrap().parent().unwrap().to_str().unwrap()),
             backend,
             debug,
             repl,
@@ -50,8 +54,8 @@ impl CompilerConfig {
         }
     }
     pub fn run(&self) {
-        let mut parser = Parser::new(self.input.clone());
-
+        let mut parser = Parser::new(self.input.clone()); 
+        
         let prog: Vec<Expr> = parser.parse_prog();
         if self.debug {
             println!("parsed prog:\n {:#?}\nsrc: \n{:#?}", prog, parser);
@@ -63,9 +67,7 @@ impl CompilerConfig {
         drop(codegen);
         match self.backend {
             Backend::C(_) => {
-                let mut codegen = c::Codegen::new();
-                let str = codegen.codegen(ir);
-                println!("{}", str);
+                c::compile(self, ir);
             }
             _ => todo!(),
         }
