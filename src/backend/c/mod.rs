@@ -37,7 +37,6 @@ pub enum Item {
 #[derive(Debug, Clone)]
 pub struct Module {
     includes: Vec<String>,
-    header: Vec<String>, // contains all the pub funcs
     functions: Vec<Vec<String>>,
 }
 
@@ -45,7 +44,6 @@ impl Module {
     pub fn new() -> Self {
         Self {
             includes: Vec::new(),
-            header: Vec::new(),
             functions: Vec::new(),
         }
     }
@@ -59,15 +57,11 @@ impl Module {
         let last = self.functions.len() - 1;
         self.functions[last].push(line);
     }
-    pub fn func(&mut self, func: Vec<String>, is_pub: bool) {
-        if is_pub {
-            let head = func[0].replace(" {", ";");
-            self.header.push(head);
-        }
+    pub fn func(&mut self, func: Vec<String>) {
         self.functions.push(func);
     }
 
-    pub fn finish(&mut self) -> (String, String) {
+    pub fn finish(&mut self) -> String {
         let mut func_lines: Vec<String> = (&self.functions).join(&String::from("\n\n"));
         self.functions.clear();
         let mut lines = Vec::new();
@@ -75,12 +69,7 @@ impl Module {
         lines.append(&mut func_lines);
         let code = lines.join("\n");
 
-        let mut header_lines = Vec::new();
-        header_lines.append(&mut self.includes);
-        header_lines.append(&mut self.header);
-
-        let header = header_lines.join("\n");
-        (code, header)
+        code
     }
 }
 #[derive(Debug, Clone)]

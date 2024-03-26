@@ -6,9 +6,9 @@ use super::Item;
 use crate::ir::{ConstType, IROp};
 
 impl Codegen {
-    pub fn codegen(&mut self, ir: Vec<IROp>) -> (String, String) {
+    pub fn codegen(&mut self, ir: Vec<IROp>) -> String {
         let main = self.bond_fn("main".to_string(), Vec::new(), ConstType::Int, ir);
-        self.module.func(main, false);
+        self.module.func(main);
         self.module.finish()
     }
     pub fn bond_fn(
@@ -42,7 +42,7 @@ impl Codegen {
                     ret,
                     body,
                 );
-                self.module.func(func, false);
+                self.module.func(func);
             }
 
             IROp::Alloc(_, _) => return None,
