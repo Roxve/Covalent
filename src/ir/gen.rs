@@ -37,8 +37,13 @@ impl IRGen for Codegen {
         ir: &mut IR,
     ) {
         ir.reverse();
-        ir.push(IROp::Import(ty, module.to_string(), name.to_string(), args));
-        self.push_function(
+        ir.push(IROp::Import(
+            ty.clone(),
+            module.to_string(),
+            name.to_string(),
+            args,
+        ));
+        self.env.push_function(
             Ident {
                 val: name.to_string(),
                 tag: None,
@@ -47,10 +52,9 @@ impl IRGen for Codegen {
                 val: "...data".to_string(),
                 tag: None,
             }],
+            ty,
         );
         ir.reverse();
-
-        self.vars.insert(name.to_string(), ConstType::Void);
     }
     fn gen_prog(&mut self, exprs: Vec<Expr>, funcs: Vec<Function>) -> IR {
         let mut gen = vec![];
@@ -82,12 +86,10 @@ impl IRGen for Codegen {
         let mut body = vec![];
         let args: Vec<String> = func.args.iter().map(|v| v.val.clone()).collect();
 
-        let old_vars = self.vars.clone();
-        self.vars.clear();
-        self.vars.reserve(args.len());
+        self.env = self.env.child();
 
         for arg in args.clone() {
-            self.vars.insert(arg, ConstType::Dynamic);
+            self.env.add(&arg, ConstType::Dynamic);
         }
 
         for expr in func.body {
@@ -96,10 +98,11 @@ impl IRGen for Codegen {
         }
 
         let ty = get_fn_type(&mut body);
-        self.vars = old_vars;
-        self.vars.insert(func.name.val.clone(), ty.clone());
 
-        self.push_function(func.name.clone(), func.args);
+        self.env = self.env.parent().unwrap();
+
+        self.env
+            .push_function(func.name.clone(), func.args, ty.clone());
         Ok(vec![IROp::Def(ty, func.name.val, args, body)])
     }
 
@@ -113,7 +116,7 @@ impl IRGen for Codegen {
             Expr::VarDeclare { name, val } => self.gen_var_declare(name.val, *val),
             Expr::VarAssign { name, val } => self.gen_var_assign(name.val, *val),
             Expr::Ident(name) => {
-                if !self.vars.contains_key(&name.val) {
+                if !self.env.has(&name.val) {
                     self.err(
                         ErrKind::UndeclaredVar,
                         format!("var {} is not declared", name.val.clone()),
@@ -121,13 +124,13 @@ impl IRGen for Codegen {
                     return Err(ErrKind::UndeclaredVar as u8);
                 }
                 Ok(vec![IROp::Load(
-                    self.vars.get(&name.val).unwrap().clone(),
+                    self.env.get_ty(&name.val).unwrap(),
                     name.val,
                 )])
             }
             Expr::FnCall { name, args } => {
                 let mut res: Vec<IROp> = vec![];
-                let fun = self.get_function(&name);
+                let fun = self.env.get_function(&name);
                 if fun.is_none() {
                     self.err(
                         ErrKind::UndeclaredVar,
@@ -154,10 +157,7 @@ impl IRGen for Codegen {
                     res.append(&mut compiled_arg);
                     res.push(IROp::Conv(ConstType::Dynamic, get_ops_type(&res)));
                 }
-                res.push(IROp::Call(
-                    self.vars.get(&name.val).unwrap().to_owned(),
-                    name.val,
-                ));
+                res.push(IROp::Call(self.env.get_ty(&name.val).unwrap(), name.val));
 
                 Ok(res)
             }
@@ -180,7 +180,7 @@ impl IRGen for Codegen {
     }
 
     fn gen_var_declare(&mut self, name: String, expr: Expr) -> IRRes {
-        if self.vars.contains_key(&name.clone()) {
+        if self.env.vars.contains_key(&name.clone()) {
             self.err(
                 ErrKind::VarAlreadyDeclared,
                 format!("var {} is already declared", name.clone()),
@@ -192,7 +192,7 @@ impl IRGen for Codegen {
         let mut g = self.gen_expr(expr)?;
         let ty = get_ops_type(&g);
         res.push(IROp::Alloc(ty.clone(), name.clone()));
-        self.vars.insert(name.clone(), ty.clone());
+        self.env.add(&name, ty.clone());
         res.append(&mut g);
         res.push(IROp::Store(ty, name));
 
@@ -200,7 +200,7 @@ impl IRGen for Codegen {
     }
 
     fn gen_var_assign(&mut self, name: String, expr: Expr) -> IRRes {
-        if !self.vars.contains_key(&name) {
+        if !self.env.has(&name) {
             self.err(
                 ErrKind::UndeclaredVar,
                 format!("var {} is not declared", name.clone()),
@@ -212,14 +212,11 @@ impl IRGen for Codegen {
         let mut compiled_expr = self.gen_expr(expr)?;
         let ty = get_ops_type(&compiled_expr);
 
-        if self.vars.get(&name).unwrap() != &ty {
-            res.push(IROp::Dealloc(
-                self.vars.get(&name).unwrap().clone(),
-                name.clone(),
-            ));
+        if &self.env.get_ty(&name).unwrap() != &ty {
+            res.push(IROp::Dealloc(self.env.get_ty(&name).unwrap(), name.clone()));
             res.push(IROp::Alloc(ty.clone(), name.clone()));
-            self.vars.remove(&name);
-            self.vars.insert(name.clone(), ty.clone());
+
+            self.env.modify(&name, ty.clone());
         }
 
         res.append(&mut compiled_expr);

@@ -85,25 +85,69 @@ pub struct CompiledFunction {
     name: Ident,
     args: Vec<Ident>,
 }
-pub struct Codegen {
+#[derive(Clone)]
+pub struct Enviroment {
     functions: Vec<CompiledFunction>,
     vars: HashMap<String, ConstType>,
-
-    errors: Vec<ATErr>,
-    warnings: Vec<ATErr>, // program can continue error
+    pub parent: Option<Box<Enviroment>>,
 }
 
-impl Codegen {
-    pub fn new() -> Self {
+impl Enviroment {
+    pub fn new(parent: Option<Box<Self>>) -> Self {
         Self {
             functions: Vec::new(),
             vars: HashMap::new(),
-            errors: Vec::new(),
-            warnings: Vec::new(),
+            parent,
         }
     }
-    pub fn push_function(&mut self, name: Ident, args: Vec<Ident>) {
-        self.functions.push(CompiledFunction { name, args })
+
+    pub fn child(&self) -> Enviroment {
+        Enviroment::new(Some(Box::new(self.clone())))
+    }
+
+    pub fn parent(&self) -> Option<Enviroment> {
+        if self.parent.is_none() {
+            None
+        } else {
+            Some(*(self.parent.clone().unwrap()))
+        }
+    }
+
+    pub fn get_ty(&self, name: &String) -> Option<ConstType> {
+        if self.vars.contains_key(name) {
+            return Some(self.vars[name].clone());
+        }
+
+        if self.parent.is_some() {
+            return self.parent().unwrap().get_ty(name);
+        } else {
+            return None;
+        }
+    }
+    pub fn has(&self, name: &String) -> bool {
+        if self.vars.contains_key(name) {
+            true
+        } else if self.parent.is_some() {
+            self.parent().unwrap().has(name)
+        } else {
+            false
+        }
+    }
+    pub fn modify(&mut self, name: &String, ty: ConstType) {
+        if self.vars.contains_key(name) {
+            self.vars.get_mut(name).map(|val| *val = ty);
+        } else if self.parent.is_some() {
+            self.parent().unwrap().modify(name, ty);
+        }
+    }
+
+    pub fn add(&mut self, name: &String, ty: ConstType) {
+        self.vars.insert(name.clone(), ty);
+    }
+
+    pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, ty: ConstType) {
+        self.vars.insert(name.val.clone(), ty);
+        self.functions.push(CompiledFunction { name, args });
     }
 
     pub fn get_function(&self, name: &Ident) -> Option<CompiledFunction> {
@@ -113,6 +157,21 @@ impl Codegen {
             }
         }
         return None;
+    }
+}
+pub struct Codegen {
+    env: Enviroment,
+    errors: Vec<ATErr>,
+    warnings: Vec<ATErr>, // program can continue error
+}
+
+impl Codegen {
+    pub fn new() -> Self {
+        Self {
+            env: Enviroment::new(None),
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        }
     }
 
     pub fn err(&mut self, kind: ErrKind, msg: String) {
