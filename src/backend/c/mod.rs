@@ -13,11 +13,16 @@ pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
     let mut codegen = Codegen::new();
     let code = codegen.codegen(ir);
     drop(codegen); 
+    let _ = Command::new("mkdir")
+    .arg("-p")
+    .arg("/tmp/covalent")
+    .spawn()
+    .unwrap()
+    .wait();
     let outpath = format!("/tmp/covalent/'{}'.c", &config.output);
 
-
     fs::write(&outpath, code).expect(format!("err writing to /tmp/covalent make sure covalent can access that path!").as_str());
-    let _ = Command::new("gcc")
+    let _ = Command::new("gcc") 
     .arg(format!("-I{}", &config.libdir))
     .arg(format!("-o{}", &config.output))
     .arg(outpath)
@@ -117,7 +122,6 @@ impl Codegen {
                 _ => todo!("conv a const item into string {:?}", con),
             },
             Item::Expr(expr) => expr,
-            _ => todo!("conv an item into a string {:?}", item),
         }
     }
     pub fn pop_all(&mut self) -> Vec<String> {

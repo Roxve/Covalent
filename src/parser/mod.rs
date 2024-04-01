@@ -8,7 +8,7 @@ use crate::source::{ATErr, ErrKind, Ident};
 #[derive(Debug, Clone, PartialEq)]
 pub enum Scope {
     Value,
-    Func(String),
+    _Func(String),
     Top,
 }
 
@@ -29,9 +29,9 @@ pub struct Function {
 }
 
 impl Function {
-    pub fn get_name(&self) -> String {
+    /*pub fn get_name(&self) -> String {
         self.name.val.clone()
-    }
+    }*/
 }
 
 #[derive(Debug, Clone)]
@@ -44,7 +44,7 @@ pub struct Parser {
     pub functions: Vec<Function>,
     pub current_scope: Scope,
     errors: Vec<ATErr>,
-    warnings: Vec<ATErr>, // program can continue error
+    _warnings: Vec<ATErr>, // program can continue error
 }
 
 impl Parser {
@@ -58,7 +58,7 @@ impl Parser {
             functions: vec![],
             current_scope: Scope::Top,
             errors: Vec::new(),
-            warnings: Vec::new(),
+            _warnings: Vec::new(),
         }
     }
 
@@ -75,14 +75,14 @@ impl Parser {
 
     // TODO gen funcs for each arg type making args less dynamic for faster exe
 
-    pub fn get_function(&self, name: String) -> Option<Function> {
+    /*pub fn get_function(&self, name: String) -> Option<Function> {
         for fun in self.functions.clone().into_iter() {
             if fun.get_name() == name {
                 return Some(fun);
             }
         }
         return None;
-    }
+    }*/
 
     pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Expr>) {
         self.functions.push(Function { name, args, body });
@@ -105,17 +105,6 @@ impl Parser {
         self.current_tok = self.next_tok.clone();
         self.next_tok = Some(tok.clone());
         return tok;
-    }
-
-    pub fn next(&mut self) -> Token {
-        if self.next_tok.is_none() {
-            if self.current_tok.is_none() {
-                self.tokenize();
-            }
-            self.current_tok = self.next_tok.clone();
-        }
-
-        return self.next_tok.clone().expect("None");
     }
 
     pub fn current(&mut self) -> Token {

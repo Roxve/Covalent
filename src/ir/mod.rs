@@ -162,7 +162,7 @@ impl Enviroment {
 pub struct Codegen {
     env: Enviroment,
     errors: Vec<ATErr>,
-    warnings: Vec<ATErr>, // program can continue error
+    _warnings: Vec<ATErr>, // program can continue error
 }
 
 impl Codegen {
@@ -170,7 +170,7 @@ impl Codegen {
         Self {
             env: Enviroment::new(None),
             errors: Vec::new(),
-            warnings: Vec::new(),
+            _warnings: Vec::new(),
         }
     }
 

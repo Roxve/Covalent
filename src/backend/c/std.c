@@ -57,5 +57,3 @@ void err(char* err, int code) {
   printf("covalent runtime error: %s", err);
   exit(code);
 }
-
-}
