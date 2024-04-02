@@ -3,6 +3,7 @@ use super::type_to_c;
 use super::types_to_cnamed;
 use super::Codegen;
 use super::Item;
+use crate::ir::get_op_type;
 use crate::ir::IROp;
 use crate::source::ConstType;
 
@@ -99,20 +100,35 @@ impl Codegen {
     }
 
     pub fn bond_binary(&mut self, op: IROp) -> Option<String> {
-        let item = match op {
-            IROp::Add(_) => self.binary("+"),
-            IROp::Sub(_) => self.binary("-"),
-            IROp::Mul(_) => self.binary("*"),
-            IROp::Div(_) => self.binary("/"),
-            _ => todo!("unimplented op {:#?}", op),
+        let item = if get_op_type(&op) == ConstType::Dynamic {
+            let ops = vec![self.pop_str(), self.pop_str()];
+            Item::Expr(match op {
+                IROp::Add(_) => self.call("__add__", ops),
+                IROp::Sub(_) => self.call("__sub__", ops),
+                IROp::Mul(_) => self.call("__mul__", ops),
+                IROp::Div(_) => self.call("__div__", ops),
+                _ => todo!()
+            })
+        } else {
+            match op {
+                IROp::Add(_) => self.binary("+"),
+                IROp::Sub(_) => self.binary("-"),
+                IROp::Mul(_) => self.binary("*"),
+                IROp::Div(_) => self.binary("/"),
+                _ => todo!("unimplented op {:#?}", op),
+            }
         };
         self.push(item);
-
         None
     }
 
-    pub fn call_one(&self, name: &str, arg: String) -> String {
+    #[inline]
+    fn call_one(&self, name: &str, arg: String) -> String {
         format!("{}({})", name, arg)
+    } 
+    #[inline]
+    fn call(&self, name: &str, args: Vec<String>) -> String {
+        format!("{}({})", name, args.join(", "))
     }
 
     pub fn bond_conv(&mut self, into: ConstType, from: ConstType) {
@@ -121,6 +137,7 @@ impl Codegen {
             ConstType::Dynamic => match from {
                 ConstType::Int => self.call_one("__int__", item),
                 ConstType::Float => self.call_one("__float__", item),
+                ConstType::Dynamic => item,
                 _ => todo!("add conv dynamic from {:?}", from),
             },
             _ => todo!("add conv into {:?}", into),

@@ -54,7 +54,6 @@ pub fn get_op_type(op: &IROp) -> ConstType {
 }
 
 pub fn get_ops_type(ops: &Vec<IROp>) -> ConstType {
-    dbg!(&ops);
     get_op_type(ops.last().unwrap())
 }
 

@@ -234,14 +234,14 @@ impl IRGen for Codegen {
             let lhs_ty = get_ops_type(&lhs);
             let rhs_ty = get_ops_type(&rhs);
             if lhs_ty == ConstType::Float && rhs_ty == ConstType::Int {
-                res.append(&mut lhs);
                 res.append(&mut rhs);
                 res.append(&mut vec![IROp::Conv(ConstType::Float, rhs_ty)]);
+                res.append(&mut lhs);
                 ty = lhs_ty;
             } else if lhs_ty == ConstType::Int && rhs_ty == ConstType::Float {
+                res.append(&mut rhs);
                 res.append(&mut lhs);
                 res.append(&mut vec![IROp::Conv(ConstType::Float, lhs_ty)]);
-                res.append(&mut rhs);
                 ty = rhs_ty;
             } else {
                 // NaN
@@ -249,8 +249,8 @@ impl IRGen for Codegen {
             }
         } else {
             ty = get_ops_type(&lhs);
-            res.append(&mut lhs);
             res.append(&mut rhs);
+            res.append(&mut lhs);
         }
 
         res.append(&mut vec![match op.as_str() {

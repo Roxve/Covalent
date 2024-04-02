@@ -10,8 +10,15 @@ typedef struct Float {
   char ty;
   float val;
 } Float;
+
+typedef struct NaN {
+  char ty;
+} NaN;
 void writeln(void* arg);
 void* __int__(int i);
 void* __float__(float f);
 void err(char* err, int code);
 void* __add__(void *a, void *b);
+void* __sub__(void *a, void *b);
+void* __mul__(void *a, void *b);
+void* __div__(void *a, void *b);

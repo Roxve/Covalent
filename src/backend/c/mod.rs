@@ -4,7 +4,7 @@ use crate::ir::IROp;
 use crate::ir::Const;
 use crate::source::ConstType;
 use std::collections::HashMap;
-use std::collections::VecDeque;
+
 
 use std::fs; 
 use std::process::Command;
@@ -101,17 +101,17 @@ impl Module {
 }
 #[derive(Debug, Clone)]
 pub struct Codegen {
-    stack: VecDeque<Item>,
+    stack: Vec<Item>,
     variables: HashMap<String, i32>, // c doesnt allow redeclaration of vars with different types
     pub module: Module,              // code we are generating
 }
 
 impl Codegen {
     pub fn push(&mut self, item: Item) {
-        self.stack.push_front(item);
+        self.stack.push(item);
     }
     pub fn pop(&mut self) -> Item {
-        self.stack.pop_back().expect("no stack item")
+        self.stack.pop().expect("no stack item")
     }
     pub fn pop_str(&mut self) -> String {
         let item = self.pop();
@@ -133,7 +133,7 @@ impl Codegen {
     }
     pub fn new() -> Self {
         Self {
-            stack: VecDeque::new(),
+            stack: Vec::new(),
             variables: HashMap::new(),
             module: Module::new(),
         }
