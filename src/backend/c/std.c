@@ -11,21 +11,23 @@ void* __NaN__() {
   return nan;
 }
 
-void __conv__(void *a, void *b) {
-  char a_ty = ((Obj*) a)->ty;
-  char b_ty = ((Obj*) b)->ty;
+void __conv__(void **a, void **b) {
+  char a_ty = ((Obj*) *a)->ty;
+  char b_ty = ((Obj*) *b)->ty;
   if (a_ty == b_ty) {
     return;
   }
   if (a_ty == FLOAT_TYPE && b_ty == INT_TYPE) {
-    void* val = &(((Int*) b)->val);
+    int val = (((Int*) *b)->val);
 
-    memcpy(b, __float__((float) *(int*) val), sizeof(Int));
+    free(*b);
+    *b = __float__((float) val);
   }
   else if (a_ty == INT_TYPE && b_ty == FLOAT_TYPE) {
-    void* val = &(((Int*) a)->val);
-    
-    memcpy(a, __float__((float) *(int*) val), sizeof(Int));
+    int val = (((Int*) a)->val);
+
+    free(*a);
+    *a = __float__((float) val);
   } else {
       err("cannot conv balance a and b", 5);
   }
@@ -67,7 +69,7 @@ void* __float__(float f) {
 
 
 void* __add__(void *a, void *b) {
-  __conv__(a, b);
+  __conv__(&a, &b);
   char a_ty = ((Obj*) a)->ty;
   switch(a_ty) {
     case INT_TYPE:
@@ -80,7 +82,7 @@ void* __add__(void *a, void *b) {
 }
 
 void* __sub__(void *a, void *b) {
-  __conv__(a, b);
+  __conv__(&a, &b);
   char a_ty = ((Obj*) a)->ty;
   switch(a_ty) {
     case INT_TYPE:
@@ -93,7 +95,7 @@ void* __sub__(void *a, void *b) {
 }
 
 void* __mul__(void *a, void *b) {
-  __conv__(a, b);
+  __conv__(&a, &b);
   char a_ty = ((Obj*) a)->ty;
   switch(a_ty) {
     case INT_TYPE:
@@ -106,7 +108,7 @@ void* __mul__(void *a, void *b) {
 }
 
 void* __div__(void *a, void *b) {
-  __conv__(a, b);
+  __conv__(&a, &b);
   char a_ty = ((Obj*) a)->ty;
   switch(a_ty) {
     case INT_TYPE:
