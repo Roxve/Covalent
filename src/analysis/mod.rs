@@ -1,10 +1,16 @@
-use crate::ir::Enviroment;
+pub mod analysis;
+use crate::{ir::Enviroment, parser::ast::Expr};
 
-pub struct Analyizer {
+pub struct Analyzer {
     env: Enviroment
 }
 
-impl Analyizer {
+pub struct TypedExpr {
+    pub expr: Expr,
+    pub rc: i16
+}
+
+impl Analyzer {
     pub fn new() -> Self {
         Self {
             env: Enviroment::new(None)

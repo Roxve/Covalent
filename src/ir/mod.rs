@@ -87,7 +87,7 @@ pub struct CompiledFunction {
 #[derive(Clone)]
 pub struct Enviroment {
     functions: Vec<CompiledFunction>,
-    vars: HashMap<String, ConstType>,
+    vars: HashMap<String, (ConstType, u16)>,
     pub parent: Option<Box<Enviroment>>,
 }
 
@@ -114,7 +114,7 @@ impl Enviroment {
 
     pub fn get_ty(&self, name: &String) -> Option<ConstType> {
         if self.vars.contains_key(name) {
-            return Some(self.vars[name].clone());
+            return Some(self.vars[name].0.clone());
         }
 
         if self.parent.is_some() {
@@ -134,18 +134,18 @@ impl Enviroment {
     }
     pub fn modify(&mut self, name: &String, ty: ConstType) {
         if self.vars.contains_key(name) {
-            self.vars.get_mut(name).map(|val| *val = ty);
+            self.vars.get_mut(name).map(|val| *val = (ty, val.1));
         } else if self.parent.is_some() {
             self.parent().unwrap().modify(name, ty);
         }
     }
 
-    pub fn add(&mut self, name: &String, ty: ConstType) {
-        self.vars.insert(name.clone(), ty);
+    pub fn add(&mut self, name: &String, ty: ConstType, rc: u16) {
+        self.vars.insert(name.clone(), (ty, rc));
     }
 
     pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, ty: ConstType) {
-        self.vars.insert(name.val.clone(), ty);
+        self.vars.insert(name.val.clone(), (ty, 0));
         self.functions.push(CompiledFunction { name, args });
     }
 

@@ -89,7 +89,7 @@ impl IRGen for Codegen {
         self.env = self.env.child();
 
         for arg in args.clone() {
-            self.env.add(&arg, ConstType::Dynamic);
+            self.env.add(&arg, ConstType::Dynamic, 0);
         }
 
         for expr in func.body {
@@ -192,7 +192,7 @@ impl IRGen for Codegen {
         let mut g = self.gen_expr(expr)?;
         let ty = get_ops_type(&g);
         res.push(IROp::Alloc(ty.clone(), name.clone()));
-        self.env.add(&name, ty.clone());
+        self.env.add(&name, ty.clone(), 0);
         res.append(&mut g);
         res.push(IROp::Store(ty, name));
 
