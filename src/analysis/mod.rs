@@ -1,19 +1,27 @@
 pub mod analysis;
-use crate::{ir::Enviroment, parser::ast::Expr};
+use crate::{ir::Enviroment, parser::ast::Expr, source::ConstType};
 
 pub struct Analyzer {
-    env: Enviroment
+    env: Enviroment,
 }
-
+pub enum AnalyzedExpr {
+    Id(String, u16),
+    BinaryExpr {
+        op: String,
+        left: Box<TypedExpr>,
+        right: Box<TypedExpr>,
+    },
+    As(Box<TypedExpr>), // change an expr type if possible
+}
 pub struct TypedExpr {
-    pub expr: Expr,
-    pub rc: i16
+    pub expr: AnalyzedExpr,
+    pub ty: ConstType,
 }
 
 impl Analyzer {
     pub fn new() -> Self {
         Self {
-            env: Enviroment::new(None)
+            env: Enviroment::new(None),
         }
     }
 }
