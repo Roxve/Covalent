@@ -123,6 +123,19 @@ impl Enviroment {
             return None;
         }
     }
+
+    pub fn get_rc(&self, name: &String) -> Option<u16> {
+        if self.vars.contains_key(name) {
+            return Some(self.vars[name].1.clone());
+        }
+
+        if self.parent.is_some() {
+            return self.parent().unwrap().get_rc(name);
+        } else {
+            return None;
+        }
+    }
+
     pub fn has(&self, name: &String) -> bool {
         if self.vars.contains_key(name) {
             true
@@ -137,6 +150,14 @@ impl Enviroment {
             self.vars.get_mut(name).map(|val| *val = (ty, val.1));
         } else if self.parent.is_some() {
             self.parent().unwrap().modify(name, ty);
+        }
+    }
+
+    pub fn modify_rc(&mut self, name: &String, rc: u16) {
+        if self.vars.contains_key(name) {
+            self.vars.get_mut(name).map(|val| *val = (val.0, rc));
+        } else if self.parent.is_some() {
+            self.parent().unwrap().modify_rc(name, rc);
         }
     }
 
