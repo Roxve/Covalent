@@ -1,14 +1,14 @@
 use std::io::{self, Write};
 mod backend;
+mod compiler;
 mod ir;
 mod lexer;
 mod parser;
 mod source;
-mod compiler;
 use std::path::Path;
 // use std::process::Command;
-use std::{env, fs}; 
-use crate::compiler::{CompilerConfig, CSettings, Backend};
+use crate::compiler::{Backend, CSettings, CompilerConfig};
+use std::{env, fs};
 #[test]
 fn test() {
     let prog = fs::read_to_string("TestProg/main.atoms").unwrap();

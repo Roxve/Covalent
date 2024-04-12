@@ -175,7 +175,7 @@ impl IRGen for Codegen {
                 compiled.append(&mut vec![IROp::Pop]);
                 Ok(compiled)
             }
-            _ => todo!(),
+            _ => todo!("ast: {:?}", expr),
         }
     }
 
