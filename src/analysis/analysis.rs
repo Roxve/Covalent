@@ -1,5 +1,6 @@
 use crate::parser::ast::Expr;
-use crate::source::{ConstType, ErrKind, Ident};
+use crate::parser::Function;
+use crate::source::{ATErr, ConstType, ErrKind, Ident};
 
 use super::*;
 
@@ -12,9 +13,46 @@ fn ty_as(ty: &ConstType, expr: TypedExpr) -> TypedExpr {
 }
 
 impl Analyzer {
-    pub fn analyz_prog(exprs: Vec<Expr>) -> Result<Vec<TypedExpr>, ErrKind> {
+    pub fn err(&mut self, kind: ErrKind, msg: String) {
+        let err = ATErr {
+            kind,
+            msg,
+            line: self.line,
+            column: self.column,
+        };
+        err.out_error();
+    }
+
+    pub fn analyz_prog(
+        exprs: Vec<Expr>,
+        functions: Vec<Function>,
+    ) -> Result<Vec<TypedExpr>, ErrKind> {
         let mut analyzer = Analyzer::new();
         let mut analyzed_prog = Vec::new();
+
+        for func in functions {
+            let args = func.args;
+
+            for arg in &args {
+                analyzer
+                    .env
+                    .add(&arg.val, arg.tag.clone().unwrap_or(ConstType::Dynamic), 0);
+            }
+            let mut body = vec![];
+            for expr in func.body {
+                body.push(analyzer.analyz(expr)?);
+            }
+            let ty = func.name.tag.unwrap_or(ConstType::Dynamic);
+            let expr = AnalyzedExpr::Func {
+                ret: ty,
+                name: func.name.val,
+                args,
+                body,
+            };
+
+            analyzed_prog.push(TypedExpr { expr, ty });
+        }
+
         for expr in exprs {
             let analyzed_expr = analyzer.analyz(expr)?;
             analyzed_prog.push(analyzed_expr);
@@ -33,6 +71,14 @@ impl Analyzer {
                 let expr = self.analyz(*expr)?;
                 let expr = AnalyzedExpr::Discard(Box::new(expr));
                 Ok(TypedExpr { expr, ty })
+            }
+            Expr::PosInfo(x, line, column) => {
+                self.line = line;
+                self.column = column;
+                Ok(TypedExpr {
+                    expr: AnalyzedExpr::Debug(x, line, column),
+                    ty: ConstType::Void,
+                })
             }
             _ => todo!("add typed expr {:?}", expr),
         }
