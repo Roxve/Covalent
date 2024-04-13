@@ -1,10 +1,9 @@
 use std::env::current_exe;
 
-use crate::analysis::{analysis, Analyzer};
+use crate::analysis::Analyzer;
 use crate::backend::c;
 use crate::ir::gen::IRGen;
 use crate::ir::Codegen;
-use crate::parser::ast::Expr;
 use crate::parser::parse::Parse;
 use crate::parser::Parser;
 
@@ -59,13 +58,13 @@ impl CompilerConfig {
     pub fn run(&self) {
         let mut parser = Parser::new(self.input.clone());
 
-        let prog = Analyzer::analyz_prog(parser.parse_prog(), parser.functions.clone()).unwrap();
+        let prog = Analyzer::analyz_prog(parser.parse_prog(), parser.functions).unwrap();
         if self.debug {
             println!("parsed prog:\n {:#?}\n", prog);
         }
 
         let mut codegen = Codegen::new();
-        let ir = codegen.gen_prog(prog, parser.functions);
+        let ir = codegen.gen_prog(prog);
         dbg!(&ir);
         drop(codegen);
         match self.backend {

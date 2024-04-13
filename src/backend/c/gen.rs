@@ -40,7 +40,9 @@ impl Codegen {
             IROp::Def(ret, name, args, body) => {
                 let func = self.bond_fn(
                     name,
-                    args.into_iter().map(|i| (ConstType::Dynamic, i)).collect(),
+                    args.into_iter()
+                        .map(|i| (i.tag.unwrap_or(ConstType::Dynamic), i.val))
+                        .collect(),
                     ret,
                     body,
                 );
@@ -107,7 +109,7 @@ impl Codegen {
                 IROp::Sub(_) => self.call("__sub__", ops),
                 IROp::Mul(_) => self.call("__mul__", ops),
                 IROp::Div(_) => self.call("__div__", ops),
-                _ => todo!()
+                _ => todo!(),
             })
         } else {
             match op {
@@ -125,7 +127,7 @@ impl Codegen {
     #[inline]
     fn call_one(&self, name: &str, arg: String) -> String {
         format!("{}({})", name, arg)
-    } 
+    }
     #[inline]
     fn call(&self, name: &str, args: Vec<String>) -> String {
         format!("{}({})", name, args.join(", "))

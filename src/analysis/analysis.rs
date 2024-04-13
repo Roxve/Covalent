@@ -29,6 +29,17 @@ impl Analyzer {
     ) -> Result<Vec<TypedExpr>, ErrKind> {
         let mut analyzer = Analyzer::new();
         let mut analyzed_prog = Vec::new();
+        analyzer.env.push_function(
+            Ident {
+                tag: None,
+                val: format!("writeln"),
+            },
+            vec![Ident {
+                val: "x".to_string(),
+                tag: Some(ConstType::Dynamic),
+            }],
+            ConstType::Void,
+        );
 
         for func in functions {
             let args = func.args;
@@ -42,7 +53,13 @@ impl Analyzer {
             for expr in func.body {
                 body.push(analyzer.analyz(expr)?);
             }
-            let ty = func.name.tag.unwrap_or(ConstType::Dynamic);
+
+            let ty = get_fn_type(&body);
+
+            analyzer
+                .env
+                .push_function(func.name.clone(), args.clone(), ty);
+
             let expr = AnalyzedExpr::Func {
                 ret: ty,
                 name: func.name.val,
@@ -81,6 +98,7 @@ impl Analyzer {
                 let ty = ConstType::Void;
                 let expr = self.analyz(*expr)?;
                 let expr = AnalyzedExpr::Discard(Box::new(expr));
+
                 Ok(TypedExpr { expr, ty })
             }
             Expr::PosInfo(x, line, column) => {
@@ -90,6 +108,14 @@ impl Analyzer {
                     expr: AnalyzedExpr::Debug(x, line, column),
                     ty: ConstType::Void,
                 })
+            }
+
+            Expr::RetExpr(expr) => {
+                let expr = self.analyz(*expr)?;
+                let ty = expr.ty;
+
+                let expr = AnalyzedExpr::RetExpr(Box::new(expr));
+                Ok(TypedExpr { expr, ty })
             }
 
             Expr::FnCall { name, args: params } => {
@@ -107,11 +133,14 @@ impl Analyzer {
                     return Err(ErrKind::UndeclaredVar);
                 }
 
-                let ty = func.unwrap().name.tag.unwrap_or(ConstType::Dynamic);
+                let ty = self.env.get_ty(&name.val).unwrap();
 
                 let mut args = vec![];
                 for param in params {
-                    args.push(self.analyz(param)?);
+                    args.push(TypedExpr {
+                        expr: AnalyzedExpr::As(Box::new(self.analyz(param)?)),
+                        ty: ConstType::Dynamic,
+                    });
                 }
 
                 let expr = AnalyzedExpr::FnCall {

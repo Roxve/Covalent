@@ -6,7 +6,7 @@ use crate::{
 };
 
 pub struct Analyzer {
-    env: Enviroment,
+    pub env: Enviroment,
     line: u32,
     column: u32,
 }
@@ -52,6 +52,34 @@ pub enum AnalyzedExpr {
 pub struct TypedExpr {
     pub expr: AnalyzedExpr,
     pub ty: ConstType,
+}
+
+fn get_ret_ty(expr: &TypedExpr, prev: ConstType) -> ConstType {
+    let mut ty = ConstType::Void;
+
+    if let AnalyzedExpr::RetExpr(_) = expr.expr {
+        if ty == ConstType::Void {
+            ty = expr.ty;
+        } else if ty != expr.ty {
+            ty = ConstType::Dynamic;
+        }
+    } else {
+        match expr.expr {
+            // anything else should be invaild ast
+            // get fn ty => Block , ifBody
+            _ => todo!(),
+        }
+    }
+
+    ty
+}
+
+pub fn get_fn_type(body: &Vec<TypedExpr>) -> ConstType {
+    let mut ty = ConstType::Void;
+    for expr in body {
+        ty = get_ret_ty(expr, ty);
+    }
+    ty
 }
 
 impl Analyzer {
