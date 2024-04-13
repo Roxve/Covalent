@@ -1,4 +1,5 @@
 use std::io::{self, Write};
+mod analysis;
 mod backend;
 mod compiler;
 mod ir;

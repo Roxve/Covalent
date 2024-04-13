@@ -1,11 +1,12 @@
 use std::env::current_exe;
 
-use crate::parser::ast::Expr;
+use crate::analysis::{analysis, Analyzer};
 use crate::backend::c;
 use crate::ir::gen::IRGen;
 use crate::ir::Codegen;
-use crate::parser::Parser;
+use crate::parser::ast::Expr;
 use crate::parser::parse::Parse;
+use crate::parser::Parser;
 
 #[allow(unused)]
 pub struct CSettings {
@@ -18,7 +19,6 @@ impl CSettings {
         Self { compiler, flags }
     }
 }
-
 
 /* macro_rules! unwarp {
     ($back: expr, $vari: path) => {
@@ -35,7 +35,7 @@ pub enum Backend {
     Custom { name: String, settings: Vec<String> },
 }
 pub struct CompilerConfig {
-    input: String, 
+    input: String,
     pub libdir: String,
     pub backend: Backend,
     pub debug: bool,
@@ -45,8 +45,11 @@ pub struct CompilerConfig {
 impl CompilerConfig {
     pub fn new(input: String, backend: Backend, debug: bool, repl: bool, output: String) -> Self {
         Self {
-            input, 
-            libdir: format!("{}/lib", current_exe().unwrap().parent().unwrap().to_str().unwrap()),
+            input,
+            libdir: format!(
+                "{}/lib",
+                current_exe().unwrap().parent().unwrap().to_str().unwrap()
+            ),
             backend,
             debug,
             repl,
@@ -54,12 +57,12 @@ impl CompilerConfig {
         }
     }
     pub fn run(&self) {
-        let mut parser = Parser::new(self.input.clone()); 
-        
-        let prog: Vec<Expr> = parser.parse_prog();
+        let mut parser = Parser::new(self.input.clone());
+
+        let prog = Analyzer::analyz_prog(parser.parse_prog(), parser.functions.clone()).unwrap();
         if self.debug {
-            println!("parsed prog:\n {:#?}\nsrc: \n{:#?}", prog, parser);
-        } 
+            println!("parsed prog:\n {:#?}\n", prog);
+        }
 
         let mut codegen = Codegen::new();
         let ir = codegen.gen_prog(prog, parser.functions);

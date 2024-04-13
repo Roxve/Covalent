@@ -1,36 +1,37 @@
 pub mod gen;
 use crate::compiler::CompilerConfig;
 use crate::ir::IROp;
-use crate::ir::Const;
+use crate::parser::ast::Literal;
 use crate::source::ConstType;
 use std::collections::HashMap;
 
-
-use std::fs; 
+use std::fs;
 use std::process::Command;
 
 pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
     let mut codegen = Codegen::new();
     let code = codegen.codegen(ir);
-    drop(codegen); 
+    drop(codegen);
     let _ = Command::new("mkdir")
-    .arg("-p")
-    .arg("/tmp/covalent")
-    .spawn()
-    .unwrap()
-    .wait();
+        .arg("-p")
+        .arg("/tmp/covalent")
+        .spawn()
+        .unwrap()
+        .wait();
     let outpath = format!("/tmp/covalent/'{}'.c", &config.output);
 
-    fs::write(&outpath, code).expect(format!("err writing to /tmp/covalent make sure covalent can access that path!").as_str());
-    let _ = Command::new("gcc") 
-    .arg(format!("-I{}", &config.libdir))
-    .arg(format!("-o{}", &config.output))
-    .arg(outpath)
-    .arg(format!("-L{}", &config.libdir))
-    .arg("-lstd")
-    .spawn()
-    .unwrap()
-    .wait();
+    fs::write(&outpath, code).expect(
+        format!("err writing to /tmp/covalent make sure covalent can access that path!").as_str(),
+    );
+    let _ = Command::new("gcc")
+        .arg(format!("-I{}", &config.libdir))
+        .arg(format!("-o{}", &config.output))
+        .arg(outpath)
+        .arg(format!("-L{}", &config.libdir))
+        .arg("-lstd")
+        .spawn()
+        .unwrap()
+        .wait();
 }
 
 pub fn type_to_c(ty: ConstType) -> String {
@@ -59,7 +60,7 @@ pub fn types_to_cnamed(tys: Vec<(ConstType, String)>) -> String {
 // or ir is stack based so we need to simulate a stack
 #[derive(Debug, Clone)]
 pub enum Item {
-    Const(Const),
+    Const(Literal),
     //  TypedExpr(Option<ConstType>, String),
     Expr(String), // push into stack except if the op doesnt push ig
 }
@@ -117,8 +118,8 @@ impl Codegen {
         let item = self.pop();
         match item {
             Item::Const(con) => match con {
-                Const::Int(i) => i.to_string(),
-                Const::Float(f) => f.to_string(),
+                Literal::Int(i) => i.to_string(),
+                Literal::Float(f) => f.to_string(),
                 _ => todo!("conv a const item into string {:?}", con),
             },
             Item::Expr(expr) => expr,

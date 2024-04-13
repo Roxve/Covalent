@@ -1,7 +1,7 @@
-use super::{get_fn_type, get_ops_type, Codegen, Const, IROp};
+use super::{Codegen, IROp};
 
 use crate::{
-    parser::ast::{Expr, Literal},
+    analysis::{AnalyzedExpr, TypedExpr},
     parser::Function,
     source::{ConstType, ErrKind, Ident},
 };
@@ -18,13 +18,13 @@ pub trait IRGen {
         args: Vec<ConstType>,
         ir: &mut IR,
     );
-    fn gen_prog(&mut self, exprs: Vec<Expr>, funcs: Vec<Function>) -> IR;
-    fn gen_func(&mut self, func: Function) -> IRRes;
-    fn gen_expr(&mut self, expr: Expr) -> IRRes;
+    fn gen_prog(&mut self, exprs: Vec<TypedExpr>, funcs: Vec<Function>) -> IR;
+    // fn gen_func(&mut self, func: Function) -> IRRes;
+    fn gen_expr(&mut self, expr: TypedExpr) -> IRRes;
 
-    fn gen_var_declare(&mut self, name: String, expr: Expr) -> IRRes;
-    fn gen_var_assign(&mut self, name: String, expr: Expr) -> IRRes;
-    fn gen_binary_expr(&mut self, op: String, left: Expr, right: Expr) -> IRRes;
+    fn gen_var_declare(&mut self, name: String, expr: TypedExpr) -> IRRes;
+    fn gen_var_assign(&mut self, name: String, expr: TypedExpr) -> IRRes;
+    fn gen_binary_expr(&mut self, op: String, left: TypedExpr, right: TypedExpr) -> IRRes;
 }
 
 impl IRGen for Codegen {
@@ -56,15 +56,15 @@ impl IRGen for Codegen {
         );
         ir.reverse();
     }
-    fn gen_prog(&mut self, exprs: Vec<Expr>, funcs: Vec<Function>) -> IR {
+    fn gen_prog(&mut self, exprs: Vec<TypedExpr>, funcs: Vec<Function>) -> IR {
         let mut gen = vec![];
 
-        for func in funcs {
+        /*for func in funcs {
             let compiled_func = self.gen_func(func);
             if compiled_func.is_ok() {
                 gen.append(&mut compiled_func.unwrap());
             }
-        }
+        }*/
 
         self.import(
             ConstType::Void,
@@ -82,95 +82,57 @@ impl IRGen for Codegen {
         gen
     }
 
-    fn gen_func(&mut self, func: Function) -> IRRes {
-        let mut body = vec![];
-        let args: Vec<String> = func.args.iter().map(|v| v.val.clone()).collect();
+    /*    fn gen_func(&mut self, func: Function) -> IRRes {
+            let mut body = vec![];
+            let args: Vec<String> = func.args.iter().map(|v| v.val.clone()).collect();
 
-        self.env = self.env.child();
+            self.env = self.env.child();
 
-        for arg in args.clone() {
-            self.env.add(&arg, ConstType::Dynamic, 0);
-        }
-
-        for expr in func.body {
-            let mut compiled_expr = self.gen_expr(expr)?;
-            body.append(&mut compiled_expr);
-        }
-
-        let ty = get_fn_type(&mut body);
-
-        self.env = self.env.parent().unwrap();
-
-        self.env
-            .push_function(func.name.clone(), func.args, ty.clone());
-        Ok(vec![IROp::Def(ty, func.name.val, args, body)])
-    }
-
-    fn gen_expr(&mut self, expr: Expr) -> IRRes {
-        match expr {
-            Expr::Literal(Literal::Int(i)) => Ok(vec![IROp::Const(ConstType::Int, Const::Int(i))]),
-            Expr::Literal(Literal::Float(f)) => {
-                Ok(vec![IROp::Const(ConstType::Float, Const::Float(f))])
+            for arg in args.clone() {
+                self.env.add(&arg, ConstType::Dynamic, 0);
             }
-            Expr::BinaryExpr { op, left, right } => self.gen_binary_expr(op, *left, *right),
-            Expr::VarDeclare { name, val } => self.gen_var_declare(name.val, *val),
-            Expr::VarAssign { name, val } => self.gen_var_assign(name.val, *val),
-            Expr::Ident(name) => {
-                if !self.env.has(&name.val) {
-                    self.err(
-                        ErrKind::UndeclaredVar,
-                        format!("var {} is not declared", name.val.clone()),
-                    );
-                    return Err(ErrKind::UndeclaredVar as u8);
-                }
-                Ok(vec![IROp::Load(
-                    self.env.get_ty(&name.val).unwrap(),
-                    name.val,
-                )])
+
+            for expr in func.body {
+                let mut compiled_expr = self.gen_expr(expr)?;
+                body.append(&mut compiled_expr);
             }
-            Expr::FnCall { name, args } => {
+
+            let ty = get_fn_type(&mut body);
+
+            self.env = self.env.parent().unwrap();
+
+            self.env
+                .push_function(func.name.clone(), func.args, ty.clone());
+            Ok(vec![IROp::Def(ty, func.name.val, args, body)])
+        }
+    */
+    fn gen_expr(&mut self, expr: TypedExpr) -> IRRes {
+        match expr.expr {
+            AnalyzedExpr::Literal(lit) => Ok(vec![IROp::Const(expr.ty, lit)]),
+
+            AnalyzedExpr::BinaryExpr { op, left, right } => self.gen_binary_expr(op, *left, *right),
+            AnalyzedExpr::VarDeclare { name, val } => self.gen_var_declare(name, *val),
+            AnalyzedExpr::VarAssign { name, val } => self.gen_var_assign(name, *val),
+            AnalyzedExpr::Id(name, rc) => {
+                self.env.modify_rc(&name, rc);
+                Ok(vec![IROp::Load(self.env.get_ty(&name).unwrap(), name)])
+            }
+            AnalyzedExpr::FnCall { name, args } => {
                 let mut res: Vec<IROp> = vec![];
-                let fun = self.env.get_function(&name);
-                if fun.is_none() {
-                    self.err(
-                        ErrKind::UndeclaredVar,
-                        format!("undeclared function {}", name.val),
-                    );
-                    return Err(ErrKind::UndeclaredVar as u8);
-                }
-
-                if (&fun.as_ref()).unwrap().args.len() != (&args).len() {
-                    self.err(
-                        ErrKind::UnexceptedArgs,
-                        format!(
-                            "unexpected args number for function {}, got {} args expected {}",
-                            name.val,
-                            args.len(),
-                            fun.unwrap().args.len()
-                        ),
-                    );
-                    return Err(ErrKind::UnexceptedArgs as u8);
-                }
-
-                for arg in args {
-                    let mut compiled_arg = self.gen_expr(arg)?;
-                    res.append(&mut compiled_arg);
-                    res.push(IROp::Conv(ConstType::Dynamic, get_ops_type(&res)));
-                }
-                res.push(IROp::Call(self.env.get_ty(&name.val).unwrap(), name.val));
+                res.push(IROp::Call(expr.ty, name));
 
                 Ok(res)
             }
-            Expr::RetExpr(expr) => {
+            AnalyzedExpr::RetExpr(expr) => {
                 let mut res = vec![];
-                let mut compiled_expr = self.gen_expr(*expr)?;
-                let ty = get_ops_type(&compiled_expr);
+                let mut compiled_expr = self.gen_expr(*expr.clone())?;
+
                 res.append(&mut compiled_expr);
-                res.push(IROp::Ret(ty));
+                res.push(IROp::Ret(expr.ty));
                 Ok(res)
             }
-            Expr::PosInfo(_, _, _) => Ok(vec![]),
-            Expr::Discard(dis) => {
+            AnalyzedExpr::Debug(_, _, _) => Ok(vec![]),
+            AnalyzedExpr::Discard(dis) => {
                 let mut compiled = self.gen_expr(*dis)?;
                 compiled.append(&mut vec![IROp::Pop]);
                 Ok(compiled)
@@ -179,18 +141,11 @@ impl IRGen for Codegen {
         }
     }
 
-    fn gen_var_declare(&mut self, name: String, expr: Expr) -> IRRes {
-        if self.env.vars.contains_key(&name.clone()) {
-            self.err(
-                ErrKind::VarAlreadyDeclared,
-                format!("var {} is already declared", name.clone()),
-            );
-            return Err(ErrKind::VarAlreadyDeclared as u8);
-        }
-
+    fn gen_var_declare(&mut self, name: String, expr: TypedExpr) -> IRRes {
         let mut res = vec![];
-        let mut g = self.gen_expr(expr)?;
-        let ty = get_ops_type(&g);
+        let mut g = self.gen_expr(expr.clone())?;
+        let ty = expr.ty;
+
         res.push(IROp::Alloc(ty.clone(), name.clone()));
         self.env.add(&name, ty.clone(), 0);
         res.append(&mut g);
@@ -199,7 +154,7 @@ impl IRGen for Codegen {
         Ok(res)
     }
 
-    fn gen_var_assign(&mut self, name: String, expr: Expr) -> IRRes {
+    fn gen_var_assign(&mut self, name: String, expr: TypedExpr) -> IRRes {
         if !self.env.has(&name) {
             self.err(
                 ErrKind::UndeclaredVar,
@@ -209,8 +164,8 @@ impl IRGen for Codegen {
         }
 
         let mut res = vec![];
-        let mut compiled_expr = self.gen_expr(expr)?;
-        let ty = get_ops_type(&compiled_expr);
+        let mut compiled_expr = self.gen_expr(expr.clone())?;
+        let ty = expr.ty;
 
         if &self.env.get_ty(&name).unwrap() != &ty {
             res.push(IROp::Dealloc(self.env.get_ty(&name).unwrap(), name.clone()));
@@ -224,34 +179,13 @@ impl IRGen for Codegen {
         Ok(res)
     }
 
-    fn gen_binary_expr(&mut self, op: String, left: Expr, right: Expr) -> IRRes {
+    fn gen_binary_expr(&mut self, op: String, left: TypedExpr, right: TypedExpr) -> IRRes {
         let mut res: IR = vec![];
-        let mut lhs = self.gen_expr(left)?;
+        let mut lhs = self.gen_expr(left.clone())?;
         let mut rhs = self.gen_expr(right)?;
-        let ty;
-        if get_ops_type(&lhs) != get_ops_type(&rhs) {
-            // beform type conv
-            let lhs_ty = get_ops_type(&lhs);
-            let rhs_ty = get_ops_type(&rhs);
-            if lhs_ty == ConstType::Float && rhs_ty == ConstType::Int {
-                res.append(&mut rhs);
-                res.append(&mut vec![IROp::Conv(ConstType::Float, rhs_ty)]);
-                res.append(&mut lhs);
-                ty = lhs_ty;
-            } else if lhs_ty == ConstType::Int && rhs_ty == ConstType::Float {
-                res.append(&mut rhs);
-                res.append(&mut lhs);
-                res.append(&mut vec![IROp::Conv(ConstType::Float, lhs_ty)]);
-                ty = rhs_ty;
-            } else {
-                // NaN
-                ty = lhs_ty;
-            }
-        } else {
-            ty = get_ops_type(&lhs);
-            res.append(&mut rhs);
-            res.append(&mut lhs);
-        }
+        let ty = left.ty;
+        res.append(&mut rhs);
+        res.append(&mut lhs);
 
         res.append(&mut vec![match op.as_str() {
             "+" => IROp::Add(ty),

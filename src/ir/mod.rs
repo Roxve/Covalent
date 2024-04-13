@@ -1,14 +1,9 @@
+use crate::parser::ast::Literal;
 use crate::source::ConstType;
 
 pub mod gen;
 pub mod tools;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Const {
-    Int(i32),
-    Float(f32),
-    Str(String),
-}
 #[derive(Debug, Clone, PartialEq)]
 pub enum IROp {
     Import(ConstType, String, String, Vec<ConstType>), // ty mod fun arg count
@@ -19,7 +14,7 @@ pub enum IROp {
     Sub(ConstType),
     Mul(ConstType),
     Div(ConstType),
-    Const(ConstType, Const),
+    Const(ConstType, Literal),
     Conv(ConstType, ConstType),
     Alloc(ConstType, String),
     Dealloc(ConstType, String), // when allocing a var with a new type we dealloc the old val
@@ -81,8 +76,8 @@ pub fn get_fn_type(ops: &mut Vec<IROp>) -> ConstType {
 
 #[derive(Debug, Clone)]
 pub struct CompiledFunction {
-    name: Ident,
-    args: Vec<Ident>,
+    pub name: Ident,
+    pub args: Vec<Ident>,
 }
 #[derive(Clone)]
 pub struct Enviroment {

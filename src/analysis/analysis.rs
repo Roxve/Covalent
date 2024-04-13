@@ -62,6 +62,17 @@ impl Analyzer {
 
     pub fn analyz(&mut self, expr: Expr) -> Result<TypedExpr, ErrKind> {
         match expr {
+            Expr::Literal(literal) => {
+                let ty = match literal {
+                    Literal::Int(_) => ConstType::Int,
+                    Literal::Float(_) => ConstType::Float,
+                    _ => todo!("Add literal {:?}", literal),
+                };
+                Ok(TypedExpr {
+                    expr: AnalyzedExpr::Literal(literal),
+                    ty,
+                })
+            }
             Expr::BinaryExpr { op, left, right } => self.analyz_binary_expr(*left, *right, op),
             Expr::Ident(id) => self.analyz_id(id),
             Expr::VarDeclare { name, val } => self.analyz_var_declare(name, *val),
@@ -79,6 +90,36 @@ impl Analyzer {
                     expr: AnalyzedExpr::Debug(x, line, column),
                     ty: ConstType::Void,
                 })
+            }
+
+            Expr::FnCall { name, args: params } => {
+                let func = self.env.get_function(&name);
+                if func.is_none() {
+                    self.err(
+                        ErrKind::UndeclaredVar,
+                        format!("undeclared function {}", &name.val),
+                    );
+                    return Err(ErrKind::UndeclaredVar);
+                }
+
+                if &func.as_ref().unwrap().args.len() != &params.len() {
+                    self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {}", params.len(), func.unwrap().args.len(), name.val));
+                    return Err(ErrKind::UndeclaredVar);
+                }
+
+                let ty = func.unwrap().name.tag.unwrap_or(ConstType::Dynamic);
+
+                let mut args = vec![];
+                for param in params {
+                    args.push(self.analyz(param)?);
+                }
+
+                let expr = AnalyzedExpr::FnCall {
+                    name: name.val,
+                    args,
+                };
+
+                Ok(TypedExpr { expr, ty })
             }
             _ => todo!("add typed expr {:?}", expr),
         }
