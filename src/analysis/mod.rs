@@ -13,6 +13,12 @@ pub struct Analyzer {
 
 #[derive(Debug, Clone)]
 pub enum AnalyzedExpr {
+    Import {
+        module: String,
+        name: String,
+        args: Vec<ConstType>,
+    },
+
     Id(String, u16),
     Literal(Literal),
     BinaryExpr {
@@ -54,7 +60,7 @@ pub struct TypedExpr {
     pub ty: ConstType,
 }
 
-fn get_ret_ty(expr: &TypedExpr, prev: ConstType) -> ConstType {
+fn get_ret_ty(expr: &TypedExpr, _prev: ConstType) -> ConstType {
     let mut ty = ConstType::Void;
 
     if let AnalyzedExpr::RetExpr(_) = expr.expr {

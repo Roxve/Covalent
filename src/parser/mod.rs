@@ -1,9 +1,9 @@
-pub mod parse; 
 pub mod ast;
-use ast::Expr;
+pub mod parse;
 use crate::lexer::Tokenize;
 use crate::source::Token;
 use crate::source::{ATErr, ErrKind, Ident};
+use ast::Expr;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Scope {
@@ -40,7 +40,6 @@ pub struct Parser {
     pub line: u32,
     pub column: u32,
     current_tok: Option<Token>,
-    next_tok: Option<Token>,
     pub functions: Vec<Function>,
     pub current_scope: Scope,
     errors: Vec<ATErr>,
@@ -54,7 +53,6 @@ impl Parser {
             line: 1,
             column: 0,
             current_tok: None,
-            next_tok: None,
             functions: vec![],
             current_scope: Scope::Top,
             errors: Vec::new(),
@@ -102,21 +100,19 @@ impl Parser {
     }
 
     pub fn set(&mut self, tok: Token) -> Token {
-        self.current_tok = self.next_tok.clone();
-        self.next_tok = Some(tok.clone());
+        self.current_tok = Some(tok.clone());
         return tok;
     }
 
     pub fn current(&mut self) -> Token {
         if self.current_tok.is_none() {
             self.tokenize();
-            self.current_tok = self.next_tok.clone();
-            self.tokenize();
         }
         return self.current_tok.clone().expect("None");
     }
 
     pub fn except(&mut self, tok: Token) -> Token {
+        dbg!(&tok);
         if self.current() != tok {
             let t = self.current();
             self.tokenize();
@@ -127,6 +123,8 @@ impl Parser {
             );
             return Token::Err("unexcepted token".to_string());
         }
+        dbg!(&self.current());
+        dbg!(&self.code);
 
         return self.tokenize();
     }

@@ -1,5 +1,5 @@
-use crate::source::*;
 use super::parser::Parser;
+use crate::source::*;
 pub fn is_num(c: char) -> bool {
     return "01234.56789".contains(c);
 }
@@ -13,8 +13,6 @@ pub trait Tokenize {
 }
 
 impl Tokenize for Parser {
-
-
     fn parse_num(&mut self, x: String) -> Token {
         if x.contains('.') {
             return self.set(Token::Float(x.parse().unwrap()));
@@ -43,7 +41,7 @@ impl Tokenize for Parser {
         match self.at() {
             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
                 let mut res = String::from("");
-                while is_num(self.at()) {
+                while self.not_eof() && is_num(self.at()) {
                     res.push(self.eat())
                 }
                 return self.parse_num(res);

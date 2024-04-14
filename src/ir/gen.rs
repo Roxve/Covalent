@@ -9,14 +9,6 @@ type IR = Vec<IROp>;
 type IRRes = Result<IR, u8>;
 
 pub trait IRGen {
-    fn import(
-        &mut self,
-        ty: ConstType,
-        module: &str,
-        name: &str,
-        args: Vec<ConstType>,
-        ir: &mut IR,
-    );
     fn gen_prog(&mut self, exprs: Vec<TypedExpr>) -> IR;
     fn gen_func(
         &mut self,
@@ -33,44 +25,9 @@ pub trait IRGen {
 }
 
 impl IRGen for Codegen {
-    fn import(
-        &mut self,
-        ty: ConstType,
-        module: &str,
-        name: &str,
-        args: Vec<ConstType>,
-        ir: &mut IR,
-    ) {
-        ir.reverse();
-        ir.push(IROp::Import(
-            ty.clone(),
-            module.to_string(),
-            name.to_string(),
-            args,
-        ));
-        self.env.push_function(
-            Ident {
-                val: name.to_string(),
-                tag: None,
-            },
-            vec![Ident {
-                val: "...data".to_string(),
-                tag: None,
-            }],
-            ty,
-        );
-        ir.reverse();
-    }
     fn gen_prog(&mut self, exprs: Vec<TypedExpr>) -> IR {
         let mut gen = vec![];
 
-        self.import(
-            ConstType::Void,
-            "std",
-            "writeln",
-            vec![ConstType::Dynamic],
-            &mut gen,
-        );
         for expr in exprs {
             let compiled_expr = self.gen_expr(expr);
             if compiled_expr.is_ok() {
@@ -98,32 +55,13 @@ impl IRGen for Codegen {
 
         Ok(vec![IROp::Def(ret, name, args, exprs)])
     }
-    /*    fn gen_func(&mut self, func: Function) -> IRRes {
-            let mut body = vec![];
-            let args: Vec<String> = func.args.iter().map(|v| v.val.clone()).collect();
 
-            self.env = self.env.child();
-
-            for arg in args.clone() {
-                self.env.add(&arg, ConstType::Dynamic, 0);
-            }
-
-            for expr in func.body {
-                let mut compiled_expr = self.gen_expr(expr)?;
-                body.append(&mut compiled_expr);
-            }
-
-            let ty = get_fn_type(&mut body);
-
-            self.env = self.env.parent().unwrap();
-
-            self.env
-                .push_function(func.name.clone(), func.args, ty.clone());
-            Ok(vec![IROp::Def(ty, func.name.val, args, body)])
-        }
-    */
     fn gen_expr(&mut self, expr: TypedExpr) -> IRRes {
         match expr.expr {
+            AnalyzedExpr::Import { module, name, args } => {
+                Ok(vec![IROp::Import(expr.ty, module, name, args)])
+            }
+
             AnalyzedExpr::Func {
                 ret,
                 name,

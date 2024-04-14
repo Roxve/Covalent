@@ -135,13 +135,6 @@ impl Codegen {
         return results;
     }
 
-    pub fn pop_all(&mut self) -> Vec<String> {
-        let mut results = Vec::new();
-        for _ in self.stack.clone() {
-            results.push(self.pop_str());
-        }
-        results
-    }
     pub fn new() -> Self {
         Self {
             stack: Vec::new(),

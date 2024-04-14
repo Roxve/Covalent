@@ -22,23 +22,51 @@ impl Analyzer {
         };
         err.out_error();
     }
-
+    #[inline]
+    fn import(
+        &mut self,
+        body: &mut Vec<TypedExpr>,
+        ty: ConstType,
+        module: &str,
+        name: &str,
+        args: Vec<(ConstType, String)>,
+    ) {
+        self.env.push_function(
+            Ident {
+                tag: None,
+                val: name.to_string(),
+            },
+            args.clone()
+                .into_iter()
+                .map(|v| Ident {
+                    tag: Some(v.0),
+                    val: v.1,
+                })
+                .collect(),
+            ty,
+        );
+        body.push(TypedExpr {
+            expr: AnalyzedExpr::Import {
+                module: module.to_string(),
+                name: name.to_string(),
+                args: args.into_iter().map(|v| v.0).collect(),
+            },
+            ty,
+        })
+    }
     pub fn analyz_prog(
         exprs: Vec<Expr>,
         functions: Vec<Function>,
     ) -> Result<Vec<TypedExpr>, ErrKind> {
         let mut analyzer = Analyzer::new();
         let mut analyzed_prog = Vec::new();
-        analyzer.env.push_function(
-            Ident {
-                tag: None,
-                val: format!("writeln"),
-            },
-            vec![Ident {
-                val: "x".to_string(),
-                tag: Some(ConstType::Dynamic),
-            }],
+
+        analyzer.import(
+            &mut analyzed_prog,
             ConstType::Void,
+            "std",
+            "writeln",
+            vec![(ConstType::Dynamic, "x".to_string())],
         );
 
         for func in functions {
