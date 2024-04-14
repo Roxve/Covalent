@@ -125,6 +125,16 @@ impl Codegen {
             Item::Expr(expr) => expr,
         }
     }
+
+    pub fn pop_amount(&mut self, count: u16) -> Vec<String> {
+        let mut results = Vec::new();
+        for _ in [1..count] {
+            results.push(self.pop_str());
+        }
+
+        return results;
+    }
+
     pub fn pop_all(&mut self) -> Vec<String> {
         let mut results = Vec::new();
         for _ in self.stack.clone() {

@@ -8,7 +8,7 @@ pub mod tools;
 pub enum IROp {
     Import(ConstType, String, String, Vec<ConstType>), // ty mod fun arg count
     Def(ConstType, String, Vec<Ident>, Vec<IROp>),
-    Call(ConstType, String),
+    Call(ConstType, String, u16),
     Ret(ConstType),
     Add(ConstType),
     Sub(ConstType),
@@ -31,7 +31,7 @@ pub fn get_op_type(op: &IROp) -> ConstType {
     match op {
         Import(t, _, _, _) => t,
         Def(t, _, _, _) => t,
-        Call(t, _) => t,
+        Call(t, _, _) => t,
         Ret(t) => t,
         Add(t) => t,
         Sub(t) => t,

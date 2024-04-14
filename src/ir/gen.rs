@@ -88,7 +88,7 @@ impl IRGen for Codegen {
     ) -> IRRes {
         for arg in &args {
             // types arent needed in ir gen
-            self.env.add(&arg.val, ConstType::Void, 0);
+            self.env.add(&arg.val, ConstType::Dynamic, 0);
         }
         let mut exprs = vec![];
 
@@ -138,14 +138,16 @@ impl IRGen for Codegen {
             AnalyzedExpr::VarAssign { name, val } => self.gen_var_assign(name, *val),
             AnalyzedExpr::Id(name, rc) => {
                 self.env.modify_rc(&name, rc);
-                Ok(vec![IROp::Load(self.env.get_ty(&name).unwrap(), name)])
+                Ok(vec![IROp::Load(expr.ty, name)])
             }
             AnalyzedExpr::FnCall { name, args } => {
                 let mut res: Vec<IROp> = vec![];
+                let count = args.len().clone() as u16;
+
                 for arg in args {
                     res.append(&mut self.gen_expr(arg)?);
                 }
-                res.push(IROp::Call(expr.ty, name));
+                res.push(IROp::Call(expr.ty, name, count));
 
                 Ok(res)
             }

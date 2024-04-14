@@ -67,8 +67,9 @@ impl Codegen {
             }
 
             IROp::Import(_, module, _, _) => self.module.include(module),
-            IROp::Call(ty, name) => {
-                let args = self.pop_all().join(", ");
+            IROp::Call(ty, name, count) => {
+                let arg_count = count;
+                let args = self.pop_amount(arg_count).join(", ");
                 let call = format!("{}({})", name, args);
                 if ty == ConstType::Void {
                     // our compiler only insert a line when the stack is empty, void functions doesnt push anything to the stack

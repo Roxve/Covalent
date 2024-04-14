@@ -168,6 +168,10 @@ impl Analyzer {
                 rhs = ty_as(&lhs.ty, rhs);
             } else if lhs.ty == ConstType::Int && rhs.ty == ConstType::Float {
                 lhs = ty_as(&rhs.ty, lhs);
+            } else if lhs.ty == ConstType::Dynamic {
+                rhs = ty_as(&lhs.ty, rhs);
+            } else if rhs.ty == ConstType::Dynamic {
+                lhs = ty_as(&rhs.ty, lhs);
             }
         }
         let ty = lhs.ty.clone();
