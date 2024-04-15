@@ -1,10 +1,12 @@
 #include "stdio.h"
 #include <stdlib.h>
 #include "std.h"
-#include "string.h"
+#include <string.h>
 
 #define INT_TYPE 0
 #define FLOAT_TYPE 1 
+#define STR_TYPE 2
+
 void* __NaN__() {
   NaN* nan = (NaN*)malloc(sizeof(NaN));
   nan->ty = -1;
@@ -35,7 +37,7 @@ void __conv__(void **a, void **b) {
 
 void writeln(void* arg) {
   char ty = ((Obj*) arg)->ty;
-  
+  printf("%d\n", ty);
   switch(ty) {
     case INT_TYPE:
     {
@@ -48,7 +50,14 @@ void writeln(void* arg) {
     {
       Float* f = (Float*) arg;
       printf("%f\n", f->val);
+      break;
     } 
+    case STR_TYPE: 
+    {
+      Str* s = (Str*) arg;
+      printf("%.*s\n", s->len, s->val);
+      break;
+    }
   }
 }
 
@@ -60,6 +69,25 @@ void* __int__(int i) {
   obj->val = i;
   return obj;
 }
+
+void* __str__(Str* s) {
+  void* str = s;
+  return str;  
+}
+
+Str* __strnew__(char* s) {
+  int len = strlen(s);
+  char* str = (char*)malloc(len);
+  memcpy(str, s, len);
+
+  Str* obj = (Str*)malloc(sizeof(Str));
+  obj->ty = STR_TYPE;
+  
+  obj->val = str;
+  obj->len = len;
+  return obj;
+}
+
 void* __float__(float f) {
   Float* obj = (Float*)malloc(sizeof(Float));
   obj->ty = FLOAT_TYPE;

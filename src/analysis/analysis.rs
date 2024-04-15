@@ -111,6 +111,7 @@ impl Analyzer {
                 let ty = match literal {
                     Literal::Int(_) => ConstType::Int,
                     Literal::Float(_) => ConstType::Float,
+                    Literal::Str(_) => ConstType::Str,
                     _ => todo!("Add literal {:?}", literal),
                 };
                 Ok(TypedExpr {
@@ -195,6 +196,10 @@ impl Analyzer {
             if lhs.ty == ConstType::Float && rhs.ty == ConstType::Int {
                 rhs = ty_as(&lhs.ty, rhs);
             } else if lhs.ty == ConstType::Int && rhs.ty == ConstType::Float {
+                lhs = ty_as(&rhs.ty, lhs);
+            } else if lhs.ty == ConstType::Str {
+                rhs = ty_as(&lhs.ty, rhs);
+            } else if rhs.ty == ConstType::Str {
                 lhs = ty_as(&rhs.ty, lhs);
             } else if lhs.ty == ConstType::Dynamic {
                 rhs = ty_as(&lhs.ty, rhs);
