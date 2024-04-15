@@ -37,7 +37,6 @@ void __conv__(void **a, void **b) {
 
 void writeln(void* arg) {
   char ty = ((Obj*) arg)->ty;
-  printf("%d\n", ty);
   switch(ty) {
     case INT_TYPE:
     {
