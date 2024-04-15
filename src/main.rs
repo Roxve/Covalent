@@ -74,13 +74,18 @@ fn main() {
 
     let path = Path::new(file.as_str());
 
-    let _filename = path.file_name().expect("file passed is a folder");
+    let filename = path
+        .file_name()
+        .expect("file passed is a folder")
+        .to_str()
+        .unwrap()
+        .to_string();
     CompilerConfig::new(
         prog.expect("invaild file name"),
         Backend::C(CSettings::new(None, Vec::new())),
         is_debug,
         false,
-        "test".to_string(),
+        filename.replace(".atoms", ""),
     )
     .run();
 }

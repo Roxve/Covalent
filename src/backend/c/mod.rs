@@ -62,8 +62,19 @@ pub fn types_to_cnamed(tys: Vec<(ConstType, String)>) -> String {
 #[derive(Debug, Clone)]
 pub enum Item {
     Const(Literal),
-    //  TypedExpr(Option<ConstType>, String),
-    Expr(String), // push into stack except if the op doesnt push ig
+    Expr(ConstType, String),
+}
+
+impl Item {
+    pub fn get_ty(&self) -> ConstType {
+        match self {
+            &Self::Expr(ty, _) => ty.clone(),
+            &Self::Const(Literal::Str(_)) => ConstType::Str,
+            &Self::Const(Literal::Float(_)) => ConstType::Float,
+            &Self::Const(Literal::Int(_)) => ConstType::Int,
+            _ => todo!("add get_ty for Const item: {:?}", self),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -112,6 +123,10 @@ impl Codegen {
     pub fn push(&mut self, item: Item) {
         self.stack.push(item);
     }
+
+    pub fn borrow(&mut self) -> &Item {
+        self.stack.last().unwrap()
+    }
     pub fn pop(&mut self) -> Item {
         self.stack.pop().expect("no stack item")
     }
@@ -124,7 +139,7 @@ impl Codegen {
                 Literal::Str(s) => format!("__strnew__(\"{}\")", s),
                 _ => todo!("conv a const item into string {:?}", con),
             },
-            Item::Expr(expr) => expr,
+            Item::Expr(_, expr) => expr,
         }
     }
 

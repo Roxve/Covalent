@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use super::type_to_c;
 
 use super::types_to_cnamed;
@@ -61,9 +63,9 @@ impl Codegen {
 
                 return Some(format!("{} {} = {}", ty, name, val));
             }
-            IROp::Load(_, name) => {
+            IROp::Load(ty, name) => {
                 let name = self.get_var(name);
-                self.push(Item::Expr(name));
+                self.push(Item::Expr(ty, name));
             }
 
             IROp::Import(_, module, _, _) => self.module.include(module),
@@ -71,11 +73,11 @@ impl Codegen {
                 let arg_count = count;
                 let args = self.pop_amount(arg_count).join(", ");
                 let call = format!("{}({})", name, args);
-                if ty == ConstType::Void {
+                if &ty == &ConstType::Void {
                     // our compiler only insert a line when the stack is empty, void functions doesnt push anything to the stack
                     return Some(call);
                 } else {
-                    self.push(Item::Expr(call));
+                    self.push(Item::Expr(ty, call));
                 }
             }
 
@@ -99,19 +101,30 @@ impl Codegen {
     }
     #[inline]
     pub fn binary(&mut self, op: &str) -> Item {
-        Item::Expr(format!("{} {} {}", self.pop_str(), op, self.pop_str()))
+        let ty = self.borrow().get_ty();
+        if &ty == &ConstType::Str {
+            Item::Expr(
+                ty,
+                format!("__stradd__({}, {})", self.pop_str(), self.pop_str()),
+            )
+        } else {
+            Item::Expr(ty, format!("{} {} {}", self.pop_str(), op, self.pop_str()))
+        }
     }
 
     pub fn bond_binary(&mut self, op: IROp) -> Option<String> {
         let item = if get_op_type(&op) == ConstType::Dynamic {
             let ops = vec![self.pop_str(), self.pop_str()];
-            Item::Expr(match op {
-                IROp::Add(_) => self.call("__add__", ops),
-                IROp::Sub(_) => self.call("__sub__", ops),
-                IROp::Mul(_) => self.call("__mul__", ops),
-                IROp::Div(_) => self.call("__div__", ops),
-                _ => todo!(),
-            })
+            Item::Expr(
+                ConstType::Dynamic,
+                match op {
+                    IROp::Add(_) => self.call("__add__", ops),
+                    IROp::Sub(_) => self.call("__sub__", ops),
+                    IROp::Mul(_) => self.call("__mul__", ops),
+                    IROp::Div(_) => self.call("__div__", ops),
+                    _ => todo!(),
+                },
+            )
         } else {
             match op {
                 IROp::Add(_) => self.binary("+"),
@@ -136,8 +149,8 @@ impl Codegen {
 
     pub fn bond_conv(&mut self, into: ConstType, from: ConstType) {
         let item = self.pop_str();
-        let conv = match into {
-            ConstType::Dynamic => match from {
+        let conv = match &into {
+            &ConstType::Dynamic => match from {
                 ConstType::Int => self.call_one("__int__", item),
                 ConstType::Float => self.call_one("__float__", item),
                 ConstType::Str => self.call_one("__str__", item),
@@ -147,6 +160,6 @@ impl Codegen {
             _ => todo!("add conv into {:?}", into),
         };
 
-        self.push(Item::Expr(conv));
+        self.push(Item::Expr(into, conv));
     }
 }

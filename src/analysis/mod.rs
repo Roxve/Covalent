@@ -60,6 +60,18 @@ pub struct TypedExpr {
     pub ty: ConstType,
 }
 
+#[inline]
+pub fn supports_op(ty: &ConstType, op: &String) -> bool {
+    match ty {
+        &ConstType::Int | &ConstType::Float | &ConstType::Dynamic => true,
+        &ConstType::Str => match op.as_str() {
+            "+" => true,
+            _ => false,
+        },
+        &ConstType::Void => false,
+    }
+}
+
 fn get_ret_ty(expr: &TypedExpr, _prev: ConstType) -> ConstType {
     let mut ty = ConstType::Void;
 

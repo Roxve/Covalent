@@ -39,7 +39,7 @@ pub enum ErrKind {
     UnexceptedTokenE = 1,
     UndeclaredVar = 2,
     VarAlreadyDeclared = 3,
-    // CannotConvertRight = 4, // in binary expressions right is always coverted to left
+    OperationNotGranted = 4,
     UnexceptedArgs = 5,
 }
 

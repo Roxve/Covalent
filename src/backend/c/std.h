@@ -8,7 +8,7 @@ typedef struct Int {
 
 typedef struct Str {
   char ty;
-  char* val;
+  char *val;
   int len;
 } Str;
 
@@ -20,17 +20,17 @@ typedef struct Float {
 typedef struct NaN {
   char ty;
 } NaN;
-void writeln(void* arg);
-void* __int__(int i);
-void* __float__(float f);
-void* __str__(Str* s);
+void writeln(void *arg);
+void *__int__(int i);
+void *__float__(float f);
+void *__str__(Str *s);
 
-Str* __strnew__(char* val);
+Str *__strnew__(char *val);
 
-void err(char* err, int code);
-void* __add__(void *a, void *b);
-void* __sub__(void *a, void *b);
-void* __mul__(void *a, void *b);
-void* __div__(void *a, void *b);
+void err(char *err, int code);
+void *__add__(void *a, void *b);
+void *__sub__(void *a, void *b);
+void *__mul__(void *a, void *b);
+void *__div__(void *a, void *b);
 
-// void* __stradd__(Str a, Str b);
+Str *__stradd__(Str *a, Str *b);

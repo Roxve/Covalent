@@ -211,6 +211,11 @@ impl Analyzer {
         let left = Box::new(lhs);
         let right = Box::new(rhs);
 
+        if !supports_op(&ty, &op) {
+            self.err(ErrKind::OperationNotGranted, format!("one of possible types [{:?}] does not support operator {}, use the do keyword to do it anyways", ty, op));
+            return Err(ErrKind::OperationNotGranted);
+        }
+
         let expr = AnalyzedExpr::BinaryExpr { op, left, right };
         Ok(TypedExpr { expr, ty })
     }
