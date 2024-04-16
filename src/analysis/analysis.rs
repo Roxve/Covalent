@@ -202,14 +202,17 @@ impl Analyzer {
                 lhs = ty_as(&rhs.ty, lhs);
             }
         }
-        let ty = lhs.ty.clone();
-        let left = Box::new(lhs);
-        let right = Box::new(rhs);
+        let ty = match op.as_str() {
+            "==" | ">" | "<" | ">=" | "<=" => ConstType::Bool,
+            _ => lhs.ty.clone(),
+        };
 
-        if !supports_op(&ty, &op) {
+        if !supports_op(&lhs.ty, &op) {
             self.err(ErrKind::OperationNotGranted, format!("one of possible types [{:?}] does not support operator {}, use the do keyword to do it anyways", ty, op));
             return Err(ErrKind::OperationNotGranted);
         }
+        let left = Box::new(lhs);
+        let right = Box::new(rhs);
 
         let expr = AnalyzedExpr::BinaryExpr { op, left, right };
         Ok(TypedExpr { expr, ty })
