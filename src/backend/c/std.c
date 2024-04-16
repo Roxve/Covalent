@@ -6,6 +6,7 @@
 #define INT_TYPE 0
 #define FLOAT_TYPE 1
 #define STR_TYPE 2
+#define BOOL_TYPE 3
 
 void *__NaN__() {
   NaN *nan = (NaN *)malloc(sizeof(NaN));
@@ -66,6 +67,13 @@ void *__int__(int i) {
 void *__str__(Str *s) {
   void *str = s;
   return str;
+}
+
+void *__bool__(_Bool b) {
+  Bool *obj = (Bool *)malloc(sizeof(Bool));
+  obj->ty = BOOL_TYPE;
+  obj->val = b;
+  return obj;
 }
 
 Str *__strnew__(char *s) {

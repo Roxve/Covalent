@@ -1,3 +1,4 @@
+#include "stdbool.h"
 typedef struct {
   char ty;
 } Obj;
@@ -17,6 +18,11 @@ typedef struct Float {
   float val;
 } Float;
 
+typedef struct Bool {
+  char ty;
+  _Bool val;
+} Bool;
+
 typedef struct NaN {
   char ty;
 } NaN;
@@ -24,6 +30,7 @@ void writeln(void *arg);
 void *__int__(int i);
 void *__float__(float f);
 void *__str__(Str *s);
+void *__bool_(_Bool b);
 
 Str *__strnew__(char *val);
 

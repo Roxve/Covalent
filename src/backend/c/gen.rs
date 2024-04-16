@@ -154,6 +154,7 @@ impl Codegen {
                 ConstType::Int => self.call_one("__int__", item),
                 ConstType::Float => self.call_one("__float__", item),
                 ConstType::Str => self.call_one("__str__", item),
+                ConstType::Bool => self.call_one("__bool__", item),
                 ConstType::Dynamic => item,
                 _ => todo!("add conv dynamic from {:?}", from),
             },
