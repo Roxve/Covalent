@@ -6,5 +6,5 @@ writeln: a * 5
 
 writeln: 6 > 5
 writeln: 5 < 6
-writeln: 25 == 25.0
-writeln: a * 5 == 25.0
+writeln: (x: 25) == (x: 25.0) 
+writeln: a * 5 == 25
