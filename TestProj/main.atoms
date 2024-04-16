@@ -18,6 +18,9 @@ set do_stuff: temp {
 
 	writeln: a * 5 == 25
 	writeln: "Hi" == "Hi"
+	a = x: "long"
+	set b = x: "short"
+	writeln: a > b # strings compare operations is only dynamic for now
 	writeln: "Hello, " + "world!"
 	writeln: temp
 }
