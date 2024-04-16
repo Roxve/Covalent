@@ -1,10 +1,21 @@
-use crate::source::Ident;
+use crate::source::{ConstType, Ident};
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Int(i32),
     Float(f32),
     Str(String),
     Bool(bool),
+}
+
+impl Literal {
+    pub fn get_ty(&self) -> ConstType {
+        match self {
+            &Self::Int(_) => ConstType::Int,
+            &Self::Float(_) => ConstType::Float,
+            &Self::Str(_) => ConstType::Str,
+            &Self::Bool(_) => ConstType::Bool,
+        }
+    }
 }
 
 pub fn get_operator_level(op: &str) -> u8 {

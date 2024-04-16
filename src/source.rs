@@ -1,14 +1,15 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u8)]
 pub enum ConstType {
-    Int = 0u8,
-    Float = 2u8,
-    Str = 3u8,
-    Dynamic = 4u8, // once you go dynamic there is no turning back
-    Void = 5u8,
+    Int,
+    Float,
+    Str,
+    Bool,
+    Dynamic,
+    Void,
 }
 #[derive(Debug, Clone, PartialEq)]
-// open file as current -> tokenize
+
 pub enum Token {
     Operator(String),
     // convert these into literal

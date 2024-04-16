@@ -40,8 +40,8 @@ pub fn type_to_c(ty: ConstType) -> String {
         ConstType::Float => "float".to_string(),
         ConstType::Dynamic => "void*".to_string(),
         ConstType::Str => "Str".to_string(),
+        ConstType::Bool => "_Bool".to_string(),
         ConstType::Void => "void".to_string(),
-        _ => todo!("convert type into c {:?}", ty),
     }
 }
 
@@ -69,10 +69,7 @@ impl Item {
     pub fn get_ty(&self) -> ConstType {
         match self {
             &Self::Expr(ty, _) => ty.clone(),
-            &Self::Const(Literal::Str(_)) => ConstType::Str,
-            &Self::Const(Literal::Float(_)) => ConstType::Float,
-            &Self::Const(Literal::Int(_)) => ConstType::Int,
-            _ => todo!("add get_ty for Const item: {:?}", self),
+            Self::Const(literal) => (&literal).get_ty(),
         }
     }
 }
@@ -137,7 +134,7 @@ impl Codegen {
                 Literal::Int(i) => i.to_string(),
                 Literal::Float(f) => f.to_string(),
                 Literal::Str(s) => format!("__strnew__(\"{}\")", s),
-                _ => todo!("conv a const item into string {:?}", con),
+                Literal::Bool(b) => (b as u8).to_string(),
             },
             Item::Expr(_, expr) => expr,
         }

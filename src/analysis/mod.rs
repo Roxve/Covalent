@@ -68,7 +68,7 @@ pub fn supports_op(ty: &ConstType, op: &String) -> bool {
             "+" => true,
             _ => false,
         },
-        &ConstType::Void => false,
+        &ConstType::Void | &ConstType::Bool => false,
     }
 }
 

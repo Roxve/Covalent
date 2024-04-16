@@ -108,12 +108,7 @@ impl Analyzer {
     pub fn analyz(&mut self, expr: Expr) -> Result<TypedExpr, ErrKind> {
         match expr {
             Expr::Literal(literal) => {
-                let ty = match literal {
-                    Literal::Int(_) => ConstType::Int,
-                    Literal::Float(_) => ConstType::Float,
-                    Literal::Str(_) => ConstType::Str,
-                    _ => todo!("Add literal {:?}", literal),
-                };
+                let ty = literal.get_ty();
                 Ok(TypedExpr {
                     expr: AnalyzedExpr::Literal(literal),
                     ty,
