@@ -1,8 +1,6 @@
 # test project 
 # TODO: added assert instead of writeln
 
-writeln: "Hello, world!"
-
 set x: a { 
 	ret a 
 } 
@@ -20,6 +18,7 @@ set do_stuff: temp {
 
 	writeln: a * 5 == 25
 	writeln: "Hi" == "Hi"
+	writeln: "Hello, " + "world!"
 	writeln: temp
 }
 do_stuff: "None"

@@ -8,6 +8,48 @@
 #define STR_TYPE 2
 #define BOOL_TYPE 3
 
+#define DEFOP_N(name, op) \
+    switch(a_ty) { \
+    case INT_TYPE: \
+    return __int__(((Int *)a)->val op ((Int *)b)->val); \
+    case FLOAT_TYPE: \
+    return __float__(((Float *)a)->val op ((Float *)b)->val); \
+    default: \
+      return __NaN__(); \
+    }
+#define DEFOP_BOOL(name, op) \
+    switch(a_ty) { \
+    case INT_TYPE: \
+    return __bool__(((Int *)a)->val op ((Int *)b)->val); \
+    case FLOAT_TYPE: \
+    return __bool__(((Float *)a)->val op ((Float *)b)->val); \
+    case BOOL_TYPE: \
+    return __bool__(((Bool *)a)->val op ((Bool *)b)->val); \
+    case STR_TYPE: \
+    return __str##name##__((Str *)a, (Str *)b); \
+    default: \
+      return __NaN__(); \
+    }
+#define DEFOP_STR(name, op) \
+    switch(a_ty) { \
+    case INT_TYPE: \
+    return __int__(((Int *)a)->val op ((Int *)b)->val); \
+    case FLOAT_TYPE: \
+    return __float__(((Float *)a)->val op ((Float *)b)->val); \
+    case STR_TYPE: \
+    return __str##name##__((Str *)a, (Str *)b); \
+    default: \
+      return __NaN__(); \
+    }
+
+#define DEF(type, name, op) \
+  void * __##name##__(void *a, void *b) { \
+   __conv__(&a, &b); \
+  char a_ty = ((Obj *)a)->ty; \
+  DEFOP_##type(name, op);\
+  }
+  
+
 void *__NaN__() {
   NaN *nan = (NaN *)malloc(sizeof(NaN));
   nan->ty = -1;
@@ -103,99 +145,40 @@ void *__float__(float f) {
   obj->val = f;
   return obj;
 }
+DEF(STR, add, +);
 
-void *__add__(void *a, void *b) {
-  __conv__(&a, &b);
-  char a_ty = ((Obj *)a)->ty;
-  switch (a_ty) {
-  case INT_TYPE:
-    return __int__(((Int *)a)->val + ((Int *)b)->val);
-  case FLOAT_TYPE:
-    return __float__(((Float *)a)->val + ((Float *)b)->val);
-  case STR_TYPE:
-    return __stradd__((Str *)a, (Str *)b);
-  default:
-    return __NaN__();
-  }
+DEF(N, sub, -);
+
+DEF(N, mul, *);
+
+DEF(N, div, /);
+
+DEF(BOOL, eq, ==);
+
+DEF(BOOL, comp, >);
+
+DEF(BOOL, ecomp, >=);
+
+Bool *__streq__(Str *a, Str *b) {
+  char *str_a = a->val;
+  char *str_b = b->val;
+  return __bool__(str_a == str_b);
 }
 
-void *__sub__(void *a, void *b) {
-  __conv__(&a, &b);
-  char a_ty = ((Obj *)a)->ty;
-  switch (a_ty) {
-  case INT_TYPE:
-    return __int__(((Int *)a)->val - ((Int *)b)->val);
-  case FLOAT_TYPE:
-    return __float__(((Float *)a)->val - ((Float *)b)->val);
-  default:
-    return __NaN__();
-  }
+Bool *__strcomp__(Str *a, Str *b) {
+  int len_a = a->len;
+  int len_b = b->len;
+  return __bool__(len_a > len_b);
 }
 
-void *__mul__(void *a, void *b) {
-  __conv__(&a, &b);
-  char a_ty = ((Obj *)a)->ty;
-  switch (a_ty) {
-  case INT_TYPE:
-    return __int__(((Int *)a)->val * ((Int *)b)->val);
-  case FLOAT_TYPE:
-    return __float__(((Float *)a)->val * ((Float *)b)->val);
-  default:
-    return __NaN__();
-  }
+Bool *__strecomp__(Str *a, Str *b) {
+  int len_a = a->len;
+  int len_b = b->len;
+  char *str_a = a->val;
+  char *str_b = b->val;
+  return __bool__(len_a > len_b || str_a == str_b);
 }
 
-void *__div__(void *a, void *b) {
-  __conv__(&a, &b);
-  char a_ty = ((Obj *)a)->ty;
-  switch (a_ty) {
-  case INT_TYPE:
-    return __int__(((Int *)a)->val / ((Int *)b)->val);
-  case FLOAT_TYPE:
-    return __float__(((Float *)a)->val / ((Float *)b)->val);
-  default:
-    return __NaN__();
-  }
-}
-
-void *__eq__(void *a, void *b) {
-  __conv__(&a, &b);
-  char a_ty = ((Obj *)a)->ty;
-  switch (a_ty) {
-  case INT_TYPE:
-    return __bool__(((Int *)a)->val == ((Int *)b)->val);
-  case FLOAT_TYPE:
-    return __bool__(((Float *)a)->val == ((Float *)b)->val);
-  default:
-    return __NaN__();
-  }
-}
-
-void *__comp__(void *a, void *b) {
-  __conv__(&a, &b);
-  char a_ty = ((Obj *)a)->ty;
-  switch (a_ty) {
-  case INT_TYPE:
-    return __bool__(((Int *)a)->val > ((Int *)b)->val);
-  case FLOAT_TYPE:
-    return __bool__(((Float *)a)->val > ((Float *)b)->val);
-  default:
-    return __NaN__();
-  }
-}
-
-void *__ecomp__(void *a, void *b) {
-  __conv__(&a, &b);
-  char a_ty = ((Obj *)a)->ty;
-  switch (a_ty) {
-  case INT_TYPE:
-    return __bool__(((Int *)a)->val >= ((Int *)b)->val);
-  case FLOAT_TYPE:
-    return __bool__(((Float *)a)->val >= ((Float *)b)->val);
-  default:
-    return __NaN__();
-  }
-}
 Str *__stradd__(Str *a, Str *b) {
   int len = a->len + b->len;
   char *str = (char *)malloc(len);

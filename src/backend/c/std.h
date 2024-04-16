@@ -44,4 +44,8 @@ void *__comp__(void *a, void *b);
 void *__ecomp__(void *a, void *b);
 void *__eq__(void *a, void *b);
 
+Bool *__strcomp__(Str *a, Str *b);
+Bool *__strecomp__(Str *a, Str *b);
+Bool *__streq__(Str *a, Str *b);
+
 Str *__stradd__(Str *a, Str *b);
