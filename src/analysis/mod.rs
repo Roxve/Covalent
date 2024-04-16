@@ -66,6 +66,7 @@ pub fn supports_op(ty: &ConstType, op: &String) -> bool {
         &ConstType::Int | &ConstType::Float | &ConstType::Dynamic => true,
         &ConstType::Str => match op.as_str() {
             "+" => true,
+            "==" | ">" | "<" | ">=" | "<=" => true,
             _ => false,
         },
         &ConstType::Void | &ConstType::Bool => false,

@@ -100,9 +100,8 @@ impl Codegen {
         None
     }
     #[inline]
-    pub fn binary(&mut self, op: &str) -> Item {
-        let ty = self.borrow().get_ty();
-        if &ty == &ConstType::Str {
+    pub fn genbinary(&mut self, op: &str, ty: ConstType) -> Item {
+        if &self.borrow().get_ty() == &ConstType::Str {
             Item::Expr(
                 ty,
                 format!("__stradd__({}, {})", self.pop_str(), self.pop_str()),
@@ -110,6 +109,16 @@ impl Codegen {
         } else {
             Item::Expr(ty, format!("{} {} {}", self.pop_str(), op, self.pop_str()))
         }
+    }
+    #[inline]
+    pub fn binary(&mut self, op: &str) -> Item {
+        let ty = self.borrow().get_ty();
+        self.genbinary(op, ty)
+    }
+
+    #[inline]
+    pub fn binaryb(&mut self, op: &str) -> Item {
+        self.genbinary(op, ConstType::Bool)
     }
 
     pub fn bond_binary(&mut self, op: IROp) -> Option<String> {
@@ -131,6 +140,9 @@ impl Codegen {
                 IROp::Sub(_) => self.binary("-"),
                 IROp::Mul(_) => self.binary("*"),
                 IROp::Div(_) => self.binary("/"),
+                IROp::Comp(_) => self.binaryb(">"),
+                IROp::Eq(_) => self.binaryb("=="),
+                IROp::EComp(_) => self.binaryb(">="),
                 _ => todo!("unimplented op {:#?}", op),
             }
         };

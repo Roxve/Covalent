@@ -30,7 +30,7 @@ void writeln(void *arg);
 void *__int__(int i);
 void *__float__(float f);
 void *__str__(Str *s);
-void *__bool_(_Bool b);
+void *__bool__(_Bool b);
 
 Str *__strnew__(char *val);
 

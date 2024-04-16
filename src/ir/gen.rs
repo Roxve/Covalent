@@ -115,7 +115,6 @@ impl IRGen for Codegen {
                 }
                 Ok(compiled)
             }
-            _ => todo!("ast: {:?}", expr),
         }
     }
 
@@ -164,12 +163,17 @@ impl IRGen for Codegen {
         let ty = left.ty;
         res.append(&mut rhs);
         res.append(&mut lhs);
-
+        if op.as_str() == "<" || op.as_str() == "<=" {
+            res.reverse();
+        }
         res.append(&mut vec![match op.as_str() {
             "+" => IROp::Add(ty),
             "-" => IROp::Sub(ty),
             "*" => IROp::Mul(ty),
             "/" => IROp::Div(ty),
+            ">" | "<" => IROp::Comp(ConstType::Bool),
+            ">=" | "<=" => IROp::EComp(ConstType::Bool),
+            "==" => IROp::Eq(ConstType::Bool),
             o => todo!("add op {}", o),
         }]);
         Ok(res)

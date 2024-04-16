@@ -54,6 +54,14 @@ void writeln(void *arg) {
     printf("%.*s\n", s->len, s->val);
     break;
   }
+  case BOOL_TYPE: {
+      Bool *b = (Bool *)arg;
+      if (b->val == 0) {
+        printf("false\n");
+      } else {
+        printf("true\n");
+      }
+    }
   }
 }
 
