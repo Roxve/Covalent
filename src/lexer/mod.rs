@@ -39,12 +39,18 @@ impl Tokenize for Parser {
         }
 
         match self.at() {
+            '#' => {
+                while self.not_eof() && self.at() != '\n' {
+                    self.eat();
+                }
+                self.tokenize()
+            }
             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
                 let mut res = String::from("");
                 while self.not_eof() && is_num(self.at()) {
                     res.push(self.eat())
                 }
-                return self.parse_num(res);
+                self.parse_num(res)
             }
 
             '"' | '\'' => {
@@ -72,7 +78,7 @@ impl Tokenize for Parser {
                     );
                 }
 
-                return self.set(Token::Str(res));
+                self.set(Token::Str(res))
             }
             '=' => {
                 self.eat();
@@ -81,41 +87,51 @@ impl Tokenize for Parser {
                     return self.set(Token::Operator("==".to_string()));
                 }
 
-                return self.set(Token::Operator("=".to_string()));
+                self.set(Token::Operator("=".to_string()))
             }
-            '+' | '-' | '*' | '/' | '^' | '<' | '>' | '&' | '|' => {
+            '+' | '-' | '*' | '/' | '^' | '&' | '|' => {
                 let op = self.eat();
-                return self.set(Token::Operator(op.to_string()));
+                self.set(Token::Operator(op.to_string()))
             }
 
+            '<' | '>' => {
+                let op = self.eat();
+
+                if self.not_eof() && self.at() == '=' {
+                    let mut op = op.to_string();
+                    op.push(self.eat());
+                    return self.set(Token::Operator(op));
+                }
+                self.set(Token::Operator(op.to_string()))
+            }
             '(' => {
                 self.eat();
-                return self.set(Token::LeftParen);
+                self.set(Token::LeftParen)
             }
 
             ')' => {
                 self.eat();
-                return self.set(Token::RightParen);
+                self.set(Token::RightParen)
             }
 
             '{' => {
                 self.eat();
-                return self.set(Token::LeftBracket);
+                self.set(Token::LeftBracket)
             }
 
             '}' => {
                 self.eat();
-                return self.set(Token::RightBracket);
+                self.set(Token::RightBracket)
             }
 
             ':' => {
                 self.eat();
-                return self.set(Token::Colon);
+                self.set(Token::Colon)
             }
 
             ',' => {
                 self.eat();
-                return self.set(Token::Comma);
+                self.set(Token::Comma)
             }
 
             c => {
@@ -144,10 +160,10 @@ impl Tokenize for Parser {
                     self.err(ErrKind::UnknownCharE, format!("unknown char '{}'", c));
 
                     // to remove?
-                    return self.set(Token::Err(format!(
+                    self.set(Token::Err(format!(
                         "AT0001::UNKNOWN_CHAR::{}::{}",
                         self.line, self.column
-                    )));
+                    )))
                 }
             }
         }

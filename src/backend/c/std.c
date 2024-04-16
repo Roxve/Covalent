@@ -26,7 +26,7 @@ void __conv__(void **a, void **b) {
     free(*b);
     *b = __float__((float)val);
   } else if (a_ty == INT_TYPE && b_ty == FLOAT_TYPE) {
-    int val = (((Int *)a)->val);
+    int val = (((Int *)*a)->val);
 
     free(*a);
     *a = __float__((float)val);

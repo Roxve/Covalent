@@ -73,24 +73,20 @@ pub fn supports_op(ty: &ConstType, op: &String) -> bool {
     }
 }
 
-fn get_ret_ty(expr: &TypedExpr, _prev: ConstType) -> ConstType {
-    let mut ty = ConstType::Void;
-
-    if let AnalyzedExpr::RetExpr(_) = expr.expr {
-        if ty == ConstType::Void {
-            ty = expr.ty;
-        } else if ty != expr.ty {
-            ty = ConstType::Dynamic;
+fn get_ret_ty(expr: &TypedExpr, prev: ConstType) -> ConstType {
+    match expr.expr {
+        AnalyzedExpr::RetExpr(_) => {
+            if prev == ConstType::Void {
+                expr.ty
+            } else if prev != expr.ty {
+                ConstType::Dynamic
+            } else {
+                prev
+            }
         }
-    } else {
-        match expr.expr {
-            // anything else should be invaild ast
-            // get fn ty => Block , ifBody
-            _ => todo!(),
-        }
+        // get fn ty => Block , ifBody
+        _ => prev,
     }
-
-    ty
 }
 
 pub fn get_fn_type(body: &Vec<TypedExpr>) -> ConstType {

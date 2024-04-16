@@ -151,6 +151,14 @@ impl Enviroment {
                 return Some(fun);
             }
         }
+        if self.parent.is_some() {
+            for fun in self.parent().unwrap().functions.clone().into_iter() {
+                if &fun.name == name {
+                    return Some(fun);
+                }
+            }
+        }
+
         return None;
     }
 }
