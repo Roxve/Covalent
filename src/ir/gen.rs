@@ -21,7 +21,13 @@ pub trait IRGen {
 
     fn gen_var_declare(&mut self, name: String, expr: TypedExpr) -> IRRes;
     fn gen_var_assign(&mut self, name: String, expr: TypedExpr) -> IRRes;
-    fn gen_binary_expr(&mut self, op: String, left: TypedExpr, right: TypedExpr) -> IRRes;
+    fn gen_binary_expr(
+        &mut self,
+        ty: ConstType,
+        op: String,
+        left: TypedExpr,
+        right: TypedExpr,
+    ) -> IRRes;
 }
 
 impl IRGen for Codegen {
@@ -71,7 +77,9 @@ impl IRGen for Codegen {
 
             AnalyzedExpr::Literal(lit) => Ok(vec![IROp::Const(expr.ty, lit)]),
 
-            AnalyzedExpr::BinaryExpr { op, left, right } => self.gen_binary_expr(op, *left, *right),
+            AnalyzedExpr::BinaryExpr { op, left, right } => {
+                self.gen_binary_expr(expr.ty, op, *left, *right)
+            }
             AnalyzedExpr::VarDeclare { name, val } => self.gen_var_declare(name, *val),
             AnalyzedExpr::VarAssign { name, val } => self.gen_var_assign(name, *val),
             AnalyzedExpr::Id(name, rc) => {
@@ -156,11 +164,16 @@ impl IRGen for Codegen {
         Ok(res)
     }
 
-    fn gen_binary_expr(&mut self, op: String, left: TypedExpr, right: TypedExpr) -> IRRes {
+    fn gen_binary_expr(
+        &mut self,
+        ty: ConstType,
+        op: String,
+        left: TypedExpr,
+        right: TypedExpr,
+    ) -> IRRes {
         let mut res: IR = vec![];
         let mut lhs = self.gen_expr(left.clone())?;
         let mut rhs = self.gen_expr(right)?;
-        let ty = left.ty;
         res.append(&mut rhs);
         res.append(&mut lhs);
         if op.as_str() == "<" || op.as_str() == "<=" {
@@ -171,9 +184,9 @@ impl IRGen for Codegen {
             "-" => IROp::Sub(ty),
             "*" => IROp::Mul(ty),
             "/" => IROp::Div(ty),
-            ">" | "<" => IROp::Comp(ConstType::Bool),
-            ">=" | "<=" => IROp::EComp(ConstType::Bool),
-            "==" => IROp::Eq(ConstType::Bool),
+            ">" | "<" => IROp::Comp(ty),
+            ">=" | "<=" => IROp::EComp(ty),
+            "==" => IROp::Eq(ty),
             o => todo!("add op {}", o),
         }]);
         Ok(res)

@@ -158,6 +158,44 @@ void *__div__(void *a, void *b) {
   }
 }
 
+void *__eq__(void *a, void *b) {
+  __conv__(&a, &b);
+  char a_ty = ((Obj *)a)->ty;
+  switch (a_ty) {
+  case INT_TYPE:
+    return __bool__(((Int *)a)->val == ((Int *)b)->val);
+  case FLOAT_TYPE:
+    return __bool__(((Float *)a)->val == ((Float *)b)->val);
+  default:
+    return __NaN__();
+  }
+}
+
+void *__comp__(void *a, void *b) {
+  __conv__(&a, &b);
+  char a_ty = ((Obj *)a)->ty;
+  switch (a_ty) {
+  case INT_TYPE:
+    return __bool__(((Int *)a)->val > ((Int *)b)->val);
+  case FLOAT_TYPE:
+    return __bool__(((Float *)a)->val > ((Float *)b)->val);
+  default:
+    return __NaN__();
+  }
+}
+
+void *__ecomp__(void *a, void *b) {
+  __conv__(&a, &b);
+  char a_ty = ((Obj *)a)->ty;
+  switch (a_ty) {
+  case INT_TYPE:
+    return __bool__(((Int *)a)->val >= ((Int *)b)->val);
+  case FLOAT_TYPE:
+    return __bool__(((Float *)a)->val >= ((Float *)b)->val);
+  default:
+    return __NaN__();
+  }
+}
 Str *__stradd__(Str *a, Str *b) {
   int len = a->len + b->len;
   char *str = (char *)malloc(len);

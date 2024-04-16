@@ -131,6 +131,9 @@ impl Codegen {
                     IROp::Sub(_) => self.call("__sub__", ops),
                     IROp::Mul(_) => self.call("__mul__", ops),
                     IROp::Div(_) => self.call("__div__", ops),
+                    IROp::Comp(_) => self.call("__comp__", ops),
+                    IROp::EComp(_) => self.call("__ecomp__", ops),
+                    IROp::Eq(_) => self.call("__eq__", ops),
                     _ => todo!(),
                 },
             )

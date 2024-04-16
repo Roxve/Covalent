@@ -1,5 +1,10 @@
 set x: a { 
 	ret a 
 } 
+set a = x: 5.0
+writeln: a * 5
 
-writeln: (x: 5.0) * 5
+writeln: 6 > 5
+writeln: 5 < 6
+writeln: 25 == 25.0
+writeln: a * 5 == 25.0

@@ -54,6 +54,36 @@ impl Analyzer {
             ty,
         })
     }
+
+    pub fn analyz_func(&mut self, func: Function) -> Result<TypedExpr, ErrKind> {
+        self.env = self.env.child();
+
+        let args = func.args;
+
+        for arg in &args {
+            self.env
+                .add(&arg.val, arg.tag.clone().unwrap_or(ConstType::Dynamic), 0);
+        }
+        let mut body = vec![];
+        for expr in func.body {
+            body.push(self.analyz(expr)?);
+        }
+
+        let ty = get_fn_type(&body);
+        self.env = self.env.parent().unwrap();
+
+        self.env.push_function(func.name.clone(), args.clone(), ty);
+
+        let expr = AnalyzedExpr::Func {
+            ret: ty,
+            name: func.name.val,
+            args,
+            body,
+        };
+
+        Ok(TypedExpr { expr, ty })
+    }
+
     pub fn analyz_prog(
         exprs: Vec<Expr>,
         functions: Vec<Function>,
@@ -70,32 +100,7 @@ impl Analyzer {
         );
 
         for func in functions {
-            let args = func.args;
-
-            for arg in &args {
-                analyzer
-                    .env
-                    .add(&arg.val, arg.tag.clone().unwrap_or(ConstType::Dynamic), 0);
-            }
-            let mut body = vec![];
-            for expr in func.body {
-                body.push(analyzer.analyz(expr)?);
-            }
-
-            let ty = get_fn_type(&body);
-
-            analyzer
-                .env
-                .push_function(func.name.clone(), args.clone(), ty);
-
-            let expr = AnalyzedExpr::Func {
-                ret: ty,
-                name: func.name.val,
-                args,
-                body,
-            };
-
-            analyzed_prog.push(TypedExpr { expr, ty });
+            analyzed_prog.push(analyzer.analyz_func(func)?);
         }
 
         for expr in exprs {
@@ -203,7 +208,13 @@ impl Analyzer {
             }
         }
         let ty = match op.as_str() {
-            "==" | ">" | "<" | ">=" | "<=" => ConstType::Bool,
+            "==" | ">" | "<" | ">=" | "<=" => {
+                if lhs.ty.clone() == ConstType::Dynamic {
+                    ConstType::Dynamic
+                } else {
+                    ConstType::Bool
+                }
+            }
             _ => lhs.ty.clone(),
         };
 
