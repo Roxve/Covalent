@@ -1,4 +1,5 @@
 #include "stdbool.h"
+#include <gc.h>
 typedef struct {
   char ty;
 } Obj;
@@ -49,3 +50,4 @@ Bool *__strecomp__(Str *a, Str *b);
 Bool *__streq__(Str *a, Str *b);
 
 Str *__stradd__(Str *a, Str *b);
+void __init__();
