@@ -1,4 +1,4 @@
-# Covalent 
+# Covalent
 (WIP Language)
 ```
 covalent path/to/file # builds results in ./
@@ -12,4 +12,12 @@ covalent
 
 **you need gcc installed in path to compile**
 
-**you only need the covalent exe and ./libs (they should be locatened in same folder), libs should conntain libstd.a its automaticly built using cargo, required files to build std(runtime) is in src/backend/c/**
+**you only need the covalent exe and libs folder (they should be locatened in >
+
+you need to get bdwgc header files on arch the package is gc on ubuntu its lib>you also need gc.o compile it from [bdwgc](https://github.com/ivmai/bdwgc) and>
+to compile gc.o use this command (will generate broken gc in some systems open>
+```
+gcc -I include -c extra/gc.c
+```
+TODO:
+- automatic gc.o build script
