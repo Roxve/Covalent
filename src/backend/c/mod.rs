@@ -18,17 +18,18 @@ pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
         .spawn()
         .unwrap()
         .wait();
-    let outpath = format!("/tmp/covalent/'{}'.c", &config.output);
+    let outpath = format!("/tmp/covalent/`{}`.c", &config.output);
 
     fs::write(&outpath, code).expect(
         format!("err writing to /tmp/covalent make sure covalent can access that path!").as_str(),
     );
+    dbg!(&config.libdir);
     let _ = Command::new("gcc")
         .arg(format!("-I{}", &config.libdir))
-        .arg(format!("-o{}", &config.output))
+        .arg(format!("-o {}", &config.output))
         .arg(outpath)
-        .arg(format!("-L{}", &config.libdir))
-        .arg("-lstd")
+        .arg(format!("{}/runtime.o", &config.libdir))
+        .arg(format!("{}/gc.o", &config.libdir))
         .spawn()
         .unwrap()
         .wait();
