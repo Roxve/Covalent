@@ -1,10 +1,11 @@
 #include "std.h"
 #include "stdio.h"
-#include <gc/gc.h>
 #include <stdlib.h>
 #include <string.h>
-#include <gc.h>
 
+
+void* GC_malloc(unsigned int);
+void GC_init();
 #define INT_TYPE 0
 #define FLOAT_TYPE 1
 #define STR_TYPE 2
@@ -20,35 +21,36 @@
     default: \
       return __NaN__(); \
     }
-#define DEFOP_BOOL(name, op) \
-    switch(a_ty) { \
-    case INT_TYPE: \                                                                                                                                                                                      return __bool__(((Int *)a)->val op ((Int *)b)->val); \
-    case FLOAT_TYPE: \
+#define DEFOP_BOOL(name, op)                                 \
+    switch(a_ty) {                                           \
+    case INT_TYPE:                                           \
+    return __bool__(((Int *)a)->val op ((Int *)b)->val);     \
+    case FLOAT_TYPE:                                         \
     return __bool__(((Float *)a)->val op ((Float *)b)->val); \
     case BOOL_TYPE: \
-    return __bool__(((Bool *)a)->val op ((Bool *)b)->val); \
-    case STR_TYPE: \
-    return __str##name##__((Str *)a, (Str *)b); \
+    return __bool__(((Bool *)a)->val op ((Bool *)b)->val);   \
+    case STR_TYPE:                                           \
+    return __str##name##__((Str *)a, (Str *)b);              \
     default: \
       return __NaN__(); \
     }
-#define DEFOP_STR(name, op) \
-    switch(a_ty) { \
+#define DEFOP_STR(name, op)                                   \
+    switch(a_ty) {                                            \
     case INT_TYPE: \
-    return __int__(((Int *)a)->val op ((Int *)b)->val); \
+    return __int__(((Int *)a)->val op ((Int *)b)->val);       \
     case FLOAT_TYPE: \
     return __float__(((Float *)a)->val op ((Float *)b)->val); \
     case STR_TYPE: \
-    return __str##name##__((Str *)a, (Str *)b); \
+    return __str##name##__((Str *)a, (Str *)b);               \
     default: \
-      return __NaN__(); \
+      return __NaN__();                                       \
     }
 
-#define DEF(type, name, op) \
+#define DEF(type, name, op)               \
   void * __##name##__(void *a, void *b) { \
-   __conv__(&a, &b); \
-  char a_ty = ((Obj *)a)->ty; \
-  DEFOP_##type(name, op);\
+   __conv__(&a, &b);                      \
+  char a_ty = ((Obj *)a)->ty;             \
+  DEFOP_##type(name, op);                 \
   }
 
 

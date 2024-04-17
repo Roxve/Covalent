@@ -1,5 +1,5 @@
 #include "stdbool.h"
-#include <gc.h>
+
 typedef struct {
   char ty;
 } Obj;

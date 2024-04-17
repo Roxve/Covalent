@@ -21,3 +21,4 @@ fn main() {
         .expect("gcc not installed")
         .wait();
 }
+
