@@ -1,12 +1,15 @@
 #include "std.h"
 #include "stdio.h"
+#include <gc/gc.h>
 #include <stdlib.h>
 #include <string.h>
+#include <gc.h>
 
 #define INT_TYPE 0
 #define FLOAT_TYPE 1
 #define STR_TYPE 2
 #define BOOL_TYPE 3
+
 
 #define DEFOP_N(name, op) \
     switch(a_ty) { \
@@ -19,8 +22,7 @@
     }
 #define DEFOP_BOOL(name, op) \
     switch(a_ty) { \
-    case INT_TYPE: \
-    return __bool__(((Int *)a)->val op ((Int *)b)->val); \
+    case INT_TYPE: \                                                                                                                                                                                      return __bool__(((Int *)a)->val op ((Int *)b)->val); \
     case FLOAT_TYPE: \
     return __bool__(((Float *)a)->val op ((Float *)b)->val); \
     case BOOL_TYPE: \
@@ -48,10 +50,10 @@
   char a_ty = ((Obj *)a)->ty; \
   DEFOP_##type(name, op);\
   }
-  
+
 
 void *__NaN__() {
-  NaN *nan = (NaN *)malloc(sizeof(NaN));
+  NaN *nan = (NaN *)GC_malloc(sizeof(NaN));
   nan->ty = -1;
   return nan;
 }
@@ -65,17 +67,15 @@ void __conv__(void **a, void **b) {
   if (a_ty == FLOAT_TYPE && b_ty == INT_TYPE) {
     int val = (((Int *)*b)->val);
 
-    free(*b);
     *b = __float__((float)val);
   } else if (a_ty == INT_TYPE && b_ty == FLOAT_TYPE) {
     int val = (((Int *)*a)->val);
 
-    free(*a);
     *a = __float__((float)val);
   } else {
     err("cannot conv balance a and b", 5);
   }
-}
+}  
 
 void writeln(void *arg) {
   char ty = ((Obj *)arg)->ty;
@@ -96,8 +96,7 @@ void writeln(void *arg) {
     printf("%.*s\n", s->len, s->val);
     break;
   }
-  case BOOL_TYPE: {
-      Bool *b = (Bool *)arg;
+  case BOOL_TYPE: {                                                                                                                                                                                         Bool *b = (Bool *)arg;
       if (b->val == 0) {
         printf("false\n");
       } else {
@@ -108,7 +107,7 @@ void writeln(void *arg) {
 }
 
 void *__int__(int i) {
-  Int *obj = (Int *)malloc(sizeof(Int));
+  Int *obj = (Int *)GC_malloc(sizeof(Int));
   obj->ty = INT_TYPE;
   obj->val = i;
   return obj;
@@ -120,7 +119,7 @@ void *__str__(Str *s) {
 }
 
 void *__bool__(_Bool b) {
-  Bool *obj = (Bool *)malloc(sizeof(Bool));
+  Bool *obj = (Bool *)GC_malloc(sizeof(Bool));
   obj->ty = BOOL_TYPE;
   obj->val = b;
   return obj;
@@ -128,10 +127,10 @@ void *__bool__(_Bool b) {
 
 Str *__strnew__(char *s) {
   int len = strlen(s);
-  char *str = (char *)malloc(len);
+  char *str = (char *)GC_malloc(len);
   memcpy(str, s, len);
 
-  Str *obj = (Str *)malloc(sizeof(Str));
+  Str *obj = (Str *)GC_malloc(sizeof(Str));
   obj->ty = STR_TYPE;
 
   obj->val = str;
@@ -140,7 +139,7 @@ Str *__strnew__(char *s) {
 }
 
 void *__float__(float f) {
-  Float *obj = (Float *)malloc(sizeof(Float));
+  Float *obj = (Float *)GC_malloc(sizeof(Float));
   obj->ty = FLOAT_TYPE;
   obj->val = f;
   return obj;
@@ -181,11 +180,11 @@ Bool *__strecomp__(Str *a, Str *b) {
 
 Str *__stradd__(Str *a, Str *b) {
   int len = a->len + b->len;
-  char *str = (char *)malloc(len);
+  char *str = (char *)GC_malloc(len);
   memcpy(str, a->val, a->len);
   memcpy(str + a->len, b->val, b->len);
 
-  Str *s = (Str *)malloc(sizeof(Str));
+  Str *s = (Str *)GC_malloc(sizeof(Str));
   s->ty = STR_TYPE;
   s->val = str;
   s->len = len;
@@ -195,4 +194,8 @@ Str *__stradd__(Str *a, Str *b) {
 void err(char *err, int code) {
   printf("covalent runtime error: %s", err);
   exit(code);
+}
+
+void __init__() {
+  GC_init();
 }
