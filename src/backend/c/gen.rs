@@ -8,9 +8,32 @@ use crate::ir::IROp;
 use crate::source::ConstType;
 
 impl Codegen {
-    pub fn codegen(&mut self, ir: Vec<IROp>) -> String {
-        let main = self.bond_fn("main".to_string(), Vec::new(), ConstType::Int, ir);
-        self.module.func(main);
+    pub fn codegen(&mut self, mut ir: Vec<IROp>) -> String {
+        // generate function and import section
+        for op in ir.clone() {
+            if let IROp::Import(_, module, _, _) = op {
+                self.module.include(module);
+                ir.remove(0);
+            } else if let IROp::Def(ret, name, args, body) = op {
+                self.bond_fn(
+                    name,
+                    args.into_iter()
+                        .map(|i| (i.tag.unwrap_or(ConstType::Dynamic), i.val))
+                        .collect(),
+                    ret,
+                    body,
+                );
+
+                ir.remove(0);
+
+                dbg!(&ir);
+            } else {
+                break;
+            }
+        }
+
+        self.bond_fn("main".to_string(), Vec::new(), ConstType::Int, ir);
+
         self.module.finish()
     }
     pub fn bond_fn(
@@ -19,26 +42,24 @@ impl Codegen {
         args: Vec<(ConstType, String)>,
         ret: ConstType,
         body: Vec<IROp>,
-    ) -> Vec<String> {
-        let mut lines = Vec::new();
+    ) {
         let ty = type_to_c(ret);
         let args = types_to_cnamed(args);
 
-        lines.push(format!("{} {}({}) {{", ty, name, args));
+        self.module
+            .emit_header(format!("{} {}({}) {{", ty, name, args));
         for op in body {
             let line = self.bond(op);
             if line.is_some() {
-                lines.push(line.unwrap() + ";");
+                self.module.emit(line.unwrap());
             }
         }
-
-        lines.push("}".to_string());
-        lines
+        self.module.end_fn();
     }
     pub fn bond(&mut self, op: IROp) -> Option<String> {
         match op {
             IROp::Def(ret, name, args, body) => {
-                let func = self.bond_fn(
+                self.bond_fn(
                     name,
                     args.into_iter()
                         .map(|i| (i.tag.unwrap_or(ConstType::Dynamic), i.val))
@@ -46,7 +67,6 @@ impl Codegen {
                     ret,
                     body,
                 );
-                self.module.func(func);
             }
 
             IROp::Alloc(_, _) => return None,
@@ -82,8 +102,6 @@ impl Codegen {
                 let name = self.get_var(name);
                 self.push(Item::Var(ty, name));
             }
-
-            IROp::Import(_, module, _, _) => self.module.include(module),
             IROp::Call(ty, name, count) => {
                 let arg_count = count;
                 let args = self.pop_amount(arg_count).join(", ");
@@ -98,12 +116,12 @@ impl Codegen {
 
             IROp::If(_, body, alt) => {
                 let cond = self.pop_str();
-                let mut line = String::from(format!("if ({}) {{", cond));
+                self.module.emit_header(format!("if ({}) {{", cond));
 
                 for expr in body {
                     let expr_line = self.bond(expr);
                     if expr_line.is_some() {
-                        line.push_str(format!("\n{};", expr_line.unwrap()).as_str());
+                        self.module.emit(expr_line.unwrap());
                     }
                 }
 
@@ -116,21 +134,18 @@ impl Codegen {
                         }
                     }
                     compiled_alt.remove(0);
-                    line.push_str("\n}");
-                    line.push_str("\nelse ");
+                    self.module.end();
+                    self.module.emit_header("else ");
                     if compiled_alt.starts_with("if") {
-                        line.push_str(compiled_alt.as_str());
+                        self.module.emit(compiled_alt);
                     } else {
-                        line.push_str("{\n");
-                        line.push_str(compiled_alt.as_str());
+                        self.module.emit("{\n");
+                        self.module.add_col();
+                        self.module.emit(compiled_alt);
                     }
                 }
-                if !line.ends_with("};") {
-                    line.push_str("\n}");
-                } else {
-                    line.pop();
-                }
-                return Some(line);
+
+                self.module.try_end();
             }
 
             IROp::Conv(into, from) => {

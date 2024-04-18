@@ -5,6 +5,7 @@ use crate::parser::ast::Literal;
 use crate::source::ConstType;
 use std::collections::HashMap;
 
+use std::fmt::Display;
 use std::fs;
 use std::process::Command;
 
@@ -89,6 +90,8 @@ impl Item {
 pub struct Module {
     includes: Vec<String>,
     functions: Vec<Vec<String>>,
+    current: Vec<String>,
+    col: u32,
 }
 
 impl Module {
@@ -96,6 +99,8 @@ impl Module {
         Self {
             includes: Vec::new(),
             functions: Vec::new(),
+            current: Vec::new(),
+            col: 0,
         }
     }
     pub fn include(&mut self, include: String) {
@@ -118,6 +123,60 @@ impl Module {
         let code = lines.join("\n");
 
         code
+    }
+    #[inline]
+    pub fn add_col(&mut self) {
+        self.col += 1
+    }
+
+    #[inline]
+    pub fn sub_col(&mut self) {
+        if self.col > 0 {
+            self.col -= 1
+        }
+    }
+    #[inline]
+    pub fn emit<T: Display>(&mut self, s: T) {
+        let mut tabs = String::new();
+        if self.col > 0 {
+            for _ in [0..self.col] {
+                tabs += "\t";
+            }
+        }
+        self.current.push(format!("\n{}{};", tabs, s))
+    }
+
+    #[inline]
+    pub fn end(&mut self) {
+        self.emit("}".to_string());
+        self.sub_col()
+    }
+
+    #[inline]
+    pub fn end_fn(&mut self) {
+        self.sub_col();
+        self.end();
+        self.func(self.current.clone());
+        self.current.clear();
+    }
+
+    #[inline]
+    pub fn try_end(&mut self) {
+        if !(&self.current).last().unwrap().ends_with("}") {
+            self.end()
+        }
+    }
+
+    #[inline]
+    pub fn emit_header<T: Display>(&mut self, s: T) {
+        let mut tabs = String::new();
+        if self.col > 0 {
+            for _ in [0..self.col] {
+                tabs += "\t";
+            }
+        }
+        self.current.push(format!("\n{}{}", tabs, s));
+        self.add_col()
     }
 }
 #[derive(Debug, Clone)]
