@@ -7,8 +7,12 @@ set x: a {
 
 # TODO argless functions using !
 set do_stuff: temp {
+	set z = 25
+	set y = z
+	
 	set a = x: 5.0
-	writeln: a * 5
+	set b = a
+	writeln: b * 5
 
 	writeln: 6 > 5
 	writeln: 5 < 6
@@ -19,7 +23,7 @@ set do_stuff: temp {
 	writeln: a * 5 == 25
 	writeln: "Hi" == "Hi"
 	a = x: "long"
-	set b = x: "short"
+	b = x: "short"
 	writeln: a > b # strings compare operations is only dynamic for now
 	writeln: "Hello, " + "world!"
 	writeln: temp

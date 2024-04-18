@@ -57,15 +57,27 @@ impl Codegen {
             IROp::Const(_, con) => self.push(Item::Const(con)),
 
             IROp::Store(ty, name) => {
-                let val = self.pop_str();
+                let b = self.borrow();
+                let b_ty = b.get_ty();
+
+                // clone dynamic and strings because they are pointers
+                let val = if !(b.is_var() && (b_ty == ConstType::Dynamic || b_ty == ConstType::Str))
+                {
+                    self.pop_str()
+                } else {
+                    let s = self.pop_str();
+                    self.call_one("__clone__", s)
+                };
                 let ty = type_to_c(ty);
+
+                // TODO figure out assiging vs declaring
                 let name = self.var(name);
 
                 return Some(format!("{} {} = {}", ty, name, val));
             }
             IROp::Load(ty, name) => {
                 let name = self.get_var(name);
-                self.push(Item::Expr(ty, name));
+                self.push(Item::Var(ty, name));
             }
 
             IROp::Import(_, module, _, _) => self.module.include(module),

@@ -63,14 +63,24 @@ pub fn types_to_cnamed(tys: Vec<(ConstType, String)>) -> String {
 #[derive(Debug, Clone)]
 pub enum Item {
     Const(Literal),
+    Var(ConstType, String),
     Expr(ConstType, String),
 }
 
 impl Item {
+    #[inline]
     pub fn get_ty(&self) -> ConstType {
         match self {
             &Self::Expr(ty, _) => ty.clone(),
+            &Self::Var(ty, _) => ty.clone(),
             Self::Const(literal) => (&literal).get_ty(),
+        }
+    }
+    #[inline]
+    pub fn is_var(&self) -> bool {
+        match self {
+            &Self::Var(_, _) => true,
+            _ => false,
         }
     }
 }
@@ -137,6 +147,7 @@ impl Codegen {
                 Literal::Str(s) => format!("__strnew__(\"{}\")", s),
                 Literal::Bool(b) => (b as u8).to_string(),
             },
+            Item::Var(_, name) => name,
             Item::Expr(_, expr) => expr,
         }
     }

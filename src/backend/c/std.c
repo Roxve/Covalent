@@ -198,6 +198,30 @@ void err(char *err, int code) {
   exit(code);
 }
 
+unsigned int type_size(char ty) {
+  switch (ty) {
+    case INT_TYPE:
+      return sizeof(Int);
+    case FLOAT_TYPE:
+      return sizeof(Float);
+    case STR_TYPE:
+      return sizeof(Str);
+    case BOOL_TYPE:
+      return sizeof(Bool);
+    default:
+      err("UNKNOWN TYPE", 3);
+      return sizeof(Obj);
+  }
+}
+
+void *__clone__(void *obj) {
+  char ty = ((Obj*) obj)->ty;
+  unsigned int size = type_size(ty);
+  void *cloned = GC_malloc(size);
+  memcpy(cloned, obj, size);
+  return cloned;
+}
+
 void __init__() {
   GC_init();
 }
