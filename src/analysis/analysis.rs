@@ -64,6 +64,10 @@ impl Analyzer {
             self.env
                 .add(&arg.val, arg.tag.clone().unwrap_or(ConstType::Dynamic), 0);
         }
+
+        // allow calling self
+        self.env
+            .push_function(func.name.clone(), args.clone(), ConstType::Dynamic);
         let mut body = vec![];
         for expr in func.body {
             body.push(self.analyz(expr)?);
@@ -179,7 +183,59 @@ impl Analyzer {
 
                 Ok(TypedExpr { expr, ty })
             }
-            _ => todo!("add typed expr {:?}", expr),
+
+            Expr::IfExpr {
+                condition,
+                body,
+                alt,
+            } => {
+                let cond = Box::new(self.analyz(*condition)?);
+                let mut analyzed_body = vec![];
+
+                self.env = self.env.child();
+                for expr in body {
+                    analyzed_body.push(self.analyz(expr)?);
+                }
+
+                self.env = self.env.parent().unwrap();
+                let analyzed_alt = if alt.is_none() {
+                    None
+                } else {
+                    Some(Box::new(self.analyz(*alt.unwrap())?))
+                };
+
+                let last = analyzed_body.last();
+
+                let ty = if last.is_none() {
+                    ConstType::Void
+                } else {
+                    last.unwrap().ty.clone()
+                };
+
+                let expr = AnalyzedExpr::If {
+                    cond,
+                    body: analyzed_body,
+                    alt: analyzed_alt,
+                };
+
+                Ok(TypedExpr { expr, ty })
+            }
+            Expr::Block(block) => {
+                let mut analyzed_block = vec![];
+
+                for expr in block {
+                    analyzed_block.push(self.analyz(expr)?);
+                }
+                let last = analyzed_block.last();
+                let ty = if last.is_none() {
+                    ConstType::Void
+                } else {
+                    last.unwrap().ty.clone()
+                };
+                let expr = AnalyzedExpr::Block(analyzed_block);
+
+                Ok(TypedExpr { expr, ty })
+            } // _ => todo!("add typed expr {:?}", expr),
         }
     }
 
@@ -208,13 +264,7 @@ impl Analyzer {
             }
         }
         let ty = match op.as_str() {
-            "==" | ">" | "<" | ">=" | "<=" => {
-                if lhs.ty.clone() == ConstType::Dynamic {
-                    ConstType::Dynamic
-                } else {
-                    ConstType::Bool
-                }
-            }
+            "==" | ">" | "<" | ">=" | "<=" => ConstType::Bool,
             _ => lhs.ty.clone(),
         };
 

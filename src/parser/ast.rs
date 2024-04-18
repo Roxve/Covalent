@@ -54,7 +54,7 @@ pub enum Expr {
     IfExpr {
         condition: Box<Expr>,
         body: Vec<Expr>,
-        alts: Vec<Expr>,
+        alt: Option<Box<Expr>>,
     },
     Discard(Box<Expr>),
     Block(Vec<Expr>),

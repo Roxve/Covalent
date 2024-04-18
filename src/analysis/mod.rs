@@ -49,6 +49,12 @@ pub enum AnalyzedExpr {
         args: Vec<Ident>,
         body: Vec<TypedExpr>,
     },
+    If {
+        cond: Box<TypedExpr>,
+        body: Vec<TypedExpr>,
+        alt: Option<Box<TypedExpr>>,
+    },
+    Block(Vec<TypedExpr>),
     Debug(String, u32, u32),
     Discard(Box<TypedExpr>),
     As(Box<TypedExpr>), // change an expr type if possible

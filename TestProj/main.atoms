@@ -1,31 +1,19 @@
 # test project 
 # TODO: added assert instead of writeln
+# TODO argless functions using!
 
-set x: a { 
-	ret a 
-} 
-
-# TODO argless functions using !
-set do_stuff: temp {
-	set z = 25
-	set y = z
-	
-	set a = x: 5.0
-	set b = a
-	writeln: b * 5
-
-	writeln: 6 > 5
-	writeln: 5 < 6
-	writeln: (x: 25) >= (x: 25.0) 
-
-	writeln: 7 <= 8
-
-	writeln: a * 5 == 25
-	writeln: "Hi" == "Hi"
-	a = x: "long"
-	b = x: "short"
-	writeln: a > b # strings compare operations is only dynamic for now
-	writeln: "Hello, " + "world!"
-	writeln: temp
+# i have a few bugs with my function gen this is required because the function doesnt know what should it return...
+set make_dynamic: a {
+	ret a
 }
-do_stuff: "None"
+
+set factorial: x {
+	if x == 1 {
+		ret make_dynamic: 1
+	}	
+	
+	ret x * (factorial: x - 1) # no problem cuz x is dynamic
+}
+
+writeln: (factorial: 5)
+writeln: (factorial: 9)

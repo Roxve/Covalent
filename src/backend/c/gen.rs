@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use super::type_to_c;
 
 use super::types_to_cnamed;
@@ -98,6 +96,43 @@ impl Codegen {
                 }
             }
 
+            IROp::If(_, body, alt) => {
+                let cond = self.pop_str();
+                let mut line = String::from(format!("if ({}) {{", cond));
+
+                for expr in body {
+                    let expr_line = self.bond(expr);
+                    if expr_line.is_some() {
+                        line.push_str(format!("\n{};", expr_line.unwrap()).as_str());
+                    }
+                }
+
+                if alt.len() > 0 {
+                    let mut compiled_alt = String::new();
+                    for expr in alt {
+                        let expr_line = self.bond(expr);
+                        if expr_line.is_some() {
+                            compiled_alt.push_str(format!("\n{};", expr_line.unwrap()).as_str());
+                        }
+                    }
+                    compiled_alt.remove(0);
+                    line.push_str("\n}");
+                    line.push_str("\nelse ");
+                    if compiled_alt.starts_with("if") {
+                        line.push_str(compiled_alt.as_str());
+                    } else {
+                        line.push_str("{\n");
+                        line.push_str(compiled_alt.as_str());
+                    }
+                }
+                if !line.ends_with("};") {
+                    line.push_str("\n}");
+                } else {
+                    line.pop();
+                }
+                return Some(line);
+            }
+
             IROp::Conv(into, from) => {
                 self.bond_conv(into, from);
             }
@@ -139,7 +174,9 @@ impl Codegen {
     }
 
     pub fn bond_binary(&mut self, op: IROp) -> Option<String> {
-        let item = if get_op_type(&op) == ConstType::Dynamic {
+        let item = if get_op_type(&op) == ConstType::Dynamic
+            || self.borrow().get_ty() == ConstType::Dynamic
+        {
             let ops = vec![self.pop_str(), self.pop_str()];
             Item::Expr(
                 ConstType::Dynamic,

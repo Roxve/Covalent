@@ -41,9 +41,9 @@ void *__sub__(void *a, void *b);
 void *__mul__(void *a, void *b);
 void *__div__(void *a, void *b);
 
-void *__comp__(void *a, void *b);
-void *__ecomp__(void *a, void *b);
-void *__eq__(void *a, void *b);
+_Bool __comp__(void *a, void *b);
+_Bool __ecomp__(void *a, void *b);
+_Bool __eq__(void *a, void *b);
 
 Bool *__strcomp__(Str *a, Str *b);
 Bool *__strecomp__(Str *a, Str *b);

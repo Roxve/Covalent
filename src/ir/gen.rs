@@ -123,6 +123,33 @@ impl IRGen for Codegen {
                 }
                 Ok(compiled)
             }
+
+            AnalyzedExpr::If { cond, body, alt } => {
+                let mut cond = self.gen_expr(*cond)?;
+
+                let mut compiled_body = vec![];
+                for expr in body {
+                    compiled_body.append(&mut self.gen_expr(expr)?);
+                }
+
+                let alt = if alt.is_none() {
+                    vec![]
+                } else {
+                    self.gen_expr(*alt.unwrap())?
+                };
+
+                let mut res = Vec::new();
+                res.append(&mut cond);
+                res.push(IROp::If(expr.ty, compiled_body, alt));
+                Ok(res)
+            }
+            AnalyzedExpr::Block(block) => {
+                let mut compiled_block = vec![];
+                for expr in block {
+                    compiled_block.append(&mut self.gen_expr(expr)?);
+                }
+                Ok(compiled_block)
+            }
         }
     }
 
@@ -184,9 +211,9 @@ impl IRGen for Codegen {
             "-" => IROp::Sub(ty),
             "*" => IROp::Mul(ty),
             "/" => IROp::Div(ty),
-            ">" | "<" => IROp::Comp(ty),
-            ">=" | "<=" => IROp::EComp(ty),
-            "==" => IROp::Eq(ty),
+            ">" | "<" => IROp::Comp(ConstType::Bool),
+            ">=" | "<=" => IROp::EComp(ConstType::Bool),
+            "==" => IROp::Eq(ConstType::Bool),
             o => todo!("add op {}", o),
         }]);
         Ok(res)

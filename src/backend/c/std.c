@@ -13,6 +13,9 @@ void GC_init();
 
 
 #define DEFOP_N(name, op) \
+    void * __##name##__(void *a, void *b) { \
+    __conv__(&a, &b);                      \
+    char a_ty = ((Obj *)a)->ty;             \
     switch(a_ty) { \
     case INT_TYPE: \
     return __int__(((Int *)a)->val op ((Int *)b)->val); \
@@ -22,19 +25,25 @@ void GC_init();
       return __NaN__(); \
     }
 #define DEFOP_BOOL(name, op)                                 \
+    _Bool __##name##__(void *a, void *b) { \
+    __conv__(&a, &b);                      \
+    char a_ty = ((Obj *)a)->ty;             \
     switch(a_ty) {                                           \
     case INT_TYPE:                                           \
-    return __bool__(((Int *)a)->val op ((Int *)b)->val);     \
+    return ((Int *)a)->val op ((Int *)b)->val;     \
     case FLOAT_TYPE:                                         \
-    return __bool__(((Float *)a)->val op ((Float *)b)->val); \
+    return ((Float *)a)->val op ((Float *)b)->val; \
     case BOOL_TYPE: \
-    return __bool__(((Bool *)a)->val op ((Bool *)b)->val);   \
+    return ((Bool *)a)->val op ((Bool *)b)->val;   \
     case STR_TYPE:                                           \
     return __str##name##__((Str *)a, (Str *)b);              \
     default: \
       return __NaN__(); \
     }
 #define DEFOP_STR(name, op)                                   \
+    void * __##name##__(void *a, void *b) { \
+    __conv__(&a, &b);                      \
+    char a_ty = ((Obj *)a)->ty;             \
     switch(a_ty) {                                            \
     case INT_TYPE: \
     return __int__(((Int *)a)->val op ((Int *)b)->val);       \
@@ -47,9 +56,6 @@ void GC_init();
     }
 
 #define DEF(type, name, op)               \
-  void * __##name##__(void *a, void *b) { \
-   __conv__(&a, &b);                      \
-  char a_ty = ((Obj *)a)->ty;             \
   DEFOP_##type(name, op);                 \
   }
 

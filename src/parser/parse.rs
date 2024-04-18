@@ -1,7 +1,7 @@
 use super::Scope;
 
-use super::Parser;
 use super::ast::*;
+use super::Parser;
 use crate::lexer::Tokenize;
 use crate::source::*;
 
@@ -237,20 +237,20 @@ impl Parse for Parser {
         let condition = self.parse_level(0);
         let body = self.parse_body();
 
-        let mut alts: Vec<Expr> = vec![];
-        while self.current() == Token::ElseKw {
+        let mut alt: Option<Box<Expr>> = None;
+        if self.current() == Token::ElseKw {
             self.tokenize();
             if self.current() == Token::IfKw {
-                alts.push(self.parse_if_expr());
+                alt = Some(Box::new(self.parse_if_expr()));
             } else {
-                alts.push(Expr::Block(self.parse_body()));
+                alt = Some(Box::new(Expr::Block(self.parse_body())));
             }
         }
 
         return Expr::IfExpr {
             condition: Box::new(condition),
             body,
-            alts,
+            alt,
         };
     }
 

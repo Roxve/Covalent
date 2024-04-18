@@ -23,6 +23,8 @@ pub enum IROp {
     Dealloc(ConstType, String), // when allocing a var with a new type we dealloc the old val
     Store(ConstType, String),
     Load(ConstType, String),
+    If(ConstType, Vec<IROp>, Vec<IROp>),
+    Block(ConstType, Vec<IROp>),
     Pop,
 }
 
@@ -49,6 +51,8 @@ pub fn get_op_type(op: &IROp) -> ConstType {
         Load(t, _) => t,
         Alloc(t, _) => t,
         Dealloc(t, _) => t,
+        If(t, _, _) => t,
+        Block(t, _) => t,
         Pop => &ConstType::Void,
     }
     .clone()
@@ -152,11 +156,7 @@ impl Enviroment {
             }
         }
         if self.parent.is_some() {
-            for fun in self.parent().unwrap().functions.clone().into_iter() {
-                if &fun.name == name {
-                    return Some(fun);
-                }
-            }
+            return self.parent.as_ref().unwrap().get_function(&name);
         }
 
         return None;
