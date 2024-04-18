@@ -123,8 +123,8 @@ impl Module {
 #[derive(Debug, Clone)]
 pub struct Codegen {
     stack: Vec<Item>,
-    variables: HashMap<String, i32>, // c doesnt allow redeclaration of vars with different types
-    pub module: Module,              // code we are generating
+    variables: HashMap<String, (i32, ConstType)>, // c doesnt allow redeclaration of vars with different types
+    pub module: Module,                           // code we are generating
 }
 
 impl Codegen {
@@ -171,26 +171,27 @@ impl Codegen {
 
     pub fn get_var(&mut self, name: String) -> String {
         let count = self.variables.get(&name);
-
         if count.is_none() {
-            self.variables.insert(name.clone(), 0);
-            name
-        } else if count.unwrap() == &0 {
+            return name;
+        }
+        let count = count.unwrap().0;
+
+        if count == 0 {
             name
         } else {
-            name + count.unwrap().to_string().as_str()
+            name + count.to_string().as_str()
         }
     }
 
-    pub fn var(&mut self, name: String) -> String {
+    pub fn var(&mut self, name: String, ty: ConstType) -> String {
         let count = self.variables.get(&name);
         if count.is_none() {
-            self.variables.insert(name.clone(), 0);
+            self.variables.insert(name.clone(), (0, ty));
             name
         } else {
-            let count = count.unwrap().to_owned() + 1;
+            let count = count.unwrap().0.to_owned() + 1;
             self.variables.remove(&name);
-            self.variables.insert(name.clone(), count);
+            self.variables.insert(name.clone(), (count, ty));
             self.get_var(name)
         }
     }

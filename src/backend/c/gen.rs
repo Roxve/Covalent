@@ -68,12 +68,17 @@ impl Codegen {
                     let s = self.pop_str();
                     self.call_one("__clone__", s)
                 };
-                let ty = type_to_c(ty);
+                let tyc = type_to_c(ty);
 
-                // TODO figure out assiging vs declaring
-                let name = self.var(name);
+                let var = self.variables.get(&name);
+                if var.is_none() || var.unwrap().1 != ty {
+                    let name = self.var(name, ty);
 
-                return Some(format!("{} {} = {}", ty, name, val));
+                    return Some(format!("{} {} = {}", tyc, name, val));
+                } else {
+                    let name = self.get_var(name);
+                    return Some(format!("{} = {}", name, val));
+                }
             }
             IROp::Load(ty, name) => {
                 let name = self.get_var(name);
