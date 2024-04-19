@@ -3,6 +3,8 @@ use crate::compiler::CompilerConfig;
 use crate::ir::IROp;
 use crate::parser::ast::Literal;
 use crate::source::ConstType;
+use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use std::fmt::Display;
@@ -85,13 +87,86 @@ impl Item {
         }
     }
 }
+#[derive(Debug)]
+pub enum Emit {
+    Body(Vec<String>),
+    Line(String),
+}
+
+pub struct Emiter {
+    body: Vec<String>,
+    pub col: RefCell<u32>,
+}
+
+impl Emiter {
+    pub fn new(col: RefCell<u32>) -> Self {
+        Self {
+            body: Vec::new(),
+            col,
+        }
+    }
+    #[inline]
+    pub fn sub_col(&mut self) {
+        if *self.col.borrow() > 0 {
+            *self.col.get_mut() -= 1
+        }
+    }
+
+    #[inline]
+    fn line<T: Display>(&mut self, s: T) {
+        let tabs = tabs(*self.col.borrow());
+        self.body.push(format!("{}{}", tabs, s))
+    }
+
+    pub fn lines(&mut self, lines: Vec<String>) {
+        for line in lines {
+            self.line(line)
+        }
+    }
+
+    pub fn emit<T: Display>(&mut self, s: T) {
+        self.line(format!("{};", s))
+    }
+
+    pub fn emit_header<T: Display>(&mut self, s: T) {
+        self.line(format!("{}", s));
+        *self.col.get_mut() += 1
+    }
+
+    pub fn embed(&mut self, emit: Emit) {
+        match emit {
+            Emit::Body(items) => self.lines(items),
+            Emit::Line(line) => self.emit(line),
+        }
+    }
+
+    #[inline]
+    pub fn end(&mut self) {
+        self.sub_col();
+        self.line("}")
+    }
+
+    pub fn finish(self) -> Vec<String> {
+        self.body
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Module {
     includes: Vec<String>,
     functions: Vec<Vec<String>>,
-    current: Vec<String>,
-    col: u32,
+    pub col: RefCell<u32>,
+}
+
+#[inline]
+fn tabs(count: u32) -> String {
+    let mut tabs = String::new();
+    if count > 0 {
+        for _ in 0..count {
+            tabs += "\t";
+        }
+    }
+    return tabs;
 }
 
 impl Module {
@@ -99,8 +174,7 @@ impl Module {
         Self {
             includes: Vec::new(),
             functions: Vec::new(),
-            current: Vec::new(),
-            col: 0,
+            col: RefCell::new(0),
         }
     }
     pub fn include(&mut self, include: String) {
@@ -123,60 +197,6 @@ impl Module {
         let code = lines.join("\n");
 
         code
-    }
-    #[inline]
-    pub fn add_col(&mut self) {
-        self.col += 1
-    }
-
-    #[inline]
-    pub fn sub_col(&mut self) {
-        if self.col > 0 {
-            self.col -= 1
-        }
-    }
-    #[inline]
-    pub fn emit<T: Display>(&mut self, s: T) {
-        let mut tabs = String::new();
-        if self.col > 0 {
-            for _ in [0..self.col] {
-                tabs += "\t";
-            }
-        }
-        self.current.push(format!("\n{}{};", tabs, s))
-    }
-
-    #[inline]
-    pub fn end(&mut self) {
-        self.emit("}".to_string());
-        self.sub_col()
-    }
-
-    #[inline]
-    pub fn end_fn(&mut self) {
-        self.sub_col();
-        self.end();
-        self.func(self.current.clone());
-        self.current.clear();
-    }
-
-    #[inline]
-    pub fn try_end(&mut self) {
-        if !(&self.current).last().unwrap().ends_with("}") {
-            self.end()
-        }
-    }
-
-    #[inline]
-    pub fn emit_header<T: Display>(&mut self, s: T) {
-        let mut tabs = String::new();
-        if self.col > 0 {
-            for _ in [0..self.col] {
-                tabs += "\t";
-            }
-        }
-        self.current.push(format!("\n{}{}", tabs, s));
-        self.add_col()
     }
 }
 #[derive(Debug, Clone)]
@@ -253,5 +273,9 @@ impl Codegen {
             self.variables.insert(name.clone(), (count, ty));
             self.get_var(name)
         }
+    }
+
+    pub fn emiter(&self) -> Emiter {
+        Emiter::new(self.module.col.clone())
     }
 }

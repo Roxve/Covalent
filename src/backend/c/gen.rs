@@ -1,4 +1,5 @@
 use super::type_to_c;
+use super::Emit;
 
 use super::types_to_cnamed;
 use super::Codegen;
@@ -25,8 +26,6 @@ impl Codegen {
                 );
 
                 ir.remove(0);
-
-                dbg!(&ir);
             } else {
                 break;
             }
@@ -45,18 +44,18 @@ impl Codegen {
     ) {
         let ty = type_to_c(ret);
         let args = types_to_cnamed(args);
-
-        self.module
-            .emit_header(format!("{} {}({}) {{", ty, name, args));
+        let mut emiter = self.emiter();
+        emiter.emit_header(format!("{} {}({}) {{", ty, name, args));
         for op in body {
-            let line = self.bond(op);
-            if line.is_some() {
-                self.module.emit(line.unwrap());
+            let emit = self.bond(op);
+            if emit.is_some() {
+                emiter.embed(emit.unwrap());
             }
         }
-        self.module.end_fn();
+        emiter.end();
+        self.module.func(emiter.finish());
     }
-    pub fn bond(&mut self, op: IROp) -> Option<String> {
+    pub fn bond(&mut self, op: IROp) -> Option<Emit> {
         match op {
             IROp::Def(ret, name, args, body) => {
                 self.bond_fn(
@@ -92,10 +91,10 @@ impl Codegen {
                 if var.is_none() || var.unwrap().1 != ty {
                     let name = self.var(name, ty);
 
-                    return Some(format!("{} {} = {}", tyc, name, val));
+                    return Some(Emit::Line(format!("{} {} = {}", tyc, name, val)));
                 } else {
                     let name = self.get_var(name);
-                    return Some(format!("{} = {}", name, val));
+                    return Some(Emit::Line(format!("{} = {}", name, val)));
                 }
             }
             IROp::Load(ty, name) => {
@@ -108,44 +107,52 @@ impl Codegen {
                 let call = format!("{}({})", name, args);
                 if &ty == &ConstType::Void {
                     // our compiler only insert a line when the stack is empty, void functions doesnt push anything to the stack
-                    return Some(call);
+                    return Some(Emit::Line(call));
                 } else {
                     self.push(Item::Expr(ty, call));
                 }
             }
 
             IROp::If(_, body, alt) => {
-                let cond = self.pop_str();
-                self.module.emit_header(format!("if ({}) {{", cond));
+                let mut emiter = self.emiter();
 
+                let cond = self.pop_str();
+                emiter.emit_header(format!("if ({}) {{", cond));
                 for expr in body {
-                    let expr_line = self.bond(expr);
-                    if expr_line.is_some() {
-                        self.module.emit(expr_line.unwrap());
+                    let expr_lines = self.bond(expr);
+                    if expr_lines.is_some() {
+                        emiter.embed(expr_lines.unwrap());
                     }
                 }
+
+                emiter.end();
 
                 if alt.len() > 0 {
-                    let mut compiled_alt = String::new();
+                    let mut compiled_alt = vec![];
                     for expr in alt {
-                        let expr_line = self.bond(expr);
-                        if expr_line.is_some() {
-                            compiled_alt.push_str(format!("\n{};", expr_line.unwrap()).as_str());
+                        let emit = self.bond(expr);
+                        match emit {
+                            Some(Emit::Body(lines)) => {
+                                for line in lines {
+                                    compiled_alt.push(line);
+                                }
+                            }
+                            Some(Emit::Line(line)) => compiled_alt.push(format!("{};", line)),
+                            None => (),
                         }
                     }
-                    compiled_alt.remove(0);
-                    self.module.end();
-                    self.module.emit_header("else ");
-                    if compiled_alt.starts_with("if") {
-                        self.module.emit(compiled_alt);
+
+                    if compiled_alt[0].starts_with("if") {
+                        compiled_alt[0] = format!("else {}", compiled_alt[0]);
+                        emiter.lines(compiled_alt);
                     } else {
-                        self.module.emit("{\n");
-                        self.module.add_col();
-                        self.module.emit(compiled_alt);
+                        emiter.emit_header("else {");
+                        emiter.lines(compiled_alt);
+                        emiter.end();
                     }
                 }
 
-                self.module.try_end();
+                return Some(Emit::Body(emiter.finish()));
             }
 
             IROp::Conv(into, from) => {
@@ -154,13 +161,13 @@ impl Codegen {
 
             IROp::Pop => {
                 if self.stack.len() > 0 {
-                    return Some(self.pop_str());
+                    return Some(Emit::Line(self.pop_str()));
                 }
             }
 
             IROp::Ret(_) => {
                 let val = self.pop_str();
-                return Some(format!("return {}", val));
+                return Some(Emit::Line(format!("return {}", val)));
             }
             _ => return self.bond_binary(op), // attempt to bond binary expr instead
         }
@@ -188,7 +195,7 @@ impl Codegen {
         self.genbinary(op, ConstType::Bool)
     }
 
-    pub fn bond_binary(&mut self, op: IROp) -> Option<String> {
+    pub fn bond_binary(&mut self, op: IROp) -> Option<Emit> {
         let item = if get_op_type(&op) == ConstType::Dynamic
             || self.borrow().get_ty() == ConstType::Dynamic
         {
