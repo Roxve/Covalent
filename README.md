@@ -8,6 +8,7 @@ to enter the repl
 ```
 covalent
 ```
+**desinged for linux for now**
 **you need gcc installed in path to compile(repl included for now)**
 
 **you only need the covalent exe and libs folder (they should be locatened in same folder) libs should contain runtime.o built from src/backend/c/std.c and gc.o, should be automatically built using cargo**
