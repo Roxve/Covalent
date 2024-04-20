@@ -9,7 +9,7 @@ mod source;
 use std::path::Path;
 // use std::process::Command;
 use crate::compiler::{Backend, CSettings, CompilerConfig};
-use std::{env, fs};
+use std::{env, fs, process::Command};
 #[test]
 fn test() {
     let prog = fs::read_to_string("TestProg/main.atoms").unwrap();
@@ -18,10 +18,9 @@ fn test() {
         prog,
         Backend::C(CSettings::new(None, Vec::new())),
         true,
-        true,
         "/tmp/covalent/test.c".to_string(),
     )
-    .run();
+    .compile();
 }
 
 fn repl(is_debug: bool) {
@@ -40,15 +39,18 @@ fn repl(is_debug: bool) {
             buffer.clone(),
             Backend::C(CSettings::new(None, Vec::new())),
             is_debug,
-            true,
-            "repl".to_string(),
+            "/tmp/covalent/repl".to_string(),
         )
-        .run();
+        .compile();
+        let _ = Command::new("/tmp/covalent/repl")
+            .spawn()
+            .expect("failed to execute repl exe")
+            .wait();
     }
 }
 
 fn main() {
-    let mut is_debug = true;
+    let mut is_debug = false;
     let mut args = env::args();
 
     if args.len() <= 1 {
@@ -60,7 +62,7 @@ fn main() {
         if arg == "test" {
             is_debug = true;
 
-            if args.len() < 2 {
+            if args.len() == 0 {
                 return repl(is_debug);
             }
 
@@ -80,12 +82,12 @@ fn main() {
         .to_str()
         .unwrap()
         .to_string();
+
     CompilerConfig::new(
         prog.expect("invaild file name"),
         Backend::C(CSettings::new(None, Vec::new())),
         is_debug,
-        false,
         filename.replace(".atoms", ""),
     )
-    .run();
+    .compile();
 }

@@ -24,7 +24,7 @@ pub enum IROp {
     Store(ConstType, String),
     Load(ConstType, String),
     If(ConstType, Vec<IROp>, Vec<IROp>),
-    Block(ConstType, Vec<IROp>),
+
     Pop,
 }
 
@@ -52,7 +52,6 @@ pub fn get_op_type(op: &IROp) -> ConstType {
         Alloc(t, _) => t,
         Dealloc(t, _) => t,
         If(t, _, _) => t,
-        Block(t, _) => t,
         Pop => &ConstType::Void,
     }
     .clone()

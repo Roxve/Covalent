@@ -19,15 +19,6 @@ impl CSettings {
     }
 }
 
-/* macro_rules! unwarp {
-    ($back: expr, $vari: path) => {
-        match $back {
-            $vari(i) => i,
-            _ => panic!(),
-        }
-    };
-}*/
-
 #[allow(unused)]
 pub enum Backend {
     C(CSettings),
@@ -38,11 +29,10 @@ pub struct CompilerConfig {
     pub libdir: String,
     pub backend: Backend,
     pub debug: bool,
-    pub repl: bool,
     pub output: String,
 }
 impl CompilerConfig {
-    pub fn new(input: String, backend: Backend, debug: bool, repl: bool, output: String) -> Self {
+    pub fn new(input: String, backend: Backend, debug: bool, output: String) -> Self {
         Self {
             input,
             libdir: format!(
@@ -51,22 +41,22 @@ impl CompilerConfig {
             ),
             backend,
             debug,
-            repl,
             output,
         }
     }
-    pub fn run(&self) {
+    pub fn compile(&self) {
         let mut parser = Parser::new(self.input.clone());
 
         let prog = Analyzer::analyz_prog(parser.parse_prog(), parser.functions).unwrap();
         if self.debug {
-            println!("parsed prog:\n {:#?}\n", prog);
+            dbg!(&prog);
         }
 
         let mut codegen = Codegen::new();
         let ir = codegen.gen_prog(prog);
-        dbg!(&ir);
-        drop(codegen);
+        if self.debug {
+            dbg!(&ir);
+        }
         match self.backend {
             Backend::C(_) => {
                 c::compile(self, ir);

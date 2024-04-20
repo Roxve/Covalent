@@ -3,7 +3,7 @@ use crate::compiler::CompilerConfig;
 use crate::ir::IROp;
 use crate::parser::ast::Literal;
 use crate::source::ConstType;
-use std::borrow::Borrow;
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -21,15 +21,17 @@ pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
         .spawn()
         .unwrap()
         .wait();
-    let outpath = format!("/tmp/covalent/`{}`.c", &config.output);
-
+    let outpath = format!(
+        "/tmp/covalent/'{}'.c",
+        config.output.clone().replace("/", "_").replace("\\", "_")
+    );
     fs::write(&outpath, code).expect(
         format!("err writing to /tmp/covalent make sure covalent can access that path!").as_str(),
     );
-    dbg!(&config.libdir);
+
     let _ = Command::new("gcc")
         .arg(format!("-I{}", &config.libdir))
-        .arg(format!("-o {}", &config.output))
+        .arg(format!("-o{}", &config.output))
         .arg(outpath)
         .arg(format!("{}/runtime.o", &config.libdir))
         .arg(format!("{}/gc.o", &config.libdir))
@@ -91,6 +93,7 @@ impl Item {
 pub enum Emit {
     Body(Vec<String>),
     Line(String),
+    None,
 }
 
 pub struct Emiter {
@@ -137,6 +140,7 @@ impl Emiter {
         match emit {
             Emit::Body(items) => self.lines(items),
             Emit::Line(line) => self.emit(line),
+            Emit::None => (),
         }
     }
 
