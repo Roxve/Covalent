@@ -8,10 +8,10 @@
 
 # if-else expr
 
-if true: {
+if true {
   # do magic
 }
-else if true: { 
+else if true { 
   # do magic
 } 
 else { 
@@ -19,33 +19,34 @@ else {
 } 
 
 
-set varname: value
-set varname: (type) value
+set varname = value
+set (type) varname = value
 
 varname = value
-
-set locked varname: value;
 
 # list 
 ["value", value];
 
 
-set func(args) : { 
+set func: args { 
   # do stuff
-  # return stuff
+  ret (ret)
 }
+func: args # call
+func! # argless call
+writeln "Hello, world" # one arg call
 
-set object: (obj) { 
+set object = { 
   name: value,
   anothername: value
 }
 
-set object: (obj) {
+set object = {
   varname,
   onthervarname
 }
 
-#* ooperators: 
+#* operators: 
   +: plus,
   -: minus,
   *: multyply,
@@ -53,12 +54,10 @@ set object: (obj) {
   %: module,
 
   ==: equals,
-  &: and,
+  &&: and,
   ||: or,
   |: listed_or;
 
-  listed_or: varname == value | value | value;
-  set func() : type | type {
-    # do stuff
-  }
+  #listed_or: 
+  varname == value |= value |< value
 *#
