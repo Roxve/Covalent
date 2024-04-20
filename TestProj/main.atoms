@@ -10,16 +10,11 @@ set make_dynamic: a {
 set factorial: x {
 	if x == 1 {
 		ret make_dynamic: 1
-	} else if false {
-		if false {
-			writeln: "inline"
-		}
-		writeln: "impossible!"	
-	} else {
-		writeln: "nah"
-	}	
+	} 	
+	
 	ret x * (factorial: x - 1) # no problem cuz x is dynamic
 }
 
 writeln: (factorial: 5)
+writeln: (factorial: 5.0)
 writeln: (factorial: 9)

@@ -44,7 +44,7 @@ pub fn type_to_c(ty: ConstType) -> String {
     match ty {
         ConstType::Int => "int".to_string(),
         ConstType::Float => "float".to_string(),
-        ConstType::Dynamic => "void*".to_string(),
+        ConstType::Dynamic => "Obj*".to_string(),
         ConstType::Str => "Str".to_string(),
         ConstType::Bool => "_Bool".to_string(),
         ConstType::Void => "void".to_string(),

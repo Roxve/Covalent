@@ -5,52 +5,50 @@
 
 
 void* GC_malloc(unsigned int);
+void GC_free(void*);
 void GC_init();
-#define INT_TYPE 0
-#define FLOAT_TYPE 1
-#define STR_TYPE 2
-#define BOOL_TYPE 3
+
 
 
 #define DEFOP_N(name, op) \
-    void * __##name##__(void *a, void *b) { \
+    Obj *__##name##__(Obj *a, Obj *b) { \
     __conv__(&a, &b);                      \
-    char a_ty = ((Obj *)a)->ty;             \
-    switch(a_ty) { \
+    TYPE kind = a->kind;             \
+    switch(kind) { \
     case INT_TYPE: \
-    return __int__(((Int *)a)->val op ((Int *)b)->val); \
+    return __int__(a->val.i op b->val.i); \
     case FLOAT_TYPE: \
-    return __float__(((Float *)a)->val op ((Float *)b)->val); \
+    return __float__(a->val.f op b->val.f); \
     default: \
       return __NaN__(); \
     }
 #define DEFOP_BOOL(name, op)                                 \
-    _Bool __##name##__(void *a, void *b) { \
+    _Bool __##name##__(Obj *a, Obj *b) { \
     __conv__(&a, &b);                      \
-    char a_ty = ((Obj *)a)->ty;             \
-    switch(a_ty) {                                           \
+    TYPE kind = a->kind;             \
+    switch(kind) {                                           \
     case INT_TYPE:                                           \
-    return ((Int *)a)->val op ((Int *)b)->val;     \
+    return a->val.i op b->val.i;     \
     case FLOAT_TYPE:                                         \
-    return ((Float *)a)->val op ((Float *)b)->val; \
+    return a->val.f op b->val.f; \
     case BOOL_TYPE: \
-    return ((Bool *)a)->val op ((Bool *)b)->val;   \
+    return a->val.b op b->val.b;   \
     case STR_TYPE:                                           \
-    return __str##name##__((Str *)a, (Str *)b);              \
+    return __str##name##__(a->val.s, b->val.s);              \
     default: \
       return __NaN__(); \
     }
 #define DEFOP_STR(name, op)                                   \
-    void * __##name##__(void *a, void *b) { \
+    Obj * __##name##__(Obj *a, Obj *b) { \
     __conv__(&a, &b);                      \
-    char a_ty = ((Obj *)a)->ty;             \
-    switch(a_ty) {                                            \
+    TYPE kind = a->kind;             \
+    switch(kind) {                                            \
     case INT_TYPE: \
-    return __int__(((Int *)a)->val op ((Int *)b)->val);       \
+    return __int__(a->val.i op b->val.i);       \
     case FLOAT_TYPE: \
-    return __float__(((Float *)a)->val op ((Float *)b)->val); \
+    return __float__(a->val.f op b->val.f); \
     case STR_TYPE: \
-    return __str##name##__((Str *)a, (Str *)b);               \
+    return __str__(__str##name##__(a->val.s, b->val.s));               \
     default: \
       return __NaN__();                                       \
     }
@@ -60,52 +58,50 @@ void GC_init();
   }
 
 
-void *__NaN__() {
-  NaN *nan = (NaN *)GC_malloc(sizeof(NaN));
-  nan->ty = -1;
+Obj *__NaN__() {
+  Obj *nan = (Obj *)GC_malloc(sizeof(TYPE));
+  nan->kind = -1;
   return nan;
 }
 
-void __conv__(void **a, void **b) {
-  char a_ty = ((Obj *)*a)->ty;
-  char b_ty = ((Obj *)*b)->ty;
+void __conv__(Obj **a, Obj **b) {
+  TYPE a_ty = (*a)->kind;
+  TYPE b_ty = (*b)->kind;
+
+  Value a_val = (*a)->val;
+  Value b_val = (*b)->val; 
+  
   if (a_ty == b_ty) {
     return;
   }
-  if (a_ty == FLOAT_TYPE && b_ty == INT_TYPE) {
-    int val = (((Int *)*b)->val);
-
-    *b = __float__((float)val);
+  if (a_ty == FLOAT_TYPE && b_ty == INT_TYPE) {      
+      *b = __float__((float)b_val.i);
   } else if (a_ty == INT_TYPE && b_ty == FLOAT_TYPE) {
-    int val = (((Int *)*a)->val);
-
-    *a = __float__((float)val);
+    *a = __float__((float)a_val.i);
   } else {
     err("cannot conv balance a and b", 5);
   }
 }  
 
-void writeln(void *arg) {
-  char ty = ((Obj *)arg)->ty;
+void writeln(Obj *arg) {
+  TYPE ty = arg->kind;
   switch (ty) {
-  case INT_TYPE: {
-    Int *i = (Int *)arg;
-    printf("%d\n", i->val);
+  case INT_TYPE: {;
+    printf("%d\n", arg->val.i);
     break;
   }
 
   case FLOAT_TYPE: {
-    Float *f = (Float *)arg;
-    printf("%f\n", f->val);
+    printf("%f\n", arg->val.f);
     break;
   }
   case STR_TYPE: {
     Str *s = (Str *)arg;
-    printf("%.*s\n", s->len, s->val);
+    printf("%.*s\n", arg->val.s->len, arg->val.s->val);
     break;
   }
-  case BOOL_TYPE: {                                                                                                                                                                                         Bool *b = (Bool *)arg;
-      if (b->val == 0) {
+  case BOOL_TYPE: {                                                                                                                                                                                         
+      if (arg->val.b == 0) {
         printf("false\n");
       } else {
         printf("true\n");
@@ -114,22 +110,24 @@ void writeln(void *arg) {
   }
 }
 
-void *__int__(int i) {
-  Int *obj = (Int *)GC_malloc(sizeof(Int));
-  obj->ty = INT_TYPE;
-  obj->val = i;
+Obj *__int__(int i) {
+  Obj *obj = (Obj *)GC_malloc(INT_SIZE);
+  obj->kind = INT_TYPE;
+  obj->val.i = i;
   return obj;
 }
 
-void *__str__(Str *s) {
-  void *str = s;
+Obj *__str__(Str *s) {
+  Obj *str = (Obj *)GC_malloc(STR_SIZE);
+  str->kind = STR_TYPE;
+  str->val.s = s;
   return str;
 }
 
-void *__bool__(_Bool b) {
-  Bool *obj = (Bool *)GC_malloc(sizeof(Bool));
-  obj->ty = BOOL_TYPE;
-  obj->val = b;
+Obj *__bool__(_Bool b) {
+  Obj *obj = (Obj *)GC_malloc(BOOL_SIZE);
+  obj->kind = BOOL_TYPE;
+  obj->val.b = b;
   return obj;
 }
 
@@ -139,17 +137,16 @@ Str *__strnew__(char *s) {
   memcpy(str, s, len);
 
   Str *obj = (Str *)GC_malloc(sizeof(Str));
-  obj->ty = STR_TYPE;
 
   obj->val = str;
   obj->len = len;
   return obj;
 }
 
-void *__float__(float f) {
-  Float *obj = (Float *)GC_malloc(sizeof(Float));
-  obj->ty = FLOAT_TYPE;
-  obj->val = f;
+Obj *__float__(float f) {
+  Obj *obj = (Obj *)GC_malloc(FLOAT_SIZE);
+  obj->kind = FLOAT_TYPE;
+  obj->val.f = f;
   return obj;
 }
 DEF(STR, add, +);
@@ -166,24 +163,24 @@ DEF(BOOL, comp, >);
 
 DEF(BOOL, ecomp, >=);
 
-Bool *__streq__(Str *a, Str *b) {
+_Bool __streq__(Str *a, Str *b) {
   char *str_a = a->val;
   char *str_b = b->val;
-  return __bool__(str_a == str_b);
+  return str_a == str_b;
 }
 
-Bool *__strcomp__(Str *a, Str *b) {
+_Bool __strcomp__(Str *a, Str *b) {
   int len_a = a->len;
   int len_b = b->len;
-  return __bool__(len_a > len_b);
+  return len_a > len_b;
 }
 
-Bool *__strecomp__(Str *a, Str *b) {
+_Bool __strecomp__(Str *a, Str *b) {
   int len_a = a->len;
   int len_b = b->len;
   char *str_a = a->val;
   char *str_b = b->val;
-  return __bool__(len_a > len_b || str_a == str_b);
+  return len_a > len_b || str_a == str_b;
 }
 
 Str *__stradd__(Str *a, Str *b) {
@@ -193,7 +190,7 @@ Str *__stradd__(Str *a, Str *b) {
   memcpy(str + a->len, b->val, b->len);
 
   Str *s = (Str *)GC_malloc(sizeof(Str));
-  s->ty = STR_TYPE;
+  
   s->val = str;
   s->len = len;
   return s;
@@ -204,24 +201,24 @@ void err(char *err, int code) {
   exit(code);
 }
 
-unsigned int type_size(char ty) {
+unsigned int type_size(TYPE ty) {
   switch (ty) {
     case INT_TYPE:
-      return sizeof(Int);
+      return INT_SIZE;
     case FLOAT_TYPE:
-      return sizeof(Float);
+      return FLOAT_SIZE;
     case STR_TYPE:
-      return sizeof(Str);
+      return STR_SIZE;
     case BOOL_TYPE:
-      return sizeof(Bool);
+      return BOOL_SIZE;
     default:
       err("UNKNOWN TYPE", 3);
       return sizeof(Obj);
   }
 }
 
-void *__clone__(void *obj) {
-  char ty = ((Obj*) obj)->ty;
+Obj *__clone__(Obj *obj) {
+  TYPE ty = obj->kind;
   unsigned int size = type_size(ty);
   void *cloned = GC_malloc(size);
   memcpy(cloned, obj, size);
