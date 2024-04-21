@@ -7,12 +7,18 @@ set make_dynamic: a {
 	ret a
 }
 
+
+
 set factorial: x {
 	if x == 1 {
-		ret make_dynamic: 1
+		writeln: "nah!"
+		ret 1
 	} 	
 	
 	ret x * (factorial: x - 1) # no problem cuz x is dynamic
+}
+set one: temp {
+	ret 1
 }
 
 writeln: (factorial: 5)

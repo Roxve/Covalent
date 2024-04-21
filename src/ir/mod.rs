@@ -62,10 +62,11 @@ pub struct CompiledFunction {
     pub name: Ident,
     pub args: Vec<Ident>,
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Enviroment {
     functions: Vec<CompiledFunction>,
     vars: HashMap<String, ConstType>,
+    pub current: ConstType,
     pub parent: Option<Box<Enviroment>>,
 }
 
@@ -74,6 +75,7 @@ impl Enviroment {
         Self {
             functions: Vec::new(),
             vars: HashMap::new(),
+            current: ConstType::Void,
             parent,
         }
     }

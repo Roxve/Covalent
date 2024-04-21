@@ -66,8 +66,7 @@ impl Analyzer {
         }
 
         // allow calling self
-        self.env
-            .push_function(func.name.clone(), args.clone(), ConstType::Dynamic);
+
         let mut body = vec![];
         for expr in func.body {
             body.push(self.analyz(expr)?);
@@ -75,8 +74,7 @@ impl Analyzer {
 
         let ty = get_fn_type(&body);
         self.env = self.env.parent().unwrap();
-
-        self.env.push_function(func.name.clone(), args.clone(), ty);
+        self.env.modify(&func.name.val, ty);
 
         let expr = AnalyzedExpr::Func {
             ret: ty,
@@ -102,7 +100,11 @@ impl Analyzer {
             "writeln",
             vec![(ConstType::Dynamic, "x".to_string())],
         );
-
+        for func in functions.clone() {
+            analyzer
+                .env
+                .push_function(func.name.clone(), func.args.clone(), ConstType::Dynamic);
+        }
         for func in functions {
             analyzed_prog.push(analyzer.analyz_func(func)?);
         }
@@ -111,6 +113,8 @@ impl Analyzer {
             let analyzed_expr = analyzer.analyz(expr)?;
             analyzed_prog.push(analyzed_expr);
         }
+
+        analyzed_prog = analyzer.correct_prog(analyzed_prog)?;
         Ok(analyzed_prog)
     }
 
