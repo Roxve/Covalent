@@ -17,10 +17,10 @@ set factorial: x {
 	
 	ret x * (factorial: x - 1) # no problem cuz x is dynamic
 }
-set one: temp {
+set one {
 	ret 1
 }
-
+writeln: one!
 writeln: (factorial: 5)
 writeln: (factorial: 5.0)
 writeln: (factorial: 9)

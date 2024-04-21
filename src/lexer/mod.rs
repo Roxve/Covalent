@@ -134,6 +134,11 @@ impl Tokenize for Parser {
                 self.set(Token::Comma)
             }
 
+            '!' => {
+                self.eat();
+                self.set(Token::Exec)
+            }
+
             c => {
                 if is_id(c) {
                     let mut res = String::from("");
