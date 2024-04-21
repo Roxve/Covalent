@@ -166,7 +166,7 @@ impl Analyzer {
                     return Err(ErrKind::UndeclaredVar);
                 }
 
-                let ty = self.env.get_ty(&name.val).unwrap();
+                let ty = self.env.get_ty(&name.val).unwrap_or(ConstType::Dynamic); // corrected later
 
                 let mut args = vec![];
                 for param in params {

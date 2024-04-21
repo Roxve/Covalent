@@ -1,4 +1,5 @@
 pub mod analysis;
+pub mod correct;
 use crate::{
     ir::Enviroment,
     parser::ast::Literal,
