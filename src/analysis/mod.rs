@@ -19,7 +19,7 @@ pub enum AnalyzedExpr {
         args: Vec<ConstType>,
     },
 
-    Id(String, u16),
+    Id(String),
     Literal(Literal),
     BinaryExpr {
         op: String,

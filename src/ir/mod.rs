@@ -65,7 +65,7 @@ pub struct CompiledFunction {
 #[derive(Clone)]
 pub struct Enviroment {
     functions: Vec<CompiledFunction>,
-    vars: HashMap<String, (ConstType, u16)>,
+    vars: HashMap<String, ConstType>,
     pub parent: Option<Box<Enviroment>>,
 }
 
@@ -92,23 +92,11 @@ impl Enviroment {
 
     pub fn get_ty(&self, name: &String) -> Option<ConstType> {
         if self.vars.contains_key(name) {
-            return Some(self.vars[name].0.clone());
+            return Some(self.vars[name].clone());
         }
 
         if self.parent.is_some() {
             return self.parent().unwrap().get_ty(name);
-        } else {
-            return None;
-        }
-    }
-
-    pub fn get_rc(&self, name: &String) -> Option<u16> {
-        if self.vars.contains_key(name) {
-            return Some(self.vars[name].1.clone());
-        }
-
-        if self.parent.is_some() {
-            return self.parent().unwrap().get_rc(name);
         } else {
             return None;
         }
@@ -125,26 +113,18 @@ impl Enviroment {
     }
     pub fn modify(&mut self, name: &String, ty: ConstType) {
         if self.vars.contains_key(name) {
-            self.vars.get_mut(name).map(|val| *val = (ty, val.1));
+            self.vars.get_mut(name).map(|val| *val = ty);
         } else if self.parent.is_some() {
             self.parent().unwrap().modify(name, ty);
         }
     }
 
-    pub fn modify_rc(&mut self, name: &String, rc: u16) {
-        if self.vars.contains_key(name) {
-            self.vars.get_mut(name).map(|val| *val = (val.0, rc));
-        } else if self.parent.is_some() {
-            self.parent().unwrap().modify_rc(name, rc);
-        }
-    }
-
-    pub fn add(&mut self, name: &String, ty: ConstType, rc: u16) {
-        self.vars.insert(name.clone(), (ty, rc));
+    pub fn add(&mut self, name: &String, ty: ConstType) {
+        self.vars.insert(name.clone(), ty);
     }
 
     pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, ty: ConstType) {
-        self.vars.insert(name.val.clone(), (ty, 0));
+        self.vars.insert(name.val.clone(), ty);
         self.functions.push(CompiledFunction { name, args });
     }
 

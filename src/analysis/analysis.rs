@@ -62,7 +62,7 @@ impl Analyzer {
 
         for arg in &args {
             self.env
-                .add(&arg.val, arg.tag.clone().unwrap_or(ConstType::Dynamic), 0);
+                .add(&arg.val, arg.tag.clone().unwrap_or(ConstType::Dynamic));
         }
 
         // allow calling self
@@ -284,11 +284,9 @@ impl Analyzer {
             return Err(ErrKind::UndeclaredVar);
         }
 
-        let rc = self.env.get_rc(&id.val).unwrap() + 1;
         let ty = self.env.get_ty(&id.val).unwrap();
-        self.env.modify_rc(&id.val, rc);
 
-        let expr = AnalyzedExpr::Id(id.val, rc);
+        let expr = AnalyzedExpr::Id(id.val);
         Ok(TypedExpr { expr, ty })
     }
 
@@ -299,7 +297,7 @@ impl Analyzer {
             return Err(ErrKind::VarAlreadyDeclared);
         }
         let ty = val.ty.clone();
-        self.env.add(&name, ty.clone(), 0);
+        self.env.add(&name, ty.clone());
 
         let expr = AnalyzedExpr::VarDeclare {
             name,
@@ -315,10 +313,7 @@ impl Analyzer {
             return Err(ErrKind::UndeclaredVar);
         }
         let ty = val.ty.clone();
-        let rc = self.env.get_rc(&name).unwrap() + 1;
         self.env.modify(&name, ty.clone());
-
-        self.env.modify_rc(&name, rc);
 
         let expr = AnalyzedExpr::VarAssign {
             name,
