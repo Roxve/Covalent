@@ -1,54 +1,56 @@
 #include "stdbool.h"
 
-typedef struct {
-  char ty;
-} Obj;
-typedef struct Int {
-  char ty;
-  int val;
-} Int;
+#define INT_TYPE 0
+#define FLOAT_TYPE 1
+#define STR_TYPE 2
+#define BOOL_TYPE 3
+typedef char TYPE;
 
 typedef struct Str {
-  char ty;
   char *val;
   int len;
 } Str;
 
-typedef struct Float {
-  char ty;
-  float val;
-} Float;
+typedef union Value {
+  int i;
+  float f;
+  _Bool b;
+  Str *s;
+} Value;
 
-typedef struct Bool {
-  char ty;
-  _Bool val;
-} Bool;
 
-typedef struct NaN {
-  char ty;
-} NaN;
-void writeln(void *arg);
-void *__int__(int i);
-void *__float__(float f);
-void *__str__(Str *s);
-void *__bool__(_Bool b);
+#define INT_SIZE sizeof(TYPE) + sizeof(int)
+#define FLOAT_SIZE sizeof(TYPE) + sizeof(float)
+#define STR_SIZE sizeof(TYPE) + sizeof(Str)
+#define BOOL_SIZE sizeof(TYPE) + sizeof(_Bool)
+
+typedef struct {
+  TYPE kind;
+  Value val;
+} Obj;
+
+void writeln(Obj *arg);
+Obj *__int__(int i);
+Obj *__float__(float f);
+Obj *__str__(Str *s);
+Obj *__bool__(_Bool b);
 
 Str *__strnew__(char *val);
 
 void err(char *err, int code);
-void *__add__(void *a, void *b);
-void *__sub__(void *a, void *b);
-void *__mul__(void *a, void *b);
-void *__div__(void *a, void *b);
+Obj *__add__(Obj *a, Obj *b);
+Obj *__sub__(Obj *a, Obj *b);
+Obj *__mul__(Obj *a, Obj *b);
+Obj *__div__(Obj *a, Obj *b);
 
-_Bool __comp__(void *a, void *b);
-_Bool __ecomp__(void *a, void *b);
-_Bool __eq__(void *a, void *b);
+_Bool __comp__(Obj *a, Obj *b);
+_Bool __ecomp__(Obj *a, Obj *b);
+_Bool __eq__(Obj *a, Obj *b);
 
-Bool *__strcomp__(Str *a, Str *b);
-Bool *__strecomp__(Str *a, Str *b);
-Bool *__streq__(Str *a, Str *b);
+_Bool __strcomp__(Str *a, Str *b);
+_Bool __strecomp__(Str *a, Str *b);
+_Bool __streq__(Str *a, Str *b);
 
 Str *__stradd__(Str *a, Str *b);
-void *__clone__(void *obj);
+Obj *__clone__(Obj *obj);
 void __init__();
