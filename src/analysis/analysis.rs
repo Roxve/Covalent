@@ -72,7 +72,7 @@ impl Analyzer {
             body.push(self.analyz(expr)?);
         }
 
-        let ty = get_fn_type(&body);
+        let ty = get_fn_type(&body, ConstType::Void);
         self.env = self.env.parent().unwrap();
         self.env.modify(&func.name.val, ty);
 

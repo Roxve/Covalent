@@ -186,9 +186,17 @@ impl Codegen {
     #[inline]
     fn genbinary(&mut self, op: &str, ty: ConstType) -> Item {
         if &self.borrow().get_ty() == &ConstType::Str {
+            let binop = match op {
+                "+" => "__stradd__",
+                "-" => "__strsub__",
+                "==" => "__streq__",
+                ">" => "__strcomp__",
+                ">=" => "__strecomp__",
+                _ => panic!(),
+            };
             Item::Expr(
                 ty,
-                format!("__stradd__({}, {})", self.pop_str(), self.pop_str()),
+                format!("{}({}, {})", binop, self.pop_str(), self.pop_str()),
             )
         } else {
             Item::Expr(ty, format!("{} {} {}", self.pop_str(), op, self.pop_str()))

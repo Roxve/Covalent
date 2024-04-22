@@ -67,21 +67,41 @@ pub struct TypedExpr {
     pub ty: ConstType,
 }
 
-#[inline]
-pub fn supports_op(ty: &ConstType, op: &String) -> bool {
-    match ty {
-        &ConstType::Int | &ConstType::Float | &ConstType::Dynamic => true,
-        &ConstType::Str => match op.as_str() {
-            "+" => true,
-            "==" | ">" | "<" | ">=" | "<=" => true,
-            _ => false,
-        },
-        &ConstType::Void | &ConstType::Bool => false,
+macro_rules! op {
+    (Bool) => {
+        vec!["==", ">", "<", "<=", ">="]
+    };
+    (Logical) => {
+        vec!["&&", "||"]
+    };
+    (Math) => {
+        vec!["+", "-", "*", "/", "%"]
+    };
+}
+
+impl ConstType {
+    pub fn get_op(&self) -> Vec<&str> {
+        match self {
+            &ConstType::Bool => [op!(Bool), op!(Logical)].concat(),
+            &ConstType::Float | &ConstType::Int => [op!(Math), op!(Bool)].concat(),
+            &ConstType::Str => {
+                let mut ops = op!(Bool);
+                ops.push("+");
+                ops
+            }
+            &ConstType::Dynamic => [op!(Logical), op!(Bool), op!(Math)].concat(),
+            &ConstType::Void => Vec::new(),
+        }
     }
 }
 
+#[inline]
+pub fn supports_op(ty: &ConstType, op: &String) -> bool {
+    ty.get_op().contains(&op.as_str())
+}
+
 fn get_ret_ty(expr: &TypedExpr, prev: ConstType) -> ConstType {
-    match expr.expr {
+    match expr.expr.clone() {
         AnalyzedExpr::RetExpr(_) => {
             if prev == ConstType::Void {
                 expr.ty
@@ -91,13 +111,21 @@ fn get_ret_ty(expr: &TypedExpr, prev: ConstType) -> ConstType {
                 prev
             }
         }
+        AnalyzedExpr::Block(body) => get_fn_type(&body, prev),
+        AnalyzedExpr::If { body, alt, .. } => {
+            let mut ty = get_fn_type(&body, prev);
+            if alt.is_some() {
+                ty = get_ret_ty(&*alt.unwrap(), ty);
+            }
+            ty
+        }
         // get fn ty => Block , ifBody
         _ => prev,
     }
 }
 
-pub fn get_fn_type(body: &Vec<TypedExpr>) -> ConstType {
-    let mut ty = ConstType::Void;
+pub fn get_fn_type(body: &Vec<TypedExpr>, prev: ConstType) -> ConstType {
+    let mut ty = prev;
     for expr in body {
         ty = get_ret_ty(expr, ty);
     }

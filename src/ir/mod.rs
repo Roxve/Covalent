@@ -27,7 +27,6 @@ pub enum IROp {
 
     Pop,
 }
-
 use crate::source::{ATErr, ErrKind, Ident};
 use std::collections::HashMap;
 
