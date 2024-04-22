@@ -25,6 +25,7 @@ pub enum Token {
     RightParen,
     LeftBracket,
     RightBracket,
+    Exec,
     Colon,
     Comma,
     IfKw,

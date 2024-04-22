@@ -97,6 +97,12 @@ impl Parse for Parser {
                     name: id.to_owned(),
                     args,
                 };
+            } else if self.current() == Token::Exec {
+                self.tokenize();
+                return Expr::FnCall {
+                    name: id.to_owned(),
+                    args: Vec::new(),
+                };
             }
         }
         return call;

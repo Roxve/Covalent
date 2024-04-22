@@ -237,8 +237,10 @@ impl Codegen {
 
     pub fn pop_amount(&mut self, count: u16) -> Vec<String> {
         let mut results = Vec::new();
-        for _ in [1..count] {
-            results.push(self.pop_str());
+        if count != 0 {
+            for _ in [1..count] {
+                results.push(self.pop_str());
+            }
         }
 
         return results;
