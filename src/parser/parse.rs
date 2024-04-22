@@ -229,6 +229,8 @@ impl Parse for Parser {
                     return self.parse_level(0);
                 }
             }
+        } else {
+            self.except(Token::Exec);
         }
         let body = self.parse_body();
 
