@@ -168,6 +168,7 @@ impl Parse for Parser {
             }
 
             Token::SetKw => self.parse_declare(),
+            Token::WhileKw => self.parse_while_expr(),
             Token::IfKw => self.parse_if_expr(),
             Token::RetKw => self.parse_ret_expr(),
             _ => {

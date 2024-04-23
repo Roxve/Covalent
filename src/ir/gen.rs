@@ -125,9 +125,16 @@ impl IRGen for Codegen {
                 let mut cond = self.gen_expr(*cond)?;
 
                 let mut compiled_body = vec![];
+
+                // TODO func which generates scope body
+                self.env = self.env.child();
                 for expr in body {
                     compiled_body.append(&mut self.gen_expr(expr)?);
                 }
+                for (var, ty) in self.env.vars.clone() {
+                    compiled_body.push(IROp::Dealloc(ty, var));
+                }
+                self.env = self.env.parent().unwrap();
 
                 let alt = if alt.is_none() {
                     vec![]
@@ -140,12 +147,40 @@ impl IRGen for Codegen {
                 res.push(IROp::If(expr.ty, compiled_body, alt));
                 Ok(res)
             }
+
             AnalyzedExpr::Block(block) => {
                 let mut compiled_block = vec![];
+                self.env = self.env.child();
                 for expr in block {
                     compiled_block.append(&mut self.gen_expr(expr)?);
                 }
+
+                for (var, ty) in self.env.vars.clone() {
+                    compiled_block.push(IROp::Dealloc(ty, var));
+                }
+                self.env = self.env.parent().unwrap();
                 Ok(compiled_block)
+            }
+
+            AnalyzedExpr::While { cond, body } => {
+                let mut cond = self.gen_expr(*cond)?;
+
+                let mut compiled_body = vec![];
+                self.env = self.env.child();
+                for expr in body {
+                    compiled_body.append(&mut self.gen_expr(expr)?);
+                }
+
+                for (var, ty) in self.env.vars.clone() {
+                    compiled_body.push(IROp::Dealloc(ty, var));
+                }
+
+                let mut res = Vec::new();
+                res.append(&mut cond);
+                res.push(IROp::While(compiled_body));
+
+                self.env = self.env.parent().unwrap();
+                Ok(res)
             }
         }
     }

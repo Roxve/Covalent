@@ -1,26 +1,4 @@
-# test project 
-# TODO: added assert instead of writeln
-# TODO argless functions using!
-
-# i have a few bugs with my function gen this is required because the function doesnt know what should it return...
-set make_dynamic: a {
-	ret a
+while true {
+	set x = "inf"
+	writeln: x
 }
-
-
-
-set factorial: x {
-	if x == 1 {
-		writeln: "nah!"
-		ret 1
-	} 	
-	
-	ret x * (factorial: x - 1) # no problem cuz x is dynamic
-}
-set one! {
-	ret 1
-}
-writeln: one!
-writeln: (factorial: 5)
-writeln: (factorial: 5.0)
-writeln: (factorial: 9)

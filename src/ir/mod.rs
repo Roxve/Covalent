@@ -24,7 +24,7 @@ pub enum IROp {
     Store(ConstType, String),
     Load(ConstType, String),
     If(ConstType, Vec<IROp>, Vec<IROp>),
-
+    While(Vec<IROp>),
     Pop,
 }
 use crate::source::{ATErr, ErrKind, Ident};
@@ -51,6 +51,7 @@ pub fn get_op_type(op: &IROp) -> ConstType {
         Alloc(t, _) => t,
         Dealloc(t, _) => t,
         If(t, _, _) => t,
+        While(_) => &ConstType::Void,
         Pop => &ConstType::Void,
     }
     .clone()

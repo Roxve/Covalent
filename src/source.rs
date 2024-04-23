@@ -37,15 +37,16 @@ pub enum Token {
     RetKw,
     EOF,
 }
-
+#[repr(u8)]
 #[derive(Debug, Clone)]
 pub enum ErrKind {
-    UnknownCharE = 0,
-    UnexceptedTokenE = 1,
-    UndeclaredVar = 2,
-    VarAlreadyDeclared = 3,
-    OperationNotGranted = 4,
-    UnexceptedArgs = 5,
+    UnknownCharE,
+    UnexceptedTokenE,
+    InvaildType,
+    UndeclaredVar,
+    VarAlreadyDeclared,
+    OperationNotGranted,
+    UnexceptedArgs,
 }
 
 #[derive(Debug, Clone)]

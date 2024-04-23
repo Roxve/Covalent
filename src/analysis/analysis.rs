@@ -118,6 +118,17 @@ impl Analyzer {
         Ok(analyzed_prog)
     }
 
+    #[inline]
+    pub fn analyz_body(&mut self, body: Vec<Expr>) -> Result<Vec<TypedExpr>, ErrKind> {
+        let mut analyzed_body = vec![];
+        self.env = self.env.child();
+        for expr in body {
+            analyzed_body.push(self.analyz(expr)?);
+        }
+        self.env = self.env.parent().unwrap();
+        Ok(analyzed_body)
+    }
+
     pub fn analyz(&mut self, expr: Expr) -> Result<TypedExpr, ErrKind> {
         match expr {
             Expr::Literal(literal) => {
@@ -194,21 +205,25 @@ impl Analyzer {
                 alt,
             } => {
                 let cond = Box::new(self.analyz(*condition)?);
-                let mut analyzed_body = vec![];
-
-                self.env = self.env.child();
-                for expr in body {
-                    analyzed_body.push(self.analyz(expr)?);
+                if &cond.ty != &ConstType::Bool {
+                    self.err(
+                        ErrKind::InvaildType,
+                        format!(
+                            "invaild condition for while loop expected Bool got {:?}",
+                            cond.ty
+                        ),
+                    );
+                    return Err(ErrKind::InvaildType);
                 }
+                let body = self.analyz_body(body)?;
 
-                self.env = self.env.parent().unwrap();
                 let analyzed_alt = if alt.is_none() {
                     None
                 } else {
                     Some(Box::new(self.analyz(*alt.unwrap())?))
                 };
 
-                let last = analyzed_body.last();
+                let last = body.last();
 
                 let ty = if last.is_none() {
                     ConstType::Void
@@ -218,29 +233,45 @@ impl Analyzer {
 
                 let expr = AnalyzedExpr::If {
                     cond,
-                    body: analyzed_body,
+                    body: body,
                     alt: analyzed_alt,
                 };
 
                 Ok(TypedExpr { expr, ty })
             }
             Expr::Block(block) => {
-                let mut analyzed_block = vec![];
+                let block = self.analyz_body(block)?;
 
-                for expr in block {
-                    analyzed_block.push(self.analyz(expr)?);
-                }
-                let last = analyzed_block.last();
+                let last = block.last();
                 let ty = if last.is_none() {
                     ConstType::Void
                 } else {
                     last.unwrap().ty.clone()
                 };
-                let expr = AnalyzedExpr::Block(analyzed_block);
+                let expr = AnalyzedExpr::Block(block);
 
                 Ok(TypedExpr { expr, ty })
             }
-            _ => todo!("add typed expr {:?}", expr),
+
+            Expr::WhileExpr { condition, body } => {
+                let cond = Box::new(self.analyz(*condition)?);
+                if &cond.ty != &ConstType::Bool {
+                    self.err(
+                        ErrKind::InvaildType,
+                        format!(
+                            "invaild condition for while loop expected Bool got {:?}",
+                            cond.ty
+                        ),
+                    );
+                    return Err(ErrKind::InvaildType);
+                }
+                let body = self.analyz_body(body)?;
+
+                let expr = AnalyzedExpr::While { cond, body };
+                let ty = ConstType::Void;
+
+                Ok(TypedExpr { expr, ty })
+            }
         }
     }
 

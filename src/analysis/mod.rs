@@ -117,7 +117,7 @@ fn get_ret_ty(expr: &TypedExpr, prev: ConstType) -> ConstType {
                 prev
             }
         }
-        AnalyzedExpr::Block(body) => get_fn_type(&body, prev),
+
         AnalyzedExpr::If { body, alt, .. } => {
             let mut ty = get_fn_type(&body, prev);
             if alt.is_some() {
@@ -125,6 +125,8 @@ fn get_ret_ty(expr: &TypedExpr, prev: ConstType) -> ConstType {
             }
             ty
         }
+
+        AnalyzedExpr::While { body, .. } | AnalyzedExpr::Block(body) => get_fn_type(&body, prev),
         // get fn ty => Block , ifBody
         _ => prev,
     }
