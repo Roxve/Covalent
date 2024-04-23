@@ -239,7 +239,8 @@ impl Analyzer {
                 let expr = AnalyzedExpr::Block(analyzed_block);
 
                 Ok(TypedExpr { expr, ty })
-            } // _ => todo!("add typed expr {:?}", expr),
+            }
+            _ => todo!("add typed expr {:?}", expr),
         }
     }
 

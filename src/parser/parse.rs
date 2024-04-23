@@ -15,6 +15,7 @@ pub trait Parse {
     fn parse_declare(&mut self) -> Expr;
     fn parse_declare_fn(&mut self, id: Ident) -> Expr;
     fn parse_if_expr(&mut self) -> Expr;
+    fn parse_while_expr(&mut self) -> Expr;
     fn parse_ret_expr(&mut self) -> Expr;
 
     fn parse_body(&mut self) -> Vec<Expr>;
@@ -208,7 +209,7 @@ impl Parse for Parser {
                 ),
             );
 
-            return left;
+            left
         }
     }
     fn parse_declare_fn(&mut self, id: Ident) -> Expr {
@@ -236,7 +237,7 @@ impl Parse for Parser {
 
         self.push_function(id.clone(), id_args, body);
         self.current_scope = Scope::Value;
-        return Expr::PosInfo(id.val, self.line, self.column);
+        Expr::PosInfo(id.val, self.line, self.column)
     }
 
     fn parse_if_expr(&mut self) -> Expr {
@@ -255,11 +256,22 @@ impl Parse for Parser {
             }
         }
 
-        return Expr::IfExpr {
+        Expr::IfExpr {
             condition: Box::new(condition),
             body,
             alt,
-        };
+        }
+    }
+    fn parse_while_expr(&mut self) -> Expr {
+        self.tokenize();
+        self.current_scope = Scope::Value;
+        let condition = self.parse_level(0);
+        let body = self.parse_body();
+
+        Expr::WhileExpr {
+            condition: Box::new(condition),
+            body,
+        }
     }
 
     #[inline]
@@ -279,7 +291,7 @@ impl Parse for Parser {
         }
         self.except(Token::RightBracket);
 
-        return body;
+        body
     }
 
     fn parse_ret_expr(&mut self) -> Expr {

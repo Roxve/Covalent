@@ -51,11 +51,18 @@ pub enum Expr {
         name: Ident,
         args: Vec<Expr>,
     },
+
     IfExpr {
         condition: Box<Expr>,
         body: Vec<Expr>,
         alt: Option<Box<Expr>>,
     },
+
+    WhileExpr {
+        condition: Box<Expr>,
+        body: Vec<Expr>,
+    },
+
     Discard(Box<Expr>),
     Block(Vec<Expr>),
     PosInfo(String, u32, u32), // debugging

@@ -50,11 +50,17 @@ pub enum AnalyzedExpr {
         args: Vec<Ident>,
         body: Vec<TypedExpr>,
     },
+
     If {
         cond: Box<TypedExpr>,
         body: Vec<TypedExpr>,
         alt: Option<Box<TypedExpr>>,
     },
+    While {
+        cond: Box<TypedExpr>,
+        body: Vec<TypedExpr>,
+    },
+
     Block(Vec<TypedExpr>),
     Debug(String, u32, u32),
     Discard(Box<TypedExpr>),

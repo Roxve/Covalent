@@ -102,11 +102,29 @@ impl Analyzer {
             AnalyzedExpr::If { cond, body, alt } => {
                 let cond = self.correct(*cond)?;
                 let body = self.correct_prog(body)?;
+                let alt = if alt.is_some() {
+                    Some(Box::new(self.correct(*alt.unwrap())?))
+                } else {
+                    None
+                };
                 return Ok(TypedExpr {
                     expr: AnalyzedExpr::If {
                         cond: Box::new(cond),
                         body,
                         alt,
+                    },
+                    ty: expr.ty,
+                });
+            }
+
+            AnalyzedExpr::While { cond, body } => {
+                let cond = self.correct(*cond)?;
+                let body = self.correct_prog(body)?;
+
+                return Ok(TypedExpr {
+                    expr: AnalyzedExpr::While {
+                        cond: Box::new(cond),
+                        body,
                     },
                     ty: expr.ty,
                 });

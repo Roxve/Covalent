@@ -151,6 +151,9 @@ impl Tokenize for Parser {
                         "set" => self.set(Token::SetKw),
                         "if" => self.set(Token::IfKw),
                         "else" => self.set(Token::ElseKw),
+                        "while" => self.set(Token::WhileKw),
+                        "break" => self.set(Token::BreakKw),
+                        "continue" => self.set(Token::Continuekw),
                         "ret" => self.set(Token::RetKw),
                         // tags(types(old WIP))
                         "__int__" => self.set(Token::Tag("int".to_string())),
