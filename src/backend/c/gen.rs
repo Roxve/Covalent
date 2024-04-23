@@ -77,7 +77,12 @@ impl Codegen {
             }
 
             IROp::Alloc(_, _) => (),
-            IROp::Dealloc(_, _) => (),
+            IROp::Dealloc(ty, name) => {
+                if ty == ConstType::Dynamic || ty == ConstType::Str {
+                    let line = self.call_one("free", name);
+                    return Emit::Line(line);
+                }
+            }
 
             IROp::Const(_, con) => self.push(Item::Const(con)),
 
@@ -121,6 +126,7 @@ impl Codegen {
                 }
             }
 
+            IROp::While(body) => return self.bond_while(body),
             IROp::If(_, body, alt) => return self.bond_if(body, alt),
 
             IROp::Conv(into, from) => {
@@ -140,6 +146,20 @@ impl Codegen {
             _ => return self.bond_binary(op), // attempt to bond binary expr instead
         }
         Emit::None
+    }
+    fn bond_while(&mut self, body: Vec<IROp>) -> Emit {
+        let mut emiter = self.emiter();
+        let cond = self.pop_str();
+
+        emiter.emit_header(format!("while ({}) {{", cond));
+        for expr in body {
+            let emit = self.bond(expr);
+
+            emiter.embed(emit);
+        }
+
+        emiter.end();
+        Emit::Body(emiter.finish())
     }
 
     fn bond_if(&mut self, body: Vec<IROp>, alt: Vec<IROp>) -> Emit {

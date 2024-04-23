@@ -108,6 +108,7 @@ void writeln(Obj *arg) {
   }
 }
 
+// TODO: replace GC_malloc for dynamic consts into alloca
 Obj *__int__(int i) {
   Obj *obj = (Obj *)GC_malloc(INT_SIZE);
   obj->kind = INT_TYPE;

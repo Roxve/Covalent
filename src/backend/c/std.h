@@ -1,5 +1,8 @@
 #include "stdbool.h"
 
+void GC_free(void *);
+#define free(a) GC_free(a) // remove later
+
 #define INT_TYPE 0
 #define FLOAT_TYPE 1
 #define STR_TYPE 2
@@ -17,7 +20,6 @@ typedef union Value {
   _Bool b;
   Str *s;
 } Value;
-
 
 #define INT_SIZE sizeof(TYPE) + sizeof(int)
 #define FLOAT_SIZE sizeof(TYPE) + sizeof(float)
