@@ -1,4 +1,16 @@
-while true {
-	set x = "inf"
-	writeln: x
+set x: i {
+	ret i
 }
+
+set a = "STR"
+set b = 5
+set c = 5.0
+set d = false
+
+writeln: a
+writeln: b
+writeln: c
+writeln: d
+
+writeln: (x: a) + (x: a)
+writeln: (x: b) * c

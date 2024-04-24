@@ -109,10 +109,12 @@ void writeln(Obj *arg) {
 }
 
 // TODO: replace GC_malloc for dynamic consts into alloca
-Obj *__int__(int i) {
-  Obj *obj = (Obj *)GC_malloc(INT_SIZE);
-  obj->kind = INT_TYPE;
-  obj->val.i = i;
+Obj __int__(int i) {
+  Obj obj;
+  obj.kind = INT_TYPE;
+  obj.val.i = i;
+  // obj->kind = INT_TYPE;
+  // obj->val.i = i;
   return obj;
 }
 
@@ -229,6 +231,13 @@ Obj *__clone__(Obj *obj) {
   TYPE ty = obj->kind;
   unsigned int size = type_size(ty);
   void *cloned = GC_malloc(size);
+  memcpy(cloned, obj, size);
+  return cloned;
+}
+
+Str *__strclone__(Str *obj) {
+  unsigned int size = STR_SIZE + (1 * obj->len);
+  Str *cloned = GC_malloc(size);
   memcpy(cloned, obj, size);
   return cloned;
 }

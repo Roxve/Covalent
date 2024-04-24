@@ -94,9 +94,12 @@ impl Codegen {
                 let val = if !(b.is_var() && (b_ty == ConstType::Dynamic || b_ty == ConstType::Str))
                 {
                     self.pop_str()
-                } else {
+                } else if b_ty == ConstType::Dynamic {
                     let s = self.pop_str();
                     self.call_one("__clone__", s)
+                } else {
+                    let s = self.pop_str();
+                    self.call_one("__strclone__", s)
                 };
                 let tyc = type_to_c(ty);
 

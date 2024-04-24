@@ -15,9 +15,10 @@ covalent
 
 you can compile gc.o from [bdwgc](https://github.com/ivmai/bdwgc) (put it in libs folder) 
 
-# features
+# features:
 - C backend
 - if-else
+- while loops
 - variables
 - functions
 - built-in types: str, int, float, bool
