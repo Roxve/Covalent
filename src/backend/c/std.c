@@ -9,44 +9,44 @@ void GC_free(void *);
 void GC_init();
 
 #define DEFOP_N(name, op)                                                      \
-  Obj *__##name##__(Obj *a, Obj *b) {                                          \
+  Obj __##name##__(Obj a, Obj b) {                                          \
     __conv__(&a, &b);                                                          \
-    TYPE kind = a->kind;                                                       \
+    TYPE kind = a.kind;                                                       \
     switch (kind) {                                                            \
     case INT_TYPE:                                                             \
-      return __int__(a->val.i op b->val.i);                                    \
+      return __int__(a.val.i op b.val.i);                                    \
     case FLOAT_TYPE:                                                           \
-      return __float__(a->val.f op b->val.f);                                  \
+      return __float__(a.val.f op b.val.f);                                  \
     default:                                                                   \
       return __NaN__();                                                        \
     }
 #define DEFOP_BOOL(name, op)                                                   \
-  _Bool __##name##__(Obj *a, Obj *b) {                                         \
+  _Bool __##name##__(Obj a, Obj b) {                                         \
     __conv__(&a, &b);                                                          \
-    TYPE kind = a->kind;                                                       \
+    TYPE kind = a.kind;                                                       \
     switch (kind) {                                                            \
     case INT_TYPE:                                                             \
-      return a->val.i op b->val.i;                                             \
+      return a.val.i op b.val.i;                                             \
     case FLOAT_TYPE:                                                           \
-      return a->val.f op b->val.f;                                             \
+      return a.val.f op b.val.f;                                             \
     case BOOL_TYPE:                                                            \
-      return a->val.b op b->val.b;                                             \
+      return a.val.b op b.val.b;                                             \
     case STR_TYPE:                                                             \
-      return __str##name##__(a->val.s, b->val.s);                              \
+      return __str##name##__(a.val.s, b.val.s);                              \
     default:                                                                   \
-      return __NaN__();                                                        \
+      return 0;                                                        \
     }
 #define DEFOP_STR(name, op)                                                    \
-  Obj *__##name##__(Obj *a, Obj *b) {                                          \
+  Obj __##name##__(Obj a, Obj b) {                                          \
     __conv__(&a, &b);                                                          \
-    TYPE kind = a->kind;                                                       \
+    TYPE kind = a.kind;                                                       \
     switch (kind) {                                                            \
     case INT_TYPE:                                                             \
-      return __int__(a->val.i op b->val.i);                                    \
+      return __int__(a.val.i op b.val.i);                                    \
     case FLOAT_TYPE:                                                           \
-      return __float__(a->val.f op b->val.f);                                  \
+      return __float__(a.val.f op b.val.f);                                  \
     case STR_TYPE:                                                             \
-      return __str__(__str##name##__(a->val.s, b->val.s));                     \
+      return __str__(__str##name##__(a.val.s, b.val.s));                     \
     default:                                                                   \
       return __NaN__();                                                        \
     }
@@ -55,18 +55,17 @@ void GC_init();
   DEFOP_##type(name, op);                                                      \
   }
 
-Obj *__NaN__() {
-  Obj *nan = (Obj *)GC_malloc(sizeof(TYPE));
-  nan->kind = -1;
+Obj __NaN__() {
+  Obj nan = (Obj){-1};
   return nan;
 }
 
-void __conv__(Obj **a, Obj **b) {
-  TYPE a_ty = (*a)->kind;
-  TYPE b_ty = (*b)->kind;
+void __conv__(Obj *a, Obj *b) {
+  TYPE a_ty = (a)->kind;
+  TYPE b_ty = (b)->kind;
 
-  Value a_val = (*a)->val;
-  Value b_val = (*b)->val;
+  Value a_val = a->val;
+  Value b_val = b->val;
 
   if (a_ty == b_ty) {
     return;
@@ -80,26 +79,24 @@ void __conv__(Obj **a, Obj **b) {
   }
 }
 
-void writeln(Obj *arg) {
-  TYPE ty = arg->kind;
+void writeln(Obj arg) {
+  TYPE ty = arg.kind;
   switch (ty) {
   case INT_TYPE: {
-    ;
-    printf("%d\n", arg->val.i);
+    printf("%d\n", arg.val.i);
     break;
   }
 
   case FLOAT_TYPE: {
-    printf("%f\n", arg->val.f);
+    printf("%f\n", arg.val.f);
     break;
   }
   case STR_TYPE: {
-    Str *s = (Str *)arg;
-    printf("%.*s\n", arg->val.s->len, arg->val.s->val);
+    printf("%.*s\n", arg.val.s->len, arg.val.s->val);
     break;
   }
   case BOOL_TYPE: {
-    if (arg->val.b == 0) {
+    if (arg.val.b == 0) {
       printf("false\n");
     } else {
       printf("true\n");
@@ -108,29 +105,6 @@ void writeln(Obj *arg) {
   }
 }
 
-// TODO: replace GC_malloc for dynamic consts into alloca
-Obj __int__(int i) {
-  Obj obj;
-  obj.kind = INT_TYPE;
-  obj.val.i = i;
-  // obj->kind = INT_TYPE;
-  // obj->val.i = i;
-  return obj;
-}
-
-Obj *__str__(Str *s) {
-  Obj *str = (Obj *)GC_malloc(STR_SIZE);
-  str->kind = STR_TYPE;
-  str->val.s = s;
-  return str;
-}
-
-Obj *__bool__(_Bool b) {
-  Obj *obj = (Obj *)GC_malloc(BOOL_SIZE);
-  obj->kind = BOOL_TYPE;
-  obj->val.b = b;
-  return obj;
-}
 
 Str *__strnew__(char *s) {
   int len = strlen(s);
@@ -144,12 +118,6 @@ Str *__strnew__(char *s) {
   return obj;
 }
 
-Obj *__float__(float f) {
-  Obj *obj = (Obj *)GC_malloc(FLOAT_SIZE);
-  obj->kind = FLOAT_TYPE;
-  obj->val.f = f;
-  return obj;
-}
 DEF(STR, add, +);
 
 DEF(N, sub, -);

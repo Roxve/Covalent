@@ -31,33 +31,31 @@ typedef struct {
   Value val;
 } Obj;
 
-void writeln(Obj *arg);
-// Obj __int__(int i);
-#define __int__(int) &((Obj) {INT_TYPE, (Value) {.i = int}})
-#define __float__(flo) &((Obj) {FLOAT_TYPE, (Value) {.f = flo}})
-#define __str__(str) &((Obj) {STR_TYPE, (Value) {.s = str}})
-#define __bool__(bool) &((Obj) {BOOL_TYPE, (Value) {.b = bool}})
-// Obj *__float__(float f);
-// Obj *__str__(Str *s);
-// Obj *__bool__(_Bool b);
+void writeln(Obj arg);
+
+#define __int__(int) ((Obj) {INT_TYPE, (Value) {.i = int}})
+#define __float__(flo) ((Obj) {FLOAT_TYPE, (Value) {.f = flo}})
+#define __str__(str) ((Obj) {STR_TYPE, (Value) {.s = str}})
+#define __bool__(bool) ((Obj) {BOOL_TYPE, (Value) {.b = bool}})
+
 
 Str *__strnew__(char *val);
 
 void err(char *err, int code);
-Obj *__add__(Obj *a, Obj *b);
-Obj *__sub__(Obj *a, Obj *b);
-Obj *__mul__(Obj *a, Obj *b);
-Obj *__div__(Obj *a, Obj *b);
+Obj __add__(Obj a, Obj b);
+Obj __sub__(Obj a, Obj b);
+Obj __mul__(Obj a, Obj b);
+Obj __div__(Obj a, Obj b);
 
-_Bool __comp__(Obj *a, Obj *b);
-_Bool __ecomp__(Obj *a, Obj *b);
-_Bool __eq__(Obj *a, Obj *b);
+_Bool __comp__(Obj a, Obj b);
+_Bool __ecomp__(Obj a, Obj b);
+_Bool __eq__(Obj a, Obj b);
 
 _Bool __strcomp__(Str *a, Str *b);
 _Bool __strecomp__(Str *a, Str *b);
 _Bool __streq__(Str *a, Str *b);
 
 Str *__stradd__(Str *a, Str *b);
-Obj *__clone__(Obj *obj);
+// Obj *__clone__(Obj *obj);
 Str *__strclone__(Str *obj);
 void __init__();

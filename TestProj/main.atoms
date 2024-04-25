@@ -14,3 +14,9 @@ writeln: d
 
 writeln: (x: a) + (x: a)
 writeln: (x: b) * c
+
+d = true
+
+if d {
+	writeln: "nice!"
+}

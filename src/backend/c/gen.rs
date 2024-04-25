@@ -78,7 +78,8 @@ impl Codegen {
 
             IROp::Alloc(_, _) => (),
             IROp::Dealloc(ty, name) => {
-                if ty == ConstType::Dynamic || ty == ConstType::Str {
+                // free heap allocated types
+                if ty == ConstType::Str {
                     let line = self.call_one("free", name);
                     return Emit::Line(line);
                 }
@@ -87,20 +88,7 @@ impl Codegen {
             IROp::Const(_, con) => self.push(Item::Const(con)),
 
             IROp::Store(ty, name) => {
-                let b = self.borrow();
-                let b_ty = b.get_ty();
-
-                // clone dynamic and strings because they are pointers
-                let val = if !(b.is_var() && (b_ty == ConstType::Dynamic || b_ty == ConstType::Str))
-                {
-                    self.pop_str()
-                } else if b_ty == ConstType::Dynamic {
-                    let s = self.pop_str();
-                    self.call_one("__clone__", s)
-                } else {
-                    let s = self.pop_str();
-                    self.call_one("__strclone__", s)
-                };
+                let val = self.pop_str();
                 let tyc = type_to_c(ty);
 
                 let var = self.variables.get(&name);
