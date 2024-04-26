@@ -2,8 +2,8 @@ use super::Scope;
 
 use super::ast::*;
 use super::Parser;
-use crate::lexer::Tokenize;
-use crate::source::*;
+use crate::lexer::Token;
+use crate::source::{ErrKind, Ident};
 
 pub trait ParserError {}
 
@@ -48,7 +48,7 @@ impl Parse for Parser {
             if let Token::Operator(c) = self.current() {
                 if c == "=" {
                     if let Expr::Ident(name) = left {
-                        self.tokenize();
+                        self.next();
                         self.current_scope = Scope::Value;
                         let right = self.parse_level(0);
 
@@ -71,7 +71,7 @@ impl Parse for Parser {
                     break;
                 }
 
-                self.tokenize();
+                self.next();
                 right = self.parse_level(current_op_level + 1);
 
                 left = Expr::BinaryExpr {
@@ -92,14 +92,14 @@ impl Parse for Parser {
 
         if let Expr::Ident(id) = &call {
             if self.current() == Token::Colon {
-                self.tokenize();
+                self.next();
                 let args = self.parse_list();
                 return Expr::FnCall {
                     name: id.to_owned(),
                     args,
                 };
             } else if self.current() == Token::Exec {
-                self.tokenize();
+                self.next();
                 return Expr::FnCall {
                     name: id.to_owned(),
                     args: Vec::new(),
@@ -114,7 +114,7 @@ impl Parse for Parser {
 
         args.push(self.parse_level(0));
         while self.current() == Token::Comma {
-            self.tokenize();
+            self.next();
             args.push(self.parse_level(0));
         }
 
@@ -125,19 +125,19 @@ impl Parse for Parser {
         let tok = self.current();
         match tok {
             Token::Int(i) => {
-                self.tokenize();
+                self.next();
                 Expr::Literal(Literal::Int(i))
             }
             Token::Float(f) => {
-                self.tokenize();
+                self.next();
                 Expr::Literal(Literal::Float(f))
             }
             Token::Bool(val) => {
-                self.tokenize();
+                self.next();
                 Expr::Literal(Literal::Bool(val))
             }
             Token::Str(s) => {
-                self.tokenize();
+                self.next();
                 Expr::Literal(Literal::Str(s))
             }
 
@@ -146,13 +146,13 @@ impl Parse for Parser {
             }
 
             Token::Ident(id) => {
-                self.tokenize();
+                self.next();
                 Expr::Ident(Ident { val: id, tag: None })
             }
             // Token::Tag(tag) => {
-            //     self.tokenize();
+            //     self.next();
             //     if let Token::Ident(id) = self.current() {
-            //         self.tokenize();
+            //         self.next();
             //         return Expr::Ident(Ident {
             //             tag: Some(tag.to_string()),
             //             val: id,
@@ -161,7 +161,7 @@ impl Parse for Parser {
             //     todo!()
             // }
             Token::LeftParen => {
-                self.tokenize();
+                self.next();
                 let expr = self.parse_level(0);
                 self.except(Token::RightParen);
                 expr
@@ -176,7 +176,7 @@ impl Parse for Parser {
                     ErrKind::UnexceptedTokenE,
                     format!("unexcepted token [{:#?}]", tok),
                 );
-                self.tokenize();
+                self.next();
 
                 // todo!(); // add null
                 Expr::Literal(Literal::Int(0))
@@ -185,13 +185,13 @@ impl Parse for Parser {
     }
 
     fn parse_declare(&mut self) -> Expr {
-        self.tokenize(); // n->t
+        self.next(); // n->t
 
         let left = self.parse_expr();
         self.current_scope = Scope::Value;
         if let Expr::Ident(name) = left {
             if Token::Operator("=".to_string()) == self.current() {
-                self.tokenize();
+                self.next();
 
                 let expr = self.parse_level(0);
                 return Expr::VarDeclare {
@@ -217,7 +217,7 @@ impl Parse for Parser {
         let mut id_args: Vec<Ident> = Vec::new();
 
         if self.current() == Token::Colon {
-            self.tokenize();
+            self.next();
             let args = self.parse_list();
 
             for arg in args {
@@ -242,14 +242,14 @@ impl Parse for Parser {
     }
 
     fn parse_if_expr(&mut self) -> Expr {
-        self.tokenize(); // remove if
+        self.next(); // remove if
         self.current_scope = Scope::Value;
         let condition = self.parse_level(0);
         let body = self.parse_body();
 
         let mut alt: Option<Box<Expr>> = None;
         if self.current() == Token::ElseKw {
-            self.tokenize();
+            self.next();
             if self.current() == Token::IfKw {
                 alt = Some(Box::new(self.parse_if_expr()));
             } else {
@@ -264,7 +264,7 @@ impl Parse for Parser {
         }
     }
     fn parse_while_expr(&mut self) -> Expr {
-        self.tokenize();
+        self.next();
         self.current_scope = Scope::Value;
         let condition = self.parse_level(0);
         let body = self.parse_body();
@@ -296,7 +296,7 @@ impl Parse for Parser {
     }
 
     fn parse_ret_expr(&mut self) -> Expr {
-        self.tokenize();
+        self.next();
         self.current_scope = Scope::Value;
         let expr = self.parse_level(0);
         Expr::RetExpr(Box::new(expr))

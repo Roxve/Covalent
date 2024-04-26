@@ -195,14 +195,6 @@ unsigned int type_size(TYPE ty) {
   }
 }
 
-Obj *__clone__(Obj *obj) {
-  TYPE ty = obj->kind;
-  unsigned int size = type_size(ty);
-  void *cloned = GC_malloc(size);
-  memcpy(cloned, obj, size);
-  return cloned;
-}
-
 Str *__strclone__(Str *obj) {
   unsigned int size = STR_SIZE + (1 * obj->len);
   Str *cloned = GC_malloc(size);

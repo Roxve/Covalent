@@ -1,179 +1,77 @@
-use super::parser::Parser;
-use crate::source::*;
-pub fn is_num(c: char) -> bool {
-    return "01234.56789".contains(c);
+use crate::source::{ATErr, ErrKind};
+
+pub mod lex;
+#[derive(Debug, Clone, PartialEq)]
+pub enum Token {
+    Operator(String),
+    // convert these into literal
+    Int(i32),
+    Float(f32),
+    Str(String),
+    Bool(bool),
+
+    Ident(String),
+    Tag(String),
+    Err(String), // error code and msg
+    LeftParen,
+    RightParen,
+    LeftBracket,
+    RightBracket,
+    Exec,
+    Colon,
+    Comma,
+    IfKw,
+    ElseKw,
+    WhileKw,
+    BreakKw,
+    Continuekw,
+    SetKw,
+    RetKw,
+    EOF,
 }
-pub fn is_id(c: char) -> bool {
-    return !(" \t\n+-*/<&|>=@#%:!?$,[{('`)}]").contains(c);
+#[derive(Debug, Clone)]
+pub struct Lexer {
+    line: u32,
+    column: u32,
+    code: String,
+    pos: usize,
+    pub errors: Vec<ATErr>,
 }
 
-pub trait Tokenize {
-    fn parse_num(&mut self, x: String) -> Token;
-    fn tokenize(&mut self) -> Token;
-}
-
-impl Tokenize for Parser {
-    fn parse_num(&mut self, x: String) -> Token {
-        if x.contains('.') {
-            return self.set(Token::Float(x.parse().unwrap()));
+impl Lexer {
+    pub fn new(code: String) -> Self {
+        Self {
+            line: 0,
+            column: 0,
+            pos: 0,
+            code,
+            errors: Vec::new(),
         }
-        return self.set(Token::Int(x.parse().unwrap()));
     }
 
-    fn tokenize(&mut self) -> Token {
-        loop {
-            if !self.not_eof() {
-                return self.set(Token::EOF);
-            }
-            match self.at() {
-                ' ' | '\t' => {
-                    self.eat();
-                }
-                '\n' => {
-                    self.eat();
-                    self.column = 0;
-                    self.line += 1;
-                }
-                _ => break,
-            }
-        }
+    fn at(&self) -> char {
+        self.code.clone().chars().nth(self.pos).unwrap()
+    }
 
-        match self.at() {
-            '#' => {
-                while self.not_eof() && self.at() != '\n' {
-                    self.eat();
-                }
-                self.tokenize()
-            }
-            '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
-                let mut res = String::from("");
-                while self.not_eof() && is_num(self.at()) {
-                    res.push(self.eat())
-                }
-                self.parse_num(res)
-            }
+    fn eat(&mut self) -> char {
+        self.pos += 1;
+        self.column += 1;
+        self.code.clone().chars().nth(self.pos - 1).unwrap()
+    }
 
-            '"' | '\'' => {
-                let op = self.eat();
+    fn not_eof(&self) -> bool {
+        self.code.len() - 1 >= self.pos
+    }
 
-                let start_line = self.line;
-                let start_column = self.column;
-
-                let mut res = String::from("");
-
-                while self.not_eof() && self.at() != op {
-                    res.push(self.eat());
-                }
-
-                if self.not_eof() && self.at() == op {
-                    self.eat();
-                } else {
-                    self.err(
-                        ErrKind::UnknownCharE,
-                        format!(
-                            "reached end of file and didnt finish string started at line {}, colmun {}",
-                            start_line,
-                            start_column
-                        ),
-                    );
-                }
-
-                self.set(Token::Str(res))
-            }
-            '=' => {
-                self.eat();
-                if self.not_eof() && self.at() == '=' {
-                    self.eat();
-                    return self.set(Token::Operator("==".to_string()));
-                }
-
-                self.set(Token::Operator("=".to_string()))
-            }
-            '+' | '-' | '*' | '/' | '^' | '&' | '|' => {
-                let op = self.eat();
-                self.set(Token::Operator(op.to_string()))
-            }
-
-            '<' | '>' => {
-                let op = self.eat();
-
-                if self.not_eof() && self.at() == '=' {
-                    let mut op = op.to_string();
-                    op.push(self.eat());
-                    return self.set(Token::Operator(op));
-                }
-                self.set(Token::Operator(op.to_string()))
-            }
-            '(' => {
-                self.eat();
-                self.set(Token::LeftParen)
-            }
-
-            ')' => {
-                self.eat();
-                self.set(Token::RightParen)
-            }
-
-            '{' => {
-                self.eat();
-                self.set(Token::LeftBracket)
-            }
-
-            '}' => {
-                self.eat();
-                self.set(Token::RightBracket)
-            }
-
-            ':' => {
-                self.eat();
-                self.set(Token::Colon)
-            }
-
-            ',' => {
-                self.eat();
-                self.set(Token::Comma)
-            }
-
-            '!' => {
-                self.eat();
-                self.set(Token::Exec)
-            }
-
-            c => {
-                if is_id(c) {
-                    let mut res = String::from("");
-                    while is_id(self.at()) {
-                        res.push(self.eat());
-                    }
-
-                    match res.as_str() {
-                        // keywords
-                        "set" => self.set(Token::SetKw),
-                        "if" => self.set(Token::IfKw),
-                        "else" => self.set(Token::ElseKw),
-                        "while" => self.set(Token::WhileKw),
-                        "break" => self.set(Token::BreakKw),
-                        "continue" => self.set(Token::Continuekw),
-                        "ret" => self.set(Token::RetKw),
-                        // tags(types(old WIP))
-                        "__int__" => self.set(Token::Tag("int".to_string())),
-                        "__float__" => self.set(Token::Tag("float".to_string())),
-                        // bools
-                        "true" => self.set(Token::Bool(true)),
-                        "false" => self.set(Token::Bool(false)),
-                        _ => self.set(Token::Ident(res)),
-                    }
-                } else {
-                    let c = self.eat();
-                    self.err(ErrKind::UnknownCharE, format!("unknown char '{}'", c));
-
-                    // to remove?
-                    self.set(Token::Err(format!(
-                        "AT0001::UNKNOWN_CHAR::{}::{}",
-                        self.line, self.column
-                    )))
-                }
-            }
-        }
+    fn err(&mut self, msg: String, kind: ErrKind) -> Token {
+        let err = ATErr {
+            kind,
+            msg,
+            line: self.line,
+            column: self.column,
+        };
+        self.errors.push(err.clone());
+        err.out_error();
+        Token::Err(err.get_error())
     }
 }

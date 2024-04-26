@@ -8,35 +8,7 @@ pub enum ConstType {
     Dynamic,
     Void,
 }
-#[derive(Debug, Clone, PartialEq)]
 
-pub enum Token {
-    Operator(String),
-    // convert these into literal
-    Int(i32),
-    Float(f32),
-    Str(String),
-    Bool(bool),
-
-    Ident(String),
-    Tag(String),
-    Err(String), // error code and msg
-    LeftParen,
-    RightParen,
-    LeftBracket,
-    RightBracket,
-    Exec,
-    Colon,
-    Comma,
-    IfKw,
-    ElseKw,
-    WhileKw,
-    BreakKw,
-    Continuekw,
-    SetKw,
-    RetKw,
-    EOF,
-}
 #[repr(u8)]
 #[derive(Debug, Clone)]
 pub enum ErrKind {
@@ -79,5 +51,3 @@ pub struct Ident {
     pub val: String,
     pub tag: Option<ConstType>,
 }
-
-// frontend generation -> feed into backend
