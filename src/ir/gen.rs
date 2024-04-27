@@ -243,6 +243,7 @@ impl IRGen for Codegen {
             "-" => IROp::Sub(ty),
             "*" => IROp::Mul(ty),
             "/" => IROp::Div(ty),
+            "%" => IROp::Mod(ty),
             ">" | "<" => IROp::Comp(ConstType::Bool),
             ">=" | "<=" => IROp::EComp(ConstType::Bool),
             "==" => IROp::Eq(ConstType::Bool),

@@ -14,6 +14,7 @@ pub enum IROp {
     Sub(ConstType),
     Mul(ConstType),
     Div(ConstType),
+    Mod(ConstType),
     Comp(ConstType), // acts like GE to peform LE switch left and right
     EComp(ConstType),
     Eq(ConstType),
@@ -41,6 +42,7 @@ pub fn get_op_type(op: &IROp) -> ConstType {
         Sub(t) => t,
         Mul(t) => t,
         Div(t) => t,
+        Mod(t) => t,
         Comp(t) => t,
         EComp(t) => t,
         Eq(t) => t,
