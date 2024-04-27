@@ -48,6 +48,7 @@ pub fn type_to_c(ty: ConstType) -> String {
         ConstType::Str => "Str*".to_string(),
         ConstType::Bool => "_Bool".to_string(),
         ConstType::Void => "void".to_string(),
+        _ => todo!("{:?}", ty),
     }
 }
 
@@ -75,9 +76,9 @@ pub enum Item {
 impl Item {
     #[inline]
     pub fn get_ty(&self) -> ConstType {
-        match self {
-            &Self::Expr(ty, _) => ty.clone(),
-            &Self::Var(ty, _) => ty.clone(),
+        match self.clone() {
+            Self::Expr(ty, _) => ty,
+            Self::Var(ty, _) => ty,
             Self::Const(literal) => (&literal).get_ty(),
         }
     }

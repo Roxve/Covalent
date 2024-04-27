@@ -20,6 +20,8 @@ pub enum Token {
     Exec,
     Colon,
     Comma,
+    Dot,
+    Access,
     IfKw,
     ElseKw,
     WhileKw,

@@ -18,10 +18,7 @@ impl TypedExpr {
                 right: Box::new((*right).to_expr()),
             },
             AnalyzedExpr::FnCall { name, args } => Expr::FnCall {
-                name: Ident {
-                    val: name,
-                    tag: None,
-                },
+                name: Box::new(name.to_expr()),
                 args: args.into_iter().map(|v| v.to_expr()).collect(),
             },
             AnalyzedExpr::Debug(name, line, column) => Expr::PosInfo(name, line, column),
@@ -56,6 +53,7 @@ impl Analyzer {
                 }
             }
             AnalyzedExpr::FnCall { name, args } => {
+                let name = Box::new(self.correct(*name)?);
                 let mut corrected_args = vec![];
                 for arg in args {
                     let arg = self.correct(arg)?;
@@ -69,13 +67,23 @@ impl Analyzer {
                     }
                 }
 
-                let ty = self.env.get_ty(&name).unwrap();
+                if let ConstType::Func(ty, _) = name.ty.clone() {
+                    return Ok(TypedExpr {
+                        expr: AnalyzedExpr::FnCall {
+                            name,
+                            args: corrected_args,
+                        },
+                        ty: *ty,
+                    });
+                } else {
+                    panic!()
+                }
+            }
+
+            AnalyzedExpr::Id(id) => {
                 return Ok(TypedExpr {
-                    expr: AnalyzedExpr::FnCall {
-                        name,
-                        args: corrected_args,
-                    },
-                    ty,
+                    ty: self.env.get_ty(&id).unwrap(),
+                    expr: AnalyzedExpr::Id(id),
                 });
             }
 
@@ -85,7 +93,7 @@ impl Analyzer {
                 args,
                 body,
             } => {
-                self.env.current = ret;
+                self.env.current = ret.clone();
                 let body = self.correct_prog(body.clone())?;
                 self.env.current = ConstType::Void;
                 return Ok(TypedExpr {
@@ -139,17 +147,17 @@ impl Analyzer {
             }
             AnalyzedExpr::RetExpr(ret) => {
                 let ret = Box::new(self.correct(*ret)?);
-                if ret.ty == self.env.current {
+                if ret.ty == self.env.current.clone() {
                     return Ok(TypedExpr {
                         expr: AnalyzedExpr::RetExpr(ret.clone()),
                         ty: ret.ty,
                     });
                 } else {
                     return Ok(TypedExpr {
-                        ty: self.env.current,
+                        ty: self.env.current.clone(),
                         expr: AnalyzedExpr::RetExpr(Box::new(TypedExpr {
                             expr: AnalyzedExpr::As(ret),
-                            ty: self.env.current,
+                            ty: self.env.current.clone(),
                         })),
                     });
                 }

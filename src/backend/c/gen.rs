@@ -89,7 +89,7 @@ impl Codegen {
 
             IROp::Store(ty, name) => {
                 let val = self.pop_str();
-                let tyc = type_to_c(ty);
+                let tyc = type_to_c(ty.clone());
 
                 let var = self.variables.get(&name);
                 if var.is_none() || var.unwrap().1 != ty {
@@ -105,18 +105,17 @@ impl Codegen {
                 let name = self.get_var(name);
                 self.push(Item::Var(ty, name));
             }
-            IROp::Call(ty, name, count) => {
-                let arg_count = count;
-                let args = self.pop_amount(arg_count).join(", ");
-                let call = format!("{}({})", name, args);
-                if &ty == &ConstType::Void {
-                    // our compiler only insert a line when the stack is empty, void functions doesnt push anything to the stack
-                    return Emit::Line(call);
-                } else {
-                    self.push(Item::Expr(ty, call));
-                }
-            }
-
+            // IROp::Call(ty, name, count) => {
+            //     let arg_count = count;
+            //     let args = self.pop_amount(arg_count).join(", ");
+            //     let call = format!("{}({})", name, args);
+            //     if &ty == &ConstType::Void {
+            //         // our compiler only insert a line when the stack is empty, void functions doesnt push anything to the stack
+            //         return Emit::Line(call);
+            //     } else {
+            //         self.push(Item::Expr(ty, call));
+            //     }
+            // }
             IROp::While(body) => return self.bond_while(body),
             IROp::If(_, body, alt) => return self.bond_if(body, alt),
 

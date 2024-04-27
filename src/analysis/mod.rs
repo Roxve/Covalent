@@ -1,9 +1,8 @@
 pub mod analysis;
 pub mod correct;
 use crate::{
-    ir::Enviroment,
     parser::ast::Literal,
-    source::{ConstType, Ident},
+    source::{ConstType, Enviroment, Ident},
 };
 
 pub struct Analyzer {
@@ -12,7 +11,7 @@ pub struct Analyzer {
     column: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum AnalyzedExpr {
     Import {
         module: String,
@@ -21,6 +20,7 @@ pub enum AnalyzedExpr {
     },
 
     Id(String),
+    Member(Box<TypedExpr>, Box<TypedExpr>),
     Literal(Literal),
     BinaryExpr {
         op: String,
@@ -35,12 +35,12 @@ pub enum AnalyzedExpr {
     },
 
     VarAssign {
-        name: String,
+        name: Box<TypedExpr>,
         val: Box<TypedExpr>,
     },
 
     FnCall {
-        name: String,
+        name: Box<TypedExpr>,
         args: Vec<TypedExpr>,
     },
 
@@ -67,7 +67,7 @@ pub enum AnalyzedExpr {
     As(Box<TypedExpr>), // change an expr type if possible
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TypedExpr {
     pub expr: AnalyzedExpr,
     pub ty: ConstType,
@@ -96,7 +96,7 @@ impl ConstType {
                 ops
             }
             &ConstType::Dynamic => [op!(Logical), op!(Bool), op!(Math)].concat(),
-            &ConstType::Void => Vec::new(),
+            &ConstType::Void | &ConstType::Obj(_) | &ConstType::Func(_, _) => Vec::new(),
         }
     }
 }
@@ -110,7 +110,7 @@ fn get_ret_ty(expr: &TypedExpr, prev: ConstType) -> ConstType {
     match expr.expr.clone() {
         AnalyzedExpr::RetExpr(_) => {
             if prev == ConstType::Void {
-                expr.ty
+                expr.ty.clone()
             } else if prev != expr.ty {
                 ConstType::Dynamic
             } else {

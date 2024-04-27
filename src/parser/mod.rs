@@ -2,23 +2,8 @@ pub mod ast;
 pub mod parse;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
-use crate::source::{ATErr, ErrKind, Ident};
+use crate::source::{ATErr, ErrKind, Ident, Scope};
 use ast::Expr;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Scope {
-    Value,
-    _Func(String),
-    Top,
-}
-
-impl Scope {
-    pub fn is_used(&self) -> bool {
-        let owned = self.to_owned();
-
-        owned == Scope::Value
-    }
-}
 
 #[derive(Debug, Clone)]
 

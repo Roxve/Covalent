@@ -47,23 +47,15 @@ impl Parse for Parser {
             // 5 (2*) 5 nothing (1+) 5
             if let Token::Operator(c) = self.current() {
                 if c == "=" {
-                    if let Expr::Ident(name) = left {
-                        self.next();
-                        self.current_scope = Scope::Value;
-                        let right = self.parse_level(0);
+                    self.next();
+                    self.current_scope = Scope::Value;
+                    let right = self.parse_level(0);
 
-                        left = Expr::VarAssign {
-                            name,
-                            val: Box::new(right),
-                        };
-                        break;
-                    }
-
-                    self.err(
-                        ErrKind::UnexceptedTokenE,
-                        "unexcepted token equal '=' which is used in assignment expr".to_string(),
-                    );
-                    return left;
+                    left = Expr::VarAssign {
+                        name: Box::new(left),
+                        val: Box::new(right),
+                    };
+                    break;
                 }
 
                 let current_op_level = get_operator_level(c.as_str());
@@ -90,22 +82,21 @@ impl Parse for Parser {
     fn parse_call_fn(&mut self) -> Expr {
         let call = self.parse_expr();
 
-        if let Expr::Ident(id) = &call {
-            if self.current() == Token::Colon {
-                self.next();
-                let args = self.parse_list();
-                return Expr::FnCall {
-                    name: id.to_owned(),
-                    args,
-                };
-            } else if self.current() == Token::Exec {
-                self.next();
-                return Expr::FnCall {
-                    name: id.to_owned(),
-                    args: Vec::new(),
-                };
-            }
+        if self.current() == Token::Colon {
+            self.next();
+            let args = self.parse_list();
+            return Expr::FnCall {
+                name: Box::new(call),
+                args,
+            };
+        } else if self.current() == Token::Exec {
+            self.next();
+            return Expr::FnCall {
+                name: Box::new(call),
+                args: Vec::new(),
+            };
         }
+
         return call;
     }
 

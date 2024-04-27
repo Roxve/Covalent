@@ -32,10 +32,7 @@ impl Analyzer {
         args: Vec<(ConstType, String)>,
     ) {
         self.env.push_function(
-            Ident {
-                tag: None,
-                val: name.to_string(),
-            },
+            name.to_string(),
             args.clone()
                 .into_iter()
                 .map(|v| Ident {
@@ -43,7 +40,7 @@ impl Analyzer {
                     val: v.1,
                 })
                 .collect(),
-            ty,
+            ty.clone(),
         );
         body.push(TypedExpr {
             expr: AnalyzedExpr::Import {
@@ -74,10 +71,19 @@ impl Analyzer {
 
         let ty = get_fn_type(&body, ConstType::Void);
         self.env = self.env.parent().unwrap();
-        self.env.modify(&func.name.val, ty);
+        self.env.modify(
+            &func.name.val,
+            ConstType::Func(
+                Box::new(ty.clone()),
+                args.clone()
+                    .iter()
+                    .map(|t| t.tag.clone().unwrap_or(ConstType::Dynamic))
+                    .collect(),
+            ),
+        );
 
         let expr = AnalyzedExpr::Func {
-            ret: ty,
+            ret: ty.clone(),
             name: func.name.val,
             args,
             body,
@@ -101,9 +107,11 @@ impl Analyzer {
             vec![(ConstType::Dynamic, "x".to_string())],
         );
         for func in functions.clone() {
-            analyzer
-                .env
-                .push_function(func.name.clone(), func.args.clone(), ConstType::Dynamic);
+            analyzer.env.push_function(
+                func.name.val.clone(),
+                func.args.clone(),
+                ConstType::Dynamic,
+            );
         }
         for func in functions {
             analyzed_prog.push(analyzer.analyz_func(func)?);
@@ -141,7 +149,7 @@ impl Analyzer {
             Expr::BinaryExpr { op, left, right } => self.analyz_binary_expr(*left, *right, op),
             Expr::Ident(id) => self.analyz_id(id),
             Expr::VarDeclare { name, val } => self.analyz_var_declare(name, *val),
-            Expr::VarAssign { name, val } => self.analyz_var_assign(name, *val),
+            Expr::VarAssign { name, val } => self.analyz_var_assign(*name, *val),
             Expr::Discard(expr) => {
                 let ty = ConstType::Void;
                 let expr = self.analyz(*expr)?;
@@ -160,43 +168,38 @@ impl Analyzer {
 
             Expr::RetExpr(expr) => {
                 let expr = self.analyz(*expr)?;
-                let ty = expr.ty;
+                let ty = expr.ty.clone();
 
                 let expr = AnalyzedExpr::RetExpr(Box::new(expr));
                 Ok(TypedExpr { expr, ty })
             }
 
             Expr::FnCall { name, args: params } => {
-                let func = self.env.get_function(&name);
-                if func.is_none() {
+                let name = Box::new(self.analyz(*name)?);
+                if let ConstType::Func(ty, args) = name.ty.clone() {
+                    if &args.len() != &params.len() {
+                        self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", params.len(), args.len(), name.expr));
+                        return Err(ErrKind::UndeclaredVar);
+                    }
+
+                    let mut args = vec![];
+                    for param in params {
+                        args.push(TypedExpr {
+                            expr: AnalyzedExpr::As(Box::new(self.analyz(param)?)),
+                            ty: ConstType::Dynamic,
+                        });
+                    }
+
+                    let expr = AnalyzedExpr::FnCall { name, args };
+
+                    Ok(TypedExpr { expr, ty: *ty })
+                } else {
                     self.err(
-                        ErrKind::UndeclaredVar,
-                        format!("undeclared function {}", &name.val),
+                        ErrKind::UnexceptedTokenE,
+                        format!("expected symbol to call got {:?}", name.expr),
                     );
-                    return Err(ErrKind::UndeclaredVar);
+                    Err(ErrKind::UnexceptedTokenE)
                 }
-
-                if &func.as_ref().unwrap().args.len() != &params.len() {
-                    self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {}", params.len(), func.unwrap().args.len(), name.val));
-                    return Err(ErrKind::UndeclaredVar);
-                }
-
-                let ty = self.env.get_ty(&name.val).unwrap_or(ConstType::Dynamic); // corrected later
-
-                let mut args = vec![];
-                for param in params {
-                    args.push(TypedExpr {
-                        expr: AnalyzedExpr::As(Box::new(self.analyz(param)?)),
-                        ty: ConstType::Dynamic,
-                    });
-                }
-
-                let expr = AnalyzedExpr::FnCall {
-                    name: name.val,
-                    args,
-                };
-
-                Ok(TypedExpr { expr, ty })
             }
 
             Expr::IfExpr {
@@ -233,7 +236,7 @@ impl Analyzer {
 
                 let expr = AnalyzedExpr::If {
                     cond,
-                    body: body,
+                    body,
                     alt: analyzed_alt,
                 };
 
@@ -272,6 +275,7 @@ impl Analyzer {
 
                 Ok(TypedExpr { expr, ty })
             }
+            _ => todo!("expr {:#?}", expr),
         }
     }
 
@@ -342,17 +346,18 @@ impl Analyzer {
         Ok(TypedExpr { expr, ty })
     }
 
-    pub fn analyz_var_assign(&mut self, name: Ident, val: Expr) -> Result<TypedExpr, ErrKind> {
+    pub fn analyz_var_assign(&mut self, id: Expr, val: Expr) -> Result<TypedExpr, ErrKind> {
         let val = self.analyz(val)?;
-        let name = name.val;
-        if !self.env.has(&name) {
-            return Err(ErrKind::UndeclaredVar);
-        }
+        let name = self.analyz(id)?;
         let ty = val.ty.clone();
-        self.env.modify(&name, ty.clone());
-
+        if let AnalyzedExpr::Id(ref name) = name.expr {
+            self.env.modify(name, ty.clone());
+        } else if val.ty != name.ty {
+            self.err(ErrKind::InvaildType, format!("cannot set the value of an Obj property to a value of different type, got type {:?} expected {:?}, in expr {:?} = {:?}", val.ty, name.ty, name, val));
+            return Err(ErrKind::InvaildType);
+        }
         let expr = AnalyzedExpr::VarAssign {
-            name,
+            name: Box::new(name),
             val: Box::new(val),
         };
         Ok(TypedExpr { expr, ty })

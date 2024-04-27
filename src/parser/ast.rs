@@ -43,12 +43,12 @@ pub enum Expr {
         val: Box<Expr>,
     },
     VarAssign {
-        name: Ident,
+        name: Box<Expr>,
         val: Box<Expr>,
     },
-    // fn declare ast is genereated in a special Vec in Source
+    // fn declare ast is genereated in parser.functions
     FnCall {
-        name: Ident,
+        name: Box<Expr>,
         args: Vec<Expr>,
     },
 
@@ -63,6 +63,10 @@ pub enum Expr {
         body: Vec<Expr>,
     },
 
+    MemberExpr {
+        parent: Box<Expr>,
+        child: Box<Expr>,
+    },
     Discard(Box<Expr>),
     Block(Vec<Expr>),
     PosInfo(String, u32, u32), // debugging

@@ -2,7 +2,7 @@ use super::{Codegen, IROp};
 
 use crate::{
     analysis::{AnalyzedExpr, TypedExpr},
-    source::{ConstType, ErrKind, Ident},
+    source::{ConstType, Ident},
 };
 
 type IR = Vec<IROp>;
@@ -20,7 +20,7 @@ pub trait IRGen {
     fn gen_expr(&mut self, expr: TypedExpr) -> IRRes;
 
     fn gen_var_declare(&mut self, name: String, expr: TypedExpr) -> IRRes;
-    fn gen_var_assign(&mut self, name: String, expr: TypedExpr) -> IRRes;
+    fn gen_var_assign(&mut self, name: TypedExpr, expr: TypedExpr) -> IRRes;
     fn gen_binary_expr(
         &mut self,
         ty: ConstType,
@@ -81,7 +81,7 @@ impl IRGen for Codegen {
                 self.gen_binary_expr(expr.ty, op, *left, *right)
             }
             AnalyzedExpr::VarDeclare { name, val } => self.gen_var_declare(name, *val),
-            AnalyzedExpr::VarAssign { name, val } => self.gen_var_assign(name, *val),
+            AnalyzedExpr::VarAssign { name, val } => self.gen_var_assign(*name, *val),
             AnalyzedExpr::Id(name) => Ok(vec![IROp::Load(expr.ty, name)]),
             AnalyzedExpr::FnCall { name, args } => {
                 let mut res: Vec<IROp> = vec![];
@@ -90,7 +90,8 @@ impl IRGen for Codegen {
                 for arg in args {
                     res.append(&mut self.gen_expr(arg)?);
                 }
-                res.push(IROp::Call(expr.ty, name, count));
+                res.append(&mut self.gen_expr(*name)?);
+                res.push(IROp::Call(expr.ty, count));
 
                 Ok(res)
             }
@@ -182,6 +183,7 @@ impl IRGen for Codegen {
                 self.env = self.env.parent().unwrap();
                 Ok(res)
             }
+            _ => todo!("{:#?}", expr),
         }
     }
 
@@ -198,28 +200,21 @@ impl IRGen for Codegen {
         Ok(res)
     }
 
-    fn gen_var_assign(&mut self, name: String, expr: TypedExpr) -> IRRes {
-        if !self.env.has(&name) {
-            self.err(
-                ErrKind::UndeclaredVar,
-                format!("var {} is not declared", name.clone()),
-            );
-            return Err(ErrKind::UndeclaredVar as u8);
-        }
-
+    fn gen_var_assign(&mut self, name: TypedExpr, expr: TypedExpr) -> IRRes {
         let mut res = vec![];
+        res.append(&mut self.gen_expr(name)?);
         let mut compiled_expr = self.gen_expr(expr.clone())?;
         let ty = expr.ty;
 
-        if &self.env.get_ty(&name).unwrap() != &ty {
-            res.push(IROp::Dealloc(self.env.get_ty(&name).unwrap(), name.clone()));
-            res.push(IROp::Alloc(ty.clone(), name.clone()));
+        // if &self.env.get_ty(&name).unwrap() != &ty {
+        //     res.push(IROp::Dealloc(self.env.get_ty(&name).unwrap(), name.clone()));
+        //     res.push(IROp::Alloc(ty.clone(), name.clone()));
 
-            self.env.modify(&name, ty.clone());
-        }
+        //     self.env.modify(&name, ty.clone());
+        // }
 
         res.append(&mut compiled_expr);
-        res.push(IROp::Store(ty, name));
+        res.push(IROp::Set(ty));
         Ok(res)
     }
 
