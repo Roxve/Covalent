@@ -28,7 +28,6 @@ pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
     fs::write(&outpath, code).expect(
         format!("err writing to /tmp/covalent make sure covalent can access that path!").as_str(),
     );
-
     let _ = Command::new("gcc")
         .arg("-Wno-implicit-function-declaration")
         .arg(format!("-I{}", &config.libdir))
