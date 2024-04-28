@@ -30,6 +30,7 @@ pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
     );
 
     let _ = Command::new("gcc")
+        .arg("-Wno-implicit-function-declaration")
         .arg(format!("-I{}", &config.libdir))
         .arg(format!("-o{}", &config.output))
         .arg(outpath)

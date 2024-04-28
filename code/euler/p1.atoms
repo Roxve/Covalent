@@ -3,10 +3,8 @@ set sum = 0
 
 while i > 0 {
 	i = i - 1
-	if i % 3 == 0 {
+	if i % 3 == 0 || i % 5 == 0 {
 		sum = sum + i
-	} else if i % 5 == 0 {
-		sum = sum + i
-	}
+	} 
 }
 writeln: sum

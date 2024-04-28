@@ -241,17 +241,22 @@ impl Codegen {
             let ops = vec![self.pop_str(), self.pop_str()];
             Item::Expr(
                 ConstType::Dynamic,
-                match op {
-                    IROp::Add(_) => self.call("__add__", ops),
-                    IROp::Sub(_) => self.call("__sub__", ops),
-                    IROp::Mul(_) => self.call("__mul__", ops),
-                    IROp::Div(_) => self.call("__div__", ops),
-                    IROp::Mod(_) => self.call("__mod__", ops),
-                    IROp::Comp(_) => self.call("__comp__", ops),
-                    IROp::EComp(_) => self.call("__ecomp__", ops),
-                    IROp::Eq(_) => self.call("__eq__", ops),
-                    _ => todo!(),
-                },
+                self.call(
+                    match op {
+                        IROp::Add(_) => "__add__",
+                        IROp::Sub(_) => "__sub__",
+                        IROp::Mul(_) => "__mul__",
+                        IROp::Div(_) => "__div__",
+                        IROp::Mod(_) => "__mod__",
+                        IROp::Comp => "__comp__",
+                        IROp::EComp => "__ecomp__",
+                        IROp::Eq => "__eq__",
+                        IROp::And => "__and__",
+                        IROp::Or => "__or__",
+                        _ => todo!(),
+                    },
+                    ops,
+                ),
             )
         } else {
             match op {
@@ -260,9 +265,11 @@ impl Codegen {
                 IROp::Mul(_) => self.binary("*"),
                 IROp::Div(_) => self.binary("/"),
                 IROp::Mod(_) => self.binary("%"),
-                IROp::Comp(_) => self.binaryb(">"),
-                IROp::Eq(_) => self.binaryb("=="),
-                IROp::EComp(_) => self.binaryb(">="),
+                IROp::Comp => self.binaryb(">"),
+                IROp::Eq => self.binaryb("=="),
+                IROp::EComp => self.binaryb(">="),
+                IROp::And => self.binaryb("&&"),
+                IROp::Or => self.binaryb("||"),
                 _ => todo!("unimplented op {:#?}", op),
             }
         };

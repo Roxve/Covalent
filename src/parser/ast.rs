@@ -20,7 +20,7 @@ impl Literal {
 
 pub fn get_operator_level(op: &str) -> u8 {
     match op {
-        "&" | "|" => 1,
+        "&&" | "||" => 1,
         "==" => 2,
         "<" | ">" | ">=" | "<=" => 3,
         "+" | "-" => 4,

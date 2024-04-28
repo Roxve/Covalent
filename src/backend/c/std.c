@@ -20,6 +20,28 @@ void GC_init();
     default:                                                                   \
       return __NaN__();                                                        \
     }
+#define DEFOP_NF(name, op)                                                      \
+  Obj __##name##__(Obj a, Obj b) {                                          \
+    __conv__(&a, &b);                                                          \
+    TYPE kind = a.kind;                                                       \
+    switch (kind) {                                                            \
+    case INT_TYPE:                                                             \
+      return __int__(a.val.i op b.val.i);                                    \
+    default:                                                                  \
+      return __NaN__();                                                        \
+    }
+    
+#define DEFOP_LOGICAL(name, op)                                                      \
+  Obj __##name##__(Obj a, Obj b) {                                          \
+    __conv__(&a, &b);                                                          \
+    TYPE kind = a.kind;                                                       \
+    switch (kind) {                                                            \
+    case BOOL_TYPE:                                                             \
+      return __int__(a.val.b op b.val.b);                                    \
+    default:                                                                  \
+      return __NaN__();                                                        \
+    }
+    
 #define DEFOP_BOOL(name, op)                                                   \
   _Bool __##name##__(Obj a, Obj b) {                                         \
     __conv__(&a, &b);                                                          \
@@ -125,6 +147,10 @@ DEF(N, sub, -);
 DEF(N, mul, *);
 
 DEF(N, div, /);
+DEF(NF, mod, %);
+
+DEF(LOGICAL, and, &&);
+DEF(LOGICAL, or, ||);
 
 DEF(BOOL, eq, ==);
 
