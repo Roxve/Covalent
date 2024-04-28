@@ -1,26 +1,13 @@
-if 2 % 2 == 0 {
-	writeln: "2 is even"
+set factorial: x {
+	if x == 1 {
+		ret one!
+	}
+
+	ret x * factorial: x - 1
 }
 
-set x: i {
-	ret i
+set one! {
+	ret  1
 }
 
-set a = "STR"
-set b = 5
-set c = 5.0
-set d = false
-
-writeln: a
-writeln: b
-writeln: c
-writeln: d
-
-writeln: (x: a) + (x: a)
-writeln: (x: b) * c
-
-d = true
-
-if d {
-	writeln: "nice!"
-}
+writeln: (factorial: 5)

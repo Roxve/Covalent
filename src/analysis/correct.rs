@@ -81,8 +81,17 @@ impl Analyzer {
             }
 
             AnalyzedExpr::Id(id) => {
+                dbg!(&self.env);
+                dbg!(&id);
+
+                let ty = if self.env.has(&id) {
+                    self.env.get_ty(&id).unwrap()
+                } else {
+                    self.env.add(&id, expr.ty.clone());
+                    expr.ty
+                };
                 return Ok(TypedExpr {
-                    ty: self.env.get_ty(&id).unwrap(),
+                    ty,
                     expr: AnalyzedExpr::Id(id),
                 });
             }

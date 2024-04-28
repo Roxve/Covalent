@@ -29,7 +29,7 @@ pub enum IROp {
     While(Vec<IROp>),
     Pop,
 }
-use crate::source::{ATErr, ErrKind, Ident};
+use crate::source::{ATErr, Ident};
 
 use self::IROp::*;
 pub fn get_op_type(op: &IROp) -> ConstType {
@@ -62,7 +62,6 @@ pub fn get_op_type(op: &IROp) -> ConstType {
 
 pub struct Codegen {
     env: Enviroment,
-    errors: Vec<ATErr>,
     _warnings: Vec<ATErr>, // program can continue error
 }
 
@@ -70,19 +69,7 @@ impl Codegen {
     pub fn new() -> Self {
         Self {
             env: Enviroment::new(None),
-            errors: Vec::new(),
             _warnings: Vec::new(),
         }
-    }
-
-    pub fn err(&mut self, kind: ErrKind, msg: String) {
-        let err = ATErr {
-            kind,
-            msg,
-            line: 0,
-            column: 0,
-        };
-        self.errors.push(err.clone());
-        err.out_error();
     }
 }

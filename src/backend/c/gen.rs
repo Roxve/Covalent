@@ -91,31 +91,24 @@ impl Codegen {
                 let val = self.pop_str();
                 let tyc = type_to_c(ty.clone());
 
-                let var = self.variables.get(&name);
-                if var.is_none() || var.unwrap().1 != ty {
-                    let name = self.var(name, ty);
-
-                    return Emit::Line(format!("{} {} = {}", tyc, name, val));
-                } else {
-                    let name = self.get_var(name);
-                    return Emit::Line(format!("{} = {}", name, val));
-                }
+                return Emit::Line(format!("{} {} = {}", tyc, name, val));
             }
             IROp::Load(ty, name) => {
                 let name = self.get_var(name);
                 self.push(Item::Var(ty, name));
             }
-            // IROp::Call(ty, name, count) => {
-            //     let arg_count = count;
-            //     let args = self.pop_amount(arg_count).join(", ");
-            //     let call = format!("{}({})", name, args);
-            //     if &ty == &ConstType::Void {
-            //         // our compiler only insert a line when the stack is empty, void functions doesnt push anything to the stack
-            //         return Emit::Line(call);
-            //     } else {
-            //         self.push(Item::Expr(ty, call));
-            //     }
-            // }
+            IROp::Call(ty, count) => {
+                let arg_count = count;
+                let name = self.pop_str();
+                let args = self.pop_amount(arg_count).join(", ");
+                let call = format!("{}({})", name, args);
+                if &ty == &ConstType::Void {
+                    // our compiler only insert a line when the stack is empty, void functions doesnt push anything to the stack
+                    return Emit::Line(call);
+                } else {
+                    self.push(Item::Expr(ty, call));
+                }
+            }
             IROp::While(body) => return self.bond_while(body),
             IROp::If(_, body, alt) => return self.bond_if(body, alt),
 
@@ -129,6 +122,24 @@ impl Codegen {
                 }
             }
 
+            IROp::Set(ty) => {
+                let val = self.pop_str();
+
+                let name = self.pop_str();
+                let tyc = type_to_c(ty.clone());
+
+                let var = self.variables.get(&name);
+                if var.is_some() {
+                    if var.unwrap().1 != ty {
+                        let name = self.var(name, ty);
+
+                        return Emit::Line(format!("{} {} = {}", tyc, name, val));
+                    }
+                } else {
+                    let name = self.get_var(name);
+                    return Emit::Line(format!("{} = {}", name, val));
+                }
+            }
             IROp::Ret(_) => {
                 let val = self.pop_str();
                 return Emit::Line(format!("return {}", val));

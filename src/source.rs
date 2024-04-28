@@ -71,29 +71,8 @@ pub struct CompiledFunction {
     pub args: Vec<Ident>,
 }
 
-// #[derive(Debug, Hash, Clone, PartialEq)]
-// pub struct Symbol {
-//     id: String,
-//     ty: ConstType,
-//     pub children: Vec<Symbol>,
-// }
-
-// impl Symbol {
-//     pub fn new(id: String, children: Vec<Symbol>, ty: ConstType) -> Self {
-//         Self { id, children, ty }
-//     }
-//     pub fn get(&self) -> String {
-//         self.id.clone()
-//     }
-
-//     pub fn get_ty(&self) -> ConstType {
-//         self.ty.clone()
-//     }
-// }
-
 #[derive(Clone, Debug)]
 pub struct Enviroment {
-    functions: Vec<CompiledFunction>,
     pub vars: HashMap<String, ConstType>,
     pub current: ConstType,
     pub parent: Option<Box<Enviroment>>,
@@ -102,7 +81,6 @@ pub struct Enviroment {
 impl Enviroment {
     pub fn new(parent: Option<Box<Self>>) -> Self {
         Self {
-            functions: Vec::new(),
             vars: HashMap::new(),
             current: ConstType::Void,
             parent,
@@ -165,20 +143,6 @@ impl Enviroment {
                     .collect(),
             ),
         );
-        self.functions.push(CompiledFunction { name, args });
-    }
-
-    pub fn get_function(&self, name: &String) -> Option<CompiledFunction> {
-        for fun in self.functions.clone().into_iter() {
-            if &fun.name == name {
-                return Some(fun);
-            }
-        }
-        if self.parent.is_some() {
-            return self.parent.as_ref().unwrap().get_function(&name);
-        }
-
-        return None;
     }
 }
 #[derive(Debug, Clone, PartialEq)]
