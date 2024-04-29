@@ -15,6 +15,8 @@ pub enum Token {
     Err(String), // error code and msg
     LeftParen,
     RightParen,
+    LeftBrace,
+    RightBrace,
     LeftBracket,
     RightBracket,
     Exec,

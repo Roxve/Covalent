@@ -5,6 +5,7 @@
 #include <string.h>
 
 void *GC_malloc(unsigned int);
+void *GC_realloc(void *, unsigned int);
 void GC_free(void *);
 void GC_init();
 
@@ -229,3 +230,18 @@ Str *__strclone__(Str *obj) {
 }
 
 void __init__() { GC_init(); }
+
+List* __listnew__(size_t elem_size, size_t size, void* arr, ...) {
+    List* list = (List*)GC_malloc(sizeof(List));
+    list->array = arr;
+    list->elem_size = elem_size;
+    list->size = size;
+    return list;
+}
+
+
+
+void __listfree__(List *list) {
+    GC_free(list->array);
+    GC_free(list);
+}

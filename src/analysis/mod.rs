@@ -21,6 +21,7 @@ pub enum AnalyzedExpr {
 
     Id(String),
     Member(Box<TypedExpr>, Box<TypedExpr>),
+    List(Vec<TypedExpr>),
     Literal(Literal),
     BinaryExpr {
         op: String,
@@ -90,7 +91,7 @@ impl ConstType {
         match self {
             &ConstType::Bool => [op!(Bool), op!(Logical)].concat(),
             &ConstType::Float | &ConstType::Int => [op!(Math), op!(Bool)].concat(),
-            &ConstType::Str => {
+            &ConstType::Str | &ConstType::List(_) => {
                 let mut ops = op!(Bool);
                 ops.push("+");
                 ops

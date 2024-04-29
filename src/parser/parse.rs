@@ -158,6 +158,12 @@ impl Parse for Parser {
                 expr
             }
 
+            Token::LeftBrace => {
+                let values = self.parse_list();
+                self.except(Token::RightBrace);
+                Expr::ListExpr(values)
+            }
+
             Token::SetKw => self.parse_declare(),
             Token::WhileKw => self.parse_while_expr(),
             Token::IfKw => self.parse_if_expr(),

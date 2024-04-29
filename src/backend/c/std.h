@@ -1,4 +1,5 @@
 #include "stdbool.h"
+#include "stdlib.h"
 
 void GC_free(void *);
 #define free(a) GC_free(a) // remove later
@@ -59,3 +60,23 @@ Str *__stradd__(Str *a, Str *b);
 // Obj *__clone__(Obj *obj);
 Str *__strclone__(Str *obj);
 void __init__();
+
+#define listdotpush(list, item) \
+do { \
+    void *_new_array = realloc((list)->array, (list)->elem_size * ((list)->size + 1)); \
+    if (_new_array) { \
+        (list)->array = _new_array; \
+        ((typeof(item) *)(list)->array)[(list)->size++] = (item); \
+    } \
+} while(0)
+
+#define __listget__(list, type, index) \
+    (((type *)((list)->array))[(index)])
+
+typedef struct List {
+    void* array;
+    size_t size;
+    size_t elem_size;
+} List;
+
+List* __listnew__(size_t elem_size, size_t size, void* arr, ...);

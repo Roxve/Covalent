@@ -146,6 +146,28 @@ impl Analyzer {
                     ty,
                 })
             }
+
+            Expr::ListExpr(items) => {
+                let items = self.analyz_body(items)?;
+
+                let item_ty = if items.len() > 0 {
+                    (&items.first().unwrap()).ty.clone()
+                } else {
+                    ConstType::Void // empty list unknown type figure out type on push
+                };
+
+                for (i, item) in (&items).iter().enumerate() {
+                    if &item.ty != &item_ty {
+                        self.err(ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
+                        return Err(ErrKind::InvaildType);
+                    }
+                }
+
+                let ty = ConstType::List(Box::new(item_ty));
+                let expr = AnalyzedExpr::List(items);
+                Ok(TypedExpr { expr, ty })
+            }
+
             Expr::BinaryExpr { op, left, right } => self.analyz_binary_expr(*left, *right, op),
             Expr::Ident(id) => self.analyz_id(id),
             Expr::VarDeclare { name, val } => self.analyz_var_declare(name, *val),
