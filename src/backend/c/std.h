@@ -57,18 +57,8 @@ _Bool __strecomp__(Str *a, Str *b);
 _Bool __streq__(Str *a, Str *b);
 
 Str *__stradd__(Str *a, Str *b);
-// Obj *__clone__(Obj *obj);
 Str *__strclone__(Str *obj);
 void __init__();
-
-#define listdotpush(list, item) \
-do { \
-    void *_new_array = realloc((list)->array, (list)->elem_size * ((list)->size + 1)); \
-    if (_new_array) { \
-        (list)->array = _new_array; \
-        ((typeof(item) *)(list)->array)[(list)->size++] = (item); \
-    } \
-} while(0)
 
 #define __listget__(list, type, index) \
     (((type *)((list)->array))[(index)])
@@ -79,4 +69,8 @@ typedef struct List {
     size_t elem_size;
 } List;
 
-List* __listnew__(size_t elem_size, size_t size, void* arr, ...);
+List *Listdotpush(List *self, Obj item);
+List *__listnew__(size_t elem_size, size_t size, void* arr, ...);
+List* Listdotpop(List *self);
+
+void __free__(void *item);

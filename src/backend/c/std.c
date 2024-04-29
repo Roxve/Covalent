@@ -1,8 +1,7 @@
 #include "std.h"
 #include "stdio.h"
 #include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
+
 
 void *GC_malloc(unsigned int);
 void *GC_realloc(void *, unsigned int);
@@ -239,9 +238,22 @@ List* __listnew__(size_t elem_size, size_t size, void* arr, ...) {
     return list;
 }
 
+// name and arguments to match type extending functions, generics for now is just Dynamic type
+// set push(T): List(T) self, T item -> List(T)
+List* Listdotpush(List *self, Obj item) {
+  self->array = GC_realloc(self->array, self->size*self->elem_size+self->elem_size);
+  void *insert = (char *) self->array + self->size * self->elem_size;
+  memcpy(insert, &item.val, self->elem_size);
 
+  return self;
+}
 
-void __listfree__(List *list) {
-    GC_free(list->array);
-    GC_free(list);
+// set pop(T): List(T) self -> List(T)
+List* Listdotpop(List *self) {
+  self->array = GC_realloc(self->array, self->size*self->elem_size-self->elem_size);
+  return self;
+}
+
+void __free__(void *item) {
+    GC_free(item);
 }
