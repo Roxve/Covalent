@@ -10,7 +10,10 @@ pub trait ParserError {}
 pub trait Parse {
     fn parse_prog(&mut self) -> Vec<Expr>;
     fn parse_level(&mut self, level: u8) -> Expr;
+
+    fn parse_member(&mut self) -> Expr;
     fn parse_call_fn(&mut self) -> Expr;
+
     fn parse_expr(&mut self) -> Expr;
     fn parse_declare(&mut self) -> Expr;
     fn parse_declare_fn(&mut self, id: Ident) -> Expr;
@@ -40,7 +43,7 @@ impl Parse for Parser {
     }
 
     fn parse_level(&mut self, level: u8) -> Expr {
-        let mut left: Expr = self.parse_call_fn();
+        let mut left: Expr = self.parse_member();
         let mut right: Expr;
 
         loop {
@@ -77,6 +80,20 @@ impl Parse for Parser {
         }
 
         return left;
+    }
+    fn parse_member(&mut self) -> Expr {
+        let left = self.parse_call_fn();
+
+        if self.current() == Token::Dot {
+            self.next();
+            let right = self.parse_call_fn();
+            Expr::MemberExpr {
+                parent: Box::new(left),
+                child: Box::new(right),
+            }
+        } else {
+            left
+        }
     }
 
     fn parse_call_fn(&mut self) -> Expr {
@@ -159,6 +176,7 @@ impl Parse for Parser {
             }
 
             Token::LeftBrace => {
+                self.next();
                 let values = self.parse_list();
                 self.except(Token::RightBrace);
                 Expr::ListExpr(values)

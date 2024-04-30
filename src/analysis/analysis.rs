@@ -1,3 +1,6 @@
+use std::borrow::Borrow;
+use std::ops::Not;
+
 use crate::parser::ast::Expr;
 use crate::parser::Function;
 use crate::source::{ATErr, ConstType, ErrKind, Ident};
@@ -297,6 +300,8 @@ impl Analyzer {
 
                 Ok(TypedExpr { expr, ty })
             }
+
+            Expr::MemberExpr { parent, child } => self.analyz_member(*parent, *child),
             _ => todo!("expr {:#?}", expr),
         }
     }
@@ -339,6 +344,42 @@ impl Analyzer {
 
         let expr = AnalyzedExpr::BinaryExpr { op, left, right };
         Ok(TypedExpr { expr, ty })
+    }
+
+    pub fn analyz_member(&mut self, parent: Expr, child: Expr) -> Result<TypedExpr, ErrKind> {
+        let parent = self.analyz(parent)?;
+        let analyzed_child;
+        let ty;
+
+        match child {
+            Expr::Ident(id) => {
+                ty = parent.ty.get(&id.val);
+                if ty.is_none() {
+                    return Err(ErrKind::UndeclaredVar);
+                }
+                analyzed_child = TypedExpr {
+                    expr: AnalyzedExpr::Id(id.val),
+                    ty: ty.clone().unwrap(),
+                };
+            }
+            Expr::FnCall { .. } => {
+                analyzed_child = self.analyz(child)?;
+                ty = Some(analyzed_child.ty.clone());
+                if !ty.as_ref().unwrap().has_parent(&parent.ty) {
+                    return Err(ErrKind::UndeclaredVar);
+                }
+            }
+            _ => {
+                return Err(ErrKind::UnexceptedTokenE);
+            }
+        }
+
+        let expr = AnalyzedExpr::Member(Box::new(parent), Box::new(analyzed_child));
+
+        Ok(TypedExpr {
+            ty: ty.unwrap(),
+            expr,
+        })
     }
 
     pub fn analyz_id(&mut self, id: Ident) -> Result<TypedExpr, ErrKind> {

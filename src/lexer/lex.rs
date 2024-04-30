@@ -5,7 +5,7 @@ pub fn is_num(c: char) -> bool {
     return "01234.56789".contains(c);
 }
 pub fn is_id(c: char) -> bool {
-    return !(" \t\n+-*/<&|>=@#%:!?$,[{('`)}]").contains(c);
+    return !(" \t\n+-*/<&|>=@#%:!?$,.[{('`)}]").contains(c);
 }
 
 impl Lexer {
@@ -174,7 +174,7 @@ impl Lexer {
             c => {
                 if is_id(c) {
                     let mut res = String::from("");
-                    while is_id(self.at()) {
+                    while self.not_eof() && is_id(self.at()) {
                         res.push(self.eat());
                     }
 

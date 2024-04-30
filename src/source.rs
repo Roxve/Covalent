@@ -15,10 +15,23 @@ pub enum ConstType {
 
 impl ConstType {
     pub fn get(&self, name: &String) -> Option<Self> {
-        if let Self::Obj(o) = self {
-            o.get(name).cloned()
-        } else {
-            None
+        match self {
+            Self::Obj(o) => o.get(name).cloned(),
+            Self::List(_) => {
+                if name == &"size".to_string() || name == &"elem_size".to_string() {
+                    Some(ConstType::Int)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
+    pub fn has_parent(&self, parent: &Self) -> bool {
+        match self {
+            Self::Func(_, args) => &args[0] == parent,
+            _ => false,
         }
     }
 }
