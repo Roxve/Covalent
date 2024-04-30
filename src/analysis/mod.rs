@@ -20,7 +20,7 @@ pub enum AnalyzedExpr {
     },
 
     Id(String),
-    Member(Box<TypedExpr>, Box<TypedExpr>),
+    Member(Box<TypedExpr>, String),
     List(Vec<TypedExpr>),
     Literal(Literal),
     BinaryExpr {

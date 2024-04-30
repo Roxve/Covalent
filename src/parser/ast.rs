@@ -66,7 +66,7 @@ pub enum Expr {
 
     MemberExpr {
         parent: Box<Expr>,
-        child: Box<Expr>,
+        child: String,
     },
     Discard(Box<Expr>),
     Block(Vec<Expr>),

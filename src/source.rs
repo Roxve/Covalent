@@ -27,13 +27,6 @@ impl ConstType {
             _ => None,
         }
     }
-
-    pub fn has_parent(&self, parent: &Self) -> bool {
-        match self {
-            Self::Func(_, args) => &args[0] == parent,
-            _ => false,
-        }
-    }
 }
 
 #[repr(u8)]
@@ -133,6 +126,20 @@ impl Enviroment {
         } else {
             false
         }
+    }
+
+    // member expr parent is passed to a function as first arg if it takes it as an arg for ex.
+    // set push: List(T) self, T item -> List(T)
+    pub fn ty_parent_fn(&self, ty: &ConstType, name: &String) -> Option<ConstType> {
+        let parent = self.vars.get(name);
+        if parent.is_some() {
+            if let ConstType::Func(_, args) = parent.unwrap() {
+                if &args[0] == ty {
+                    return Some(parent.unwrap().to_owned());
+                }
+            }
+        }
+        None
     }
 
     pub fn modify(&mut self, name: &String, ty: ConstType) {

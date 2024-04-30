@@ -1,6 +1,3 @@
-use std::borrow::Borrow;
-use std::ops::Not;
-
 use crate::parser::ast::Expr;
 use crate::parser::Function;
 use crate::source::{ATErr, ConstType, ErrKind, Ident};
@@ -200,19 +197,44 @@ impl Analyzer {
             }
 
             Expr::FnCall { name, args: params } => {
-                let name = Box::new(self.analyz(*name)?);
-                if let ConstType::Func(ty, args) = name.ty.clone() {
-                    if &args.len() != &params.len() {
-                        self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", params.len(), args.len(), name.expr));
-                        return Err(ErrKind::UndeclaredVar);
-                    }
-
+                let mut name = Box::new(self.analyz(*name)?);
+                if let ConstType::Func(ty, args_ty) = name.ty.clone() {
                     let mut args = vec![];
                     for param in params {
                         args.push(TypedExpr {
                             expr: AnalyzedExpr::As(Box::new(self.analyz(param)?)),
                             ty: ConstType::Dynamic,
                         });
+                    }
+
+                    // if its a member call pass parent as first arg and call the child instead
+                    if let AnalyzedExpr::Member(p, c) = (*name).clone().expr {
+                        if self.env.ty_parent_fn(&p.ty, &c).is_some() {
+                            name = Box::new(TypedExpr {
+                                expr: AnalyzedExpr::Id(c),
+                                ty: name.ty,
+                            });
+                            let mut p = vec![*p];
+                            p.append(&mut args);
+                            args = p;
+                        }
+                    }
+
+                    if &args_ty.len() != &args.len() {
+                        self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_ty.len(), name.expr));
+                        return Err(ErrKind::UndeclaredVar);
+                    }
+
+                    for (i, ty) in args_ty.into_iter().enumerate() {
+                        if &args[i].ty != &ty {
+                            self.err(
+                                ErrKind::InvaildType,
+                                format!(
+                                    "expected argument of type {:?}, got type {:?} at argument {}",
+                                    ty, args[i].ty, i
+                                ),
+                            )
+                        }
                     }
 
                     let expr = AnalyzedExpr::FnCall { name, args };
@@ -301,8 +323,8 @@ impl Analyzer {
                 Ok(TypedExpr { expr, ty })
             }
 
-            Expr::MemberExpr { parent, child } => self.analyz_member(*parent, *child),
-            _ => todo!("expr {:#?}", expr),
+            Expr::MemberExpr { parent, child } => self.analyz_member(*parent, child),
+            // _ => todo!("expr {:#?}", expr),
         }
     }
 
@@ -346,35 +368,18 @@ impl Analyzer {
         Ok(TypedExpr { expr, ty })
     }
 
-    pub fn analyz_member(&mut self, parent: Expr, child: Expr) -> Result<TypedExpr, ErrKind> {
+    pub fn analyz_member(&mut self, parent: Expr, child: String) -> Result<TypedExpr, ErrKind> {
         let parent = self.analyz(parent)?;
-        let analyzed_child;
-        let ty;
 
-        match child {
-            Expr::Ident(id) => {
-                ty = parent.ty.get(&id.val);
-                if ty.is_none() {
-                    return Err(ErrKind::UndeclaredVar);
-                }
-                analyzed_child = TypedExpr {
-                    expr: AnalyzedExpr::Id(id.val),
-                    ty: ty.clone().unwrap(),
-                };
-            }
-            Expr::FnCall { .. } => {
-                analyzed_child = self.analyz(child)?;
-                ty = Some(analyzed_child.ty.clone());
-                if !ty.as_ref().unwrap().has_parent(&parent.ty) {
-                    return Err(ErrKind::UndeclaredVar);
-                }
-            }
-            _ => {
-                return Err(ErrKind::UnexceptedTokenE);
+        let mut ty = parent.ty.get(&child);
+        if ty.is_none() {
+            ty = self.env.ty_parent_fn(&parent.ty, &child);
+            if ty.is_none() {
+                return Err(ErrKind::UndeclaredVar);
             }
         }
 
-        let expr = AnalyzedExpr::Member(Box::new(parent), Box::new(analyzed_child));
+        let expr = AnalyzedExpr::Member(Box::new(parent), child);
 
         Ok(TypedExpr {
             ty: ty.unwrap(),

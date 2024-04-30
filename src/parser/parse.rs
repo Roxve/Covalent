@@ -11,8 +11,8 @@ pub trait Parse {
     fn parse_prog(&mut self) -> Vec<Expr>;
     fn parse_level(&mut self, level: u8) -> Expr;
 
-    fn parse_member(&mut self) -> Expr;
     fn parse_call_fn(&mut self) -> Expr;
+    fn parse_member(&mut self) -> Expr;
 
     fn parse_expr(&mut self) -> Expr;
     fn parse_declare(&mut self) -> Expr;
@@ -43,7 +43,7 @@ impl Parse for Parser {
     }
 
     fn parse_level(&mut self, level: u8) -> Expr {
-        let mut left: Expr = self.parse_member();
+        let mut left: Expr = self.parse_call_fn();
         let mut right: Expr;
 
         loop {
@@ -81,24 +81,9 @@ impl Parse for Parser {
 
         return left;
     }
-    fn parse_member(&mut self) -> Expr {
-        let left = self.parse_call_fn();
-
-        if self.current() == Token::Dot {
-            self.next();
-            let right = self.parse_call_fn();
-            Expr::MemberExpr {
-                parent: Box::new(left),
-                child: Box::new(right),
-            }
-        } else {
-            left
-        }
-    }
 
     fn parse_call_fn(&mut self) -> Expr {
-        let call = self.parse_expr();
-
+        let call = self.parse_member();
         if self.current() == Token::Colon {
             self.next();
             let args = self.parse_list();
@@ -115,6 +100,28 @@ impl Parse for Parser {
         }
 
         return call;
+    }
+
+    fn parse_member(&mut self) -> Expr {
+        let left = self.parse_expr();
+        if self.current() == Token::Dot {
+            self.next();
+            let right = self.parse_expr();
+            if let Expr::Ident(id) = right {
+                Expr::MemberExpr {
+                    parent: Box::new(left),
+                    child: id.val,
+                }
+            } else {
+                self.err(
+                    ErrKind::UnexceptedTokenE,
+                    format!("expected id in member expr got {:?}", right),
+                );
+                Expr::Literal(Literal::Int(0))
+            }
+        } else {
+            left
+        }
     }
 
     fn parse_list(&mut self) -> Vec<Expr> {
@@ -193,7 +200,7 @@ impl Parse for Parser {
                 );
                 self.next();
 
-                // todo!(); // add null
+                // todo!(); // add null TODO <-
                 Expr::Literal(Literal::Int(0))
             }
         }
