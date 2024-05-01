@@ -285,7 +285,7 @@ impl Analyzer {
     ) -> Result<TypedExpr, ErrKind> {
         let mut lhs = self.analyz(left)?;
         let mut rhs = self.analyz(right)?;
-        (lhs, rhs) = Self::type_conv(lhs, rhs);
+        (lhs, rhs) = self.type_conv(lhs, rhs)?;
 
         let ty = match op.as_str() {
             "==" | ">" | "<" | ">=" | "<=" => ConstType::Bool,
@@ -420,7 +420,7 @@ impl Analyzer {
                 expr: _tmp,
                 ty: into,
             };
-            let (try_conv, unchanged) = Self::type_conv(from.clone(), _tmp.clone());
+            let (try_conv, unchanged) = self.type_conv(from.clone(), _tmp.clone())?;
             if &unchanged != &_tmp {
                 self.err(
                     ErrKind::InvaildType,
@@ -432,7 +432,11 @@ impl Analyzer {
         }
     }
 
-    pub fn type_conv(mut lhs: TypedExpr, mut rhs: TypedExpr) -> (TypedExpr, TypedExpr) {
+    pub fn type_conv(
+        &mut self,
+        mut lhs: TypedExpr,
+        mut rhs: TypedExpr,
+    ) -> Result<(TypedExpr, TypedExpr), ErrKind> {
         if lhs.ty != rhs.ty {
             if lhs.ty == ConstType::Float && rhs.ty == ConstType::Int {
                 rhs = ty_as(&lhs.ty, rhs);
@@ -446,9 +450,15 @@ impl Analyzer {
                 rhs = ty_as(&lhs.ty, rhs);
             } else if rhs.ty == ConstType::Dynamic {
                 lhs = ty_as(&rhs.ty, lhs);
+            } else {
+                self.err(
+                    ErrKind::InvaildType,
+                    format!("cannot make {:?} and {:?} as the same type", lhs.ty, rhs.ty),
+                );
+                return Err(ErrKind::InvaildType);
             }
         }
 
-        (lhs, rhs)
+        Ok((lhs, rhs))
     }
 }
