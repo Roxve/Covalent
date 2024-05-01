@@ -137,6 +137,15 @@ impl Analyzer {
         Ok(analyzed_body)
     }
 
+    #[inline]
+    pub fn analyz_items(&mut self, items: Vec<Expr>) -> Result<Vec<TypedExpr>, ErrKind> {
+        let mut analyzed_items = vec![];
+        for expr in items {
+            analyzed_items.push(self.analyz(expr)?);
+        }
+        Ok(analyzed_items)
+    }
+
     pub fn analyz(&mut self, expr: Expr) -> Result<TypedExpr, ErrKind> {
         match expr {
             Expr::Literal(literal) => {
@@ -148,22 +157,24 @@ impl Analyzer {
             }
 
             Expr::ListExpr(items) => {
-                let items = self.analyz_body(items)?;
+                let mut items = self.analyz_items(items)?;
 
-                let item_ty = if items.len() > 0 {
-                    (&items.first().unwrap()).ty.clone()
-                } else {
-                    ConstType::Void // empty list unknown type figure out type on push
-                };
+                // let item_ty = if items.len() > 0 {
+                //     (&items.first().unwrap()).ty.clone()
+                // } else {
+                //     ConstType::Void // empty list unknown type figure out type on push
+                // };
 
-                for (i, item) in (&items).iter().enumerate() {
-                    if &item.ty != &item_ty {
-                        self.err(ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
-                        return Err(ErrKind::InvaildType);
-                    }
+                // for (i, item) in (&items).iter().enumerate() {
+                //     if &item.ty != &item_ty {
+                //         self.err(ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
+                //         return Err(ErrKind::InvaildType);
+                //     }
+                // }
+                for i in 0..items.len() - 1 {
+                    items[i] = ty_as(&ConstType::Dynamic, items[i].clone());
                 }
-
-                let ty = ConstType::List(Box::new(item_ty));
+                let ty = ConstType::List;
                 let expr = AnalyzedExpr::List(items);
                 Ok(TypedExpr { expr, ty })
             }
@@ -306,11 +317,7 @@ impl Analyzer {
     pub fn analyz_call(&mut self, name: Expr, params: Vec<Expr>) -> Result<TypedExpr, ErrKind> {
         let mut name = Box::new(self.analyz(name)?);
         if let ConstType::Func(ty, args_ty) = name.ty.clone() {
-            let mut args = vec![];
-
-            for param in params {
-                args.push(self.analyz(param)?);
-            }
+            let mut args = self.analyz_items(params)?;
 
             // if its a member call pass parent as first arg and call the child instead
             if let AnalyzedExpr::Member(p, c) = (*name).clone().expr {

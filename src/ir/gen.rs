@@ -75,7 +75,7 @@ impl IRGen for Codegen {
                 body,
             } => self.gen_func(name, args, ret, body),
 
-            AnalyzedExpr::Literal(lit) => Ok(vec![IROp::Const(expr.ty, lit)]),
+            AnalyzedExpr::Literal(lit) => Ok(vec![IROp::Const(lit)]),
 
             AnalyzedExpr::BinaryExpr { op, left, right } => {
                 self.gen_binary_expr(expr.ty, op, *left, *right)
@@ -83,6 +83,24 @@ impl IRGen for Codegen {
             AnalyzedExpr::VarDeclare { name, val } => self.gen_var_declare(name, *val),
             AnalyzedExpr::VarAssign { name, val } => self.gen_var_assign(*name, *val),
             AnalyzedExpr::Id(name) => Ok(vec![IROp::Load(expr.ty, name)]),
+
+            AnalyzedExpr::List(items) => {
+                let mut bonded = vec![];
+                for item in items {
+                    bonded.push(self.gen_expr(item)?);
+                }
+
+                Ok(vec![IROp::List(bonded)])
+            }
+
+            AnalyzedExpr::Member(parent, child) => {
+                let parent = self.gen_expr(*parent)?;
+                let mut res = parent;
+                res.push(IROp::LoadProp(expr.ty, child));
+
+                Ok(res)
+            }
+
             AnalyzedExpr::FnCall { name, args } => {
                 let mut res: Vec<IROp> = vec![];
                 let count = args.len().clone() as u16;
@@ -182,8 +200,7 @@ impl IRGen for Codegen {
 
                 self.env = self.env.parent().unwrap();
                 Ok(res)
-            }
-            _ => todo!("{:#?}", expr),
+            } // _ => todo!("{:#?}", expr),
         }
     }
 

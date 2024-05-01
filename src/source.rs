@@ -8,7 +8,7 @@ pub enum ConstType {
     Bool,
     Dynamic,
     Void,
-    List(Box<Self>),
+    List,
     Func(Box<Self>, Vec<Self>),
     Obj(HashMap<String, Self>),
 }
@@ -17,7 +17,7 @@ impl ConstType {
     pub fn get(&self, name: &String) -> Option<Self> {
         match self {
             Self::Obj(o) => o.get(name).cloned(),
-            Self::List(_) => {
+            Self::List => {
                 if name == &"size".to_string() || name == &"elem_size".to_string() {
                     Some(ConstType::Int)
                 } else {

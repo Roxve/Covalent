@@ -85,8 +85,8 @@ impl Codegen {
                 }
             }
 
-            IROp::Const(_, con) => self.push(Item::Const(con)),
-
+            IROp::Const(con) => self.push(Item::Const(con)),
+            IROp::List(_items) => (),
             IROp::Store(ty, name) => {
                 let val = self.pop_str();
                 let tyc = type_to_c(ty.clone());
@@ -97,6 +97,12 @@ impl Codegen {
                 let name = self.get_var(name);
                 self.push(Item::Var(ty, name));
             }
+
+            IROp::LoadProp(ty, name) => {
+                let id = self.pop_str();
+                self.push(Item::Expr(ty, format!("{}.{}", id, name)));
+            }
+
             IROp::Call(ty, count) => {
                 let arg_count = count;
                 let name = self.pop_str();

@@ -20,13 +20,15 @@ pub enum IROp {
     Eq,
     And,
     Or,
-    Const(ConstType, Literal),
+    Const(Literal),
+    List(Vec<Vec<IROp>>), // each item is a bunch of operations
     Conv(ConstType, ConstType),
     Alloc(ConstType, String),
     Dealloc(ConstType, String), // when allocing a var with a new type we dealloc the old val
     Store(ConstType, String),
     Set(ConstType),
-    Load(ConstType, String),
+    Load(ConstType, String),     // load loads an id
+    LoadProp(ConstType, String), // load prop loads a property from the id
     If(ConstType, Vec<IROp>, Vec<IROp>),
     While(Vec<IROp>),
     Pop,
@@ -50,11 +52,14 @@ pub fn get_op_type(op: &IROp) -> ConstType {
         Comp => &ConstType::Bool,
         EComp => &ConstType::Bool,
         Eq => &ConstType::Bool,
-        Const(t, _) => t,
+        List(_) => &ConstType::List,
+        Const(lit) => return lit.get_ty(),
         Conv(t, _) => t,
         Store(t, _) => t,
         Set(t) => t,
         Load(t, _) => t,
+        LoadProp(t, _) => t,
+        // Get(t) => t,
         Alloc(t, _) => t,
         Dealloc(t, _) => t,
         If(t, _, _) => t,
