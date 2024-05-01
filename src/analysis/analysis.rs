@@ -196,58 +196,7 @@ impl Analyzer {
                 Ok(TypedExpr { expr, ty })
             }
 
-            Expr::FnCall { name, args: params } => {
-                let mut name = Box::new(self.analyz(*name)?);
-                if let ConstType::Func(ty, args_ty) = name.ty.clone() {
-                    let mut args = vec![];
-                    for param in params {
-                        args.push(TypedExpr {
-                            expr: AnalyzedExpr::As(Box::new(self.analyz(param)?)),
-                            ty: ConstType::Dynamic,
-                        });
-                    }
-
-                    // if its a member call pass parent as first arg and call the child instead
-                    if let AnalyzedExpr::Member(p, c) = (*name).clone().expr {
-                        if self.env.ty_parent_fn(&p.ty, &c).is_some() {
-                            name = Box::new(TypedExpr {
-                                expr: AnalyzedExpr::Id(c),
-                                ty: name.ty,
-                            });
-                            let mut p = vec![*p];
-                            p.append(&mut args);
-                            args = p;
-                        }
-                    }
-
-                    if &args_ty.len() != &args.len() {
-                        self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_ty.len(), name.expr));
-                        return Err(ErrKind::UndeclaredVar);
-                    }
-
-                    for (i, ty) in args_ty.into_iter().enumerate() {
-                        if &args[i].ty != &ty {
-                            self.err(
-                                ErrKind::InvaildType,
-                                format!(
-                                    "expected argument of type {:?}, got type {:?} at argument {}",
-                                    ty, args[i].ty, i
-                                ),
-                            )
-                        }
-                    }
-
-                    let expr = AnalyzedExpr::FnCall { name, args };
-
-                    Ok(TypedExpr { expr, ty: *ty })
-                } else {
-                    self.err(
-                        ErrKind::UnexceptedTokenE,
-                        format!("expected symbol to call got {:?}", name.expr),
-                    );
-                    Err(ErrKind::UnexceptedTokenE)
-                }
-            }
+            Expr::FnCall { name, args } => self.analyz_call(*name, args),
 
             Expr::IfExpr {
                 condition,
@@ -336,22 +285,8 @@ impl Analyzer {
     ) -> Result<TypedExpr, ErrKind> {
         let mut lhs = self.analyz(left)?;
         let mut rhs = self.analyz(right)?;
+        (lhs, rhs) = Self::type_conv(lhs, rhs);
 
-        if lhs.ty != rhs.ty {
-            if lhs.ty == ConstType::Float && rhs.ty == ConstType::Int {
-                rhs = ty_as(&lhs.ty, rhs);
-            } else if lhs.ty == ConstType::Int && rhs.ty == ConstType::Float {
-                lhs = ty_as(&rhs.ty, lhs);
-            } else if lhs.ty == ConstType::Str {
-                rhs = ty_as(&lhs.ty, rhs);
-            } else if rhs.ty == ConstType::Str {
-                lhs = ty_as(&rhs.ty, lhs);
-            } else if lhs.ty == ConstType::Dynamic {
-                rhs = ty_as(&lhs.ty, rhs);
-            } else if rhs.ty == ConstType::Dynamic {
-                lhs = ty_as(&rhs.ty, lhs);
-            }
-        }
         let ty = match op.as_str() {
             "==" | ">" | "<" | ">=" | "<=" => ConstType::Bool,
             _ => lhs.ty.clone(),
@@ -366,6 +301,51 @@ impl Analyzer {
 
         let expr = AnalyzedExpr::BinaryExpr { op, left, right };
         Ok(TypedExpr { expr, ty })
+    }
+
+    pub fn analyz_call(&mut self, name: Expr, params: Vec<Expr>) -> Result<TypedExpr, ErrKind> {
+        let mut name = Box::new(self.analyz(name)?);
+        if let ConstType::Func(ty, args_ty) = name.ty.clone() {
+            let mut args = vec![];
+
+            for param in params {
+                args.push(self.analyz(param)?);
+            }
+
+            // if its a member call pass parent as first arg and call the child instead
+            if let AnalyzedExpr::Member(p, c) = (*name).clone().expr {
+                if self.env.ty_parent_fn(&p.ty, &c).is_some() {
+                    name = Box::new(TypedExpr {
+                        expr: AnalyzedExpr::Id(c),
+                        ty: name.ty,
+                    });
+                    let mut p = vec![*p];
+                    p.append(&mut args);
+                    args = p;
+                }
+            }
+
+            if &args_ty.len() != &args.len() {
+                self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_ty.len(), name.expr));
+                return Err(ErrKind::UndeclaredVar);
+            }
+
+            for (i, ty) in args_ty.into_iter().enumerate() {
+                if &args[i].ty != &ty {
+                    args[i] = self.type_cast(args[i].clone(), ty)?;
+                }
+            }
+
+            let expr = AnalyzedExpr::FnCall { name, args };
+
+            Ok(TypedExpr { expr, ty: *ty })
+        } else {
+            self.err(
+                ErrKind::UnexceptedTokenE,
+                format!("expected symbol to call got {:?}", name.expr),
+            );
+            Err(ErrKind::UnexceptedTokenE)
+        }
     }
 
     pub fn analyz_member(&mut self, parent: Expr, child: String) -> Result<TypedExpr, ErrKind> {
@@ -429,5 +409,46 @@ impl Analyzer {
             val: Box::new(val),
         };
         Ok(TypedExpr { expr, ty })
+    }
+
+    pub fn type_cast(&mut self, from: TypedExpr, into: ConstType) -> Result<TypedExpr, ErrKind> {
+        if into == ConstType::Dynamic || into == ConstType::Str {
+            Ok(ty_as(&into, from))
+        } else {
+            let _tmp = AnalyzedExpr::Id("temp".to_string());
+            let _tmp = TypedExpr {
+                expr: _tmp,
+                ty: into,
+            };
+            let (try_conv, unchanged) = Self::type_conv(from.clone(), _tmp.clone());
+            if &unchanged != &_tmp {
+                self.err(
+                    ErrKind::InvaildType,
+                    format!("cannot convert from {:?} into {:?}", from.ty, _tmp.ty),
+                );
+                return Err(ErrKind::InvaildType);
+            }
+            Ok(try_conv)
+        }
+    }
+
+    pub fn type_conv(mut lhs: TypedExpr, mut rhs: TypedExpr) -> (TypedExpr, TypedExpr) {
+        if lhs.ty != rhs.ty {
+            if lhs.ty == ConstType::Float && rhs.ty == ConstType::Int {
+                rhs = ty_as(&lhs.ty, rhs);
+            } else if lhs.ty == ConstType::Int && rhs.ty == ConstType::Float {
+                lhs = ty_as(&rhs.ty, lhs);
+            } else if lhs.ty == ConstType::Str {
+                rhs = ty_as(&lhs.ty, rhs);
+            } else if rhs.ty == ConstType::Str {
+                lhs = ty_as(&rhs.ty, lhs);
+            } else if lhs.ty == ConstType::Dynamic {
+                rhs = ty_as(&lhs.ty, rhs);
+            } else if rhs.ty == ConstType::Dynamic {
+                lhs = ty_as(&rhs.ty, lhs);
+            }
+        }
+
+        (lhs, rhs)
     }
 }

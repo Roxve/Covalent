@@ -2,7 +2,7 @@ set list = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 writeln: list.size
 
-list.push: 10
-list.push: 11
-list.pop!
-writeln: list
+#list.push: 10
+#list.push: 11
+#list.pop!
+#writeln: list
