@@ -91,7 +91,7 @@ impl ConstType {
         match self {
             &ConstType::Bool => [op!(Bool), op!(Logical)].concat(),
             &ConstType::Float | &ConstType::Int => [op!(Math), op!(Bool)].concat(),
-            &ConstType::Str | &ConstType::List => {
+            &ConstType::Str | &ConstType::List(_) => {
                 let mut ops = op!(Bool);
                 ops.push("+");
                 ops

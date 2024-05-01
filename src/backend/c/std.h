@@ -70,7 +70,7 @@ typedef struct List {
 } List;
 
 List *Listdotpush(List *self, Obj item);
-List *__listnew__(size_t elem_size, size_t size, void* arr, ...);
+List *__listnew__(size_t elem_size, size_t size, ...);
 List* Listdotpop(List *self);
 
 void __free__(void *item);

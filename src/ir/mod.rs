@@ -21,7 +21,7 @@ pub enum IROp {
     And,
     Or,
     Const(Literal),
-    List(Vec<Vec<IROp>>), // each item is a bunch of operations
+    List(ConstType, Vec<Vec<IROp>>), // each item is a bunch of operations
     Conv(ConstType, ConstType),
     Alloc(ConstType, String),
     Dealloc(ConstType, String), // when allocing a var with a new type we dealloc the old val
@@ -52,7 +52,7 @@ pub fn get_op_type(op: &IROp) -> ConstType {
         Comp => &ConstType::Bool,
         EComp => &ConstType::Bool,
         Eq => &ConstType::Bool,
-        List(_) => &ConstType::List,
+        List(ref ty, _) => return ConstType::List(Box::new(ty.clone())),
         Const(lit) => return lit.get_ty(),
         Conv(t, _) => t,
         Store(t, _) => t,

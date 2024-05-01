@@ -159,22 +159,19 @@ impl Analyzer {
             Expr::ListExpr(items) => {
                 let mut items = self.analyz_items(items)?;
 
-                // let item_ty = if items.len() > 0 {
-                //     (&items.first().unwrap()).ty.clone()
-                // } else {
-                //     ConstType::Void // empty list unknown type figure out type on push
-                // };
+                let item_ty = if items.len() > 0 {
+                    (&items.first().unwrap()).ty.clone()
+                } else {
+                    ConstType::Void // empty list unknown type figure out type on push
+                };
 
-                // for (i, item) in (&items).iter().enumerate() {
-                //     if &item.ty != &item_ty {
-                //         self.err(ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
-                //         return Err(ErrKind::InvaildType);
-                //     }
-                // }
-                for i in 0..items.len() - 1 {
-                    items[i] = ty_as(&ConstType::Dynamic, items[i].clone());
+                for (i, item) in (&items).iter().enumerate() {
+                    if &item.ty != &item_ty {
+                        self.err(ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
+                        return Err(ErrKind::InvaildType);
+                    }
                 }
-                let ty = ConstType::List;
+                let ty = ConstType::List(Box::new(item_ty));
                 let expr = AnalyzedExpr::List(items);
                 Ok(TypedExpr { expr, ty })
             }

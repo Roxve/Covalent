@@ -90,7 +90,7 @@ impl IRGen for Codegen {
                     bonded.push(self.gen_expr(item)?);
                 }
 
-                Ok(vec![IROp::List(bonded)])
+                Ok(vec![IROp::List(expr.ty, bonded)])
             }
 
             AnalyzedExpr::Member(parent, child) => {

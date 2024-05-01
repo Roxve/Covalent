@@ -86,7 +86,14 @@ impl Codegen {
             }
 
             IROp::Const(con) => self.push(Item::Const(con)),
-            IROp::List(_items) => (),
+            IROp::List(ty, items) => {
+                for item in items.clone() {
+                    for expr in item {
+                        self.bond(expr);
+                    }
+                }
+                self.push(Item::List(ty, items.len() as u16));
+            }
             IROp::Store(ty, name) => {
                 let val = self.pop_str();
                 let tyc = type_to_c(ty.clone());
@@ -100,7 +107,7 @@ impl Codegen {
 
             IROp::LoadProp(ty, name) => {
                 let id = self.pop_str();
-                self.push(Item::Expr(ty, format!("{}.{}", id, name)));
+                self.push(Item::Expr(ty, format!("{}->{}", id, name)));
             }
 
             IROp::Call(ty, count) => {

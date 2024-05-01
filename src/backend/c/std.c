@@ -1,6 +1,8 @@
 #include "std.h"
 #include "stdio.h"
+#include <stdarg.h>
 #include <stdbool.h>
+#include <string.h>
 
 
 void *GC_malloc(unsigned int);
@@ -230,7 +232,16 @@ Str *__strclone__(Str *obj) {
 
 void __init__() { GC_init(); }
 
-List* __listnew__(size_t elem_size, size_t size, void* arr, ...) {
+List* __listnew__(size_t elem_size, size_t size, ...) {
+    void* arr = GC_malloc(elem_size * size);
+    va_list args;
+    va_start(args, size);
+
+    char* next_ele = (char*) arr;
+    for(int i = 0; i < size*elem_size/4; i++) {
+      ((int*) arr)[i] = va_arg(args, int);
+    }
+    
     List* list = (List*)GC_malloc(sizeof(List));
     list->array = arr;
     list->elem_size = elem_size;

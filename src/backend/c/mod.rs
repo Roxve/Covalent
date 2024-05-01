@@ -46,6 +46,7 @@ pub fn type_to_c(ty: ConstType) -> String {
         ConstType::Float => "float".to_string(),
         ConstType::Dynamic => "Obj".to_string(),
         ConstType::Str => "Str*".to_string(),
+        ConstType::List(_) => "List*".to_string(),
         ConstType::Bool => "_Bool".to_string(),
         ConstType::Void => "void".to_string(),
         _ => todo!("{:?}", ty),
@@ -71,6 +72,7 @@ pub enum Item {
     Const(Literal),
     Var(ConstType, String),
     Expr(ConstType, String),
+    List(ConstType, u16 /* size */),
 }
 
 impl Item {
@@ -79,6 +81,7 @@ impl Item {
         match self.clone() {
             Self::Expr(ty, _) => ty,
             Self::Var(ty, _) => ty,
+            Self::List(ty, _) => ConstType::List(Box::new(ty)),
             Self::Const(literal) => (&literal).get_ty(),
         }
     }
@@ -197,6 +200,15 @@ impl Module {
         code
     }
 }
+
+// const fn sizeof(ty: &ConstType) -> &'static str {
+//     match ty {
+//         ConstType::Int => "sizeof(int)",
+//         ConstType::Float => "sizeof(float)",
+//         _ => todo!(),
+//     }
+// }
+
 #[derive(Debug, Clone)]
 pub struct Codegen {
     stack: Vec<Item>,
@@ -226,13 +238,24 @@ impl Codegen {
             },
             Item::Var(_, name) => name,
             Item::Expr(_, expr) => expr,
+            Item::List(ty, size) => {
+                let mut items = self.pop_amount(size);
+                items.reverse();
+                let new = items.join(", ");
+                format!(
+                    "__listnew__({}, {}, {})",
+                    format!("sizeof({})", type_to_c(ty)),
+                    size,
+                    new
+                )
+            }
         }
     }
 
     pub fn pop_amount(&mut self, count: u16) -> Vec<String> {
         let mut results = Vec::new();
         if count != 0 {
-            for _ in [1..count] {
+            for _ in 0..count {
                 results.push(self.pop_str());
             }
         }
