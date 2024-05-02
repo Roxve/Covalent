@@ -61,7 +61,7 @@ Str *__strclone__(Str *obj);
 void __init__();
 
 #define __listget__(list, type, index) \
-    (((type *)((list)->array))[(index)])
+    (((type *)(list)->array)[index])
 
 typedef struct List {
     void* array;

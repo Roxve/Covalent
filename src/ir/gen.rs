@@ -101,6 +101,12 @@ impl IRGen for Codegen {
                 Ok(res)
             }
 
+            AnalyzedExpr::Index(expr, index) => {
+                let expr = self.gen_expr(*expr)?;
+                let idx = self.gen_expr(*index.clone())?;
+                Ok([expr, idx, vec![IROp::LoadIdx(index.ty)]].concat())
+            }
+
             AnalyzedExpr::FnCall { name, args } => {
                 let mut res: Vec<IROp> = vec![];
                 let count = args.len().clone() as u16;
@@ -200,8 +206,7 @@ impl IRGen for Codegen {
 
                 self.env = self.env.parent().unwrap();
                 Ok(res)
-            }
-            _ => todo!("{:#?}", expr),
+            } // _ => todo!("{:#?}", expr),
         }
     }
 

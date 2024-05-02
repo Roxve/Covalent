@@ -110,6 +110,16 @@ impl Codegen {
                 self.push(Item::Expr(ty, format!("{}->{}", id, name)));
             }
 
+            IROp::LoadIdx(ty) => {
+                let idx = self.pop_str();
+                let expr = self.pop_str();
+
+                self.push(Item::Expr(
+                    ty.clone(),
+                    format!("__listget__({expr}, {}, {idx})", type_to_c(ty)),
+                ))
+            }
+
             IROp::Call(ty, count) => {
                 let arg_count = count;
                 let name = self.pop_str();

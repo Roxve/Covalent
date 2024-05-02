@@ -29,6 +29,8 @@ pub enum IROp {
     Set(ConstType),
     Load(ConstType, String),     // load loads an id
     LoadProp(ConstType, String), // load prop loads a property from the id
+    LoadIdx(ConstType),          // loads an index
+
     If(ConstType, Vec<IROp>, Vec<IROp>),
     While(Vec<IROp>),
     Pop,
@@ -59,6 +61,7 @@ pub fn get_op_type(op: &IROp) -> ConstType {
         Set(t) => t,
         Load(t, _) => t,
         LoadProp(t, _) => t,
+        LoadIdx(t) => t,
         // Get(t) => t,
         Alloc(t, _) => t,
         Dealloc(t, _) => t,
