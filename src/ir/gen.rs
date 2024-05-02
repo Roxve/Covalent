@@ -200,7 +200,8 @@ impl IRGen for Codegen {
 
                 self.env = self.env.parent().unwrap();
                 Ok(res)
-            } // _ => todo!("{:#?}", expr),
+            }
+            _ => todo!("{:#?}", expr),
         }
     }
 

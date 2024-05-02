@@ -68,6 +68,11 @@ pub enum Expr {
         parent: Box<Expr>,
         child: String,
     },
+
+    IndexExpr {
+        parent: Box<Expr>,
+        index: Box<Expr>,
+    },
     Discard(Box<Expr>),
     Block(Vec<Expr>),
     PosInfo(String, u32, u32), // debugging

@@ -281,6 +281,7 @@ impl Analyzer {
             }
 
             Expr::MemberExpr { parent, child } => self.analyz_member(*parent, child),
+            Expr::IndexExpr { parent, index } => self.analyz_index(*parent, *index),
             // _ => todo!("expr {:#?}", expr),
         }
     }
@@ -350,6 +351,22 @@ impl Analyzer {
             );
             Err(ErrKind::UnexceptedTokenE)
         }
+    }
+
+    pub fn analyz_index(&mut self, parent: Expr, index: Expr) -> Result<TypedExpr, ErrKind> {
+        let parent = self.analyz(parent)?;
+        let index = self.analyz(index)?;
+        if index.ty != ConstType::Int {
+            return Err(ErrKind::InvaildType);
+        }
+        let ty = match parent.ty.clone() {
+            ConstType::Str => ConstType::Str,
+            ConstType::List(t) => *t,
+            _ => return Err(ErrKind::InvaildType),
+        };
+
+        let expr = AnalyzedExpr::Index(Box::new(parent), Box::new(index));
+        Ok(TypedExpr { expr, ty })
     }
 
     pub fn analyz_member(&mut self, parent: Expr, child: String) -> Result<TypedExpr, ErrKind> {

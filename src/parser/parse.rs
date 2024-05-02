@@ -11,6 +11,7 @@ pub trait Parse {
     fn parse_prog(&mut self) -> Vec<Expr>;
     fn parse_level(&mut self, level: u8) -> Expr;
 
+    fn parse_index(&mut self) -> Expr;
     fn parse_call_fn(&mut self) -> Expr;
     fn parse_member(&mut self) -> Expr;
 
@@ -43,7 +44,7 @@ impl Parse for Parser {
     }
 
     fn parse_level(&mut self, level: u8) -> Expr {
-        let mut left: Expr = self.parse_call_fn();
+        let mut left: Expr = self.parse_index();
         let mut right: Expr;
 
         loop {
@@ -80,6 +81,22 @@ impl Parse for Parser {
         }
 
         return left;
+    }
+
+    fn parse_index(&mut self) -> Expr {
+        let expr = self.parse_call_fn();
+
+        if self.current() == Token::LeftBrace {
+            self.next();
+            let index = Box::new(self.parse_level(0));
+            self.except(Token::RightBrace);
+
+            return Expr::IndexExpr {
+                parent: Box::new(expr),
+                index,
+            };
+        }
+        expr
     }
 
     fn parse_call_fn(&mut self) -> Expr {
