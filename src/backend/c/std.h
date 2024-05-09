@@ -32,6 +32,25 @@ typedef struct {
   Value val;
 } Obj;
 
+
+typedef struct IonTable {  
+  struct Ion* (*add) (struct Ion* self, struct Ion* b);
+} IonTable;
+
+// an Ion is an Atom everything is an Atom expect base types an Ion is a base type as an Atom
+typedef struct Ion {
+  TYPE kind;
+  IonTable* table;
+} Ion;
+
+typedef struct {
+  TYPE kind;
+  IonTable* table;
+  int val;
+} IonizedInt;
+
+IonizedInt* IonizedIntdotNew(int val);
+
 void writeln(Obj arg);
 
 #define __int__(int) ((Obj) {INT_TYPE, (Value) {.i = int}})

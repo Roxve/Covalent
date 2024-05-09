@@ -268,3 +268,26 @@ List* Listdotpop(List *self) {
 void __free__(void *item) {
     GC_free(item);
 }
+
+Ion* IonizedIntdotadd(Ion* a, Ion* b) {
+  IonizedInt* self = (IonizedInt*)a; 
+
+  if(b->kind == INT_TYPE) {
+    return (Ion*) IonizedIntdotNew(self->val + ((IonizedInt*) b)->val);
+  } else if (b->kind == FLOAT_TYPE) {
+    // return IonizedFloatdotNew 
+    return NULL;
+  } else {
+    err("idk", -1); 
+    return NULL;
+  }
+} 
+
+IonTable IntTable = (IonTable) {.add = &IonizedIntdotadd };
+IonizedInt* IonizedIntdotNew(int val) {
+  IonizedInt* Int = GC_malloc(sizeof(IonizedInt));
+  Int->kind = INT_TYPE;
+  Int->table = &IntTable;
+  Int->val = val; 
+  return Int;
+}

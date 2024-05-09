@@ -32,49 +32,73 @@ pub fn get_operator_level(op: &str) -> u8 {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Literal(Literal),
-    ListExpr(Vec<Expr>),
+    ListExpr(Vec<Node>),
     BinaryExpr {
         op: String,
-        left: Box<Expr>,
-        right: Box<Expr>,
+        left: Box<Node>,
+        right: Box<Node>,
     },
     Ident(Ident),
     VarDeclare {
         name: Ident,
-        val: Box<Expr>,
+        val: Box<Node>,
     },
     VarAssign {
-        name: Box<Expr>,
-        val: Box<Expr>,
+        name: Box<Node>,
+        val: Box<Node>,
     },
     // fn declare ast is genereated in parser.functions
     FnCall {
-        name: Box<Expr>,
-        args: Vec<Expr>,
+        name: Box<Node>,
+        args: Vec<Node>,
     },
 
     IfExpr {
-        condition: Box<Expr>,
-        body: Vec<Expr>,
-        alt: Option<Box<Expr>>,
+        condition: Box<Node>,
+        body: Vec<Node>,
+        alt: Option<Box<Node>>,
     },
 
     WhileExpr {
-        condition: Box<Expr>,
-        body: Vec<Expr>,
+        condition: Box<Node>,
+        body: Vec<Node>,
     },
 
     MemberExpr {
-        parent: Box<Expr>,
+        parent: Box<Node>,
         child: String,
     },
 
     IndexExpr {
-        parent: Box<Expr>,
-        index: Box<Expr>,
+        parent: Box<Node>,
+        index: Box<Node>,
     },
-    Discard(Box<Expr>),
-    Block(Vec<Expr>),
+    Discard(Box<Node>),
+    Block(Vec<Node>),
     PosInfo(String, u32, u32), // debugging
-    RetExpr(Box<Expr>),
+    RetExpr(Box<Node>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Node {
+    pub expr: Expr,
+    ty: Option<ConstType>,
+}
+
+impl Node {
+    pub fn is_typed(&self) -> bool {
+        self.ty.is_some()
+    }
+
+    pub fn ty(self) -> ConstType {
+        self.ty.unwrap()
+    }
+}
+
+pub fn untyped(expr: Expr) -> Node {
+    Node { expr, ty: None }
+}
+
+pub fn typed(expr: Expr, ty: ConstType) -> Node {
+    Node { expr, ty: Some(ty) }
 }
