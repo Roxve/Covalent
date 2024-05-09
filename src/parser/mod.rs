@@ -3,14 +3,14 @@ pub mod parse;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
 use crate::source::{ATErr, ErrKind, Ident, Scope};
-use ast::Expr;
+use ast::Node;
 
 #[derive(Debug, Clone)]
 
 pub struct Function {
     pub name: Ident,
     pub args: Vec<Ident>,
-    pub body: Vec<Expr>,
+    pub body: Vec<Node>,
 }
 
 impl Function {
@@ -54,7 +54,7 @@ impl Parser {
         err.out_error();
     }
 
-    pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Expr>) {
+    pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Node>) {
         self.functions.push(Function { name, args, body });
     }
     fn current(&mut self) -> Token {
