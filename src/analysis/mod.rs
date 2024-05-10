@@ -1,9 +1,7 @@
 pub mod analysis;
 pub mod correct;
-use crate::{
-    parser::ast::Literal,
-    source::{ConstType, Enviroment, Ident},
-};
+use crate::parser::ast::{Expr, Node};
+use crate::source::{ConstType, Enviroment};
 
 pub struct Analyzer {
     pub env: Enviroment,
@@ -11,96 +9,22 @@ pub struct Analyzer {
     column: u32,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum AnalyzedExpr {
-    Import {
-        module: String,
-        name: String,
-        args: Vec<ConstType>,
-    },
+const COMPARE_OP: Vec<&'static str> = vec!["==", "<", ">", "<=", ">=", "+"];
+const LOGIC_OP: Vec<&'static str> = vec!["&&", "||"];
 
-    Id(String),
+const MATH_OP: Vec<&'static str> = vec!["+", "-", "*", "/", "%"];
+const BOOL_OP: Vec<&'static str> = vec![vec!["=="], LOGIC_OP].concat();
 
-    Member(Box<TypedExpr>, String),
-
-    Index(Box<TypedExpr>, Box<TypedExpr>),
-
-    List(Vec<TypedExpr>),
-    Literal(Literal),
-    BinaryExpr {
-        op: String,
-        left: Box<TypedExpr>,
-        right: Box<TypedExpr>,
-    },
-    RetExpr(Box<TypedExpr>),
-
-    VarDeclare {
-        name: String,
-        val: Box<TypedExpr>,
-    },
-
-    VarAssign {
-        name: Box<TypedExpr>,
-        val: Box<TypedExpr>,
-    },
-
-    FnCall {
-        name: Box<TypedExpr>,
-        args: Vec<TypedExpr>,
-    },
-
-    Func {
-        ret: ConstType,
-        name: String,
-        args: Vec<Ident>,
-        body: Vec<TypedExpr>,
-    },
-
-    If {
-        cond: Box<TypedExpr>,
-        body: Vec<TypedExpr>,
-        alt: Option<Box<TypedExpr>>,
-    },
-    While {
-        cond: Box<TypedExpr>,
-        body: Vec<TypedExpr>,
-    },
-
-    Block(Vec<TypedExpr>),
-    Debug(String, u32, u32),
-    Discard(Box<TypedExpr>),
-    As(Box<TypedExpr>), // change an expr type if possible
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypedExpr {
-    pub expr: AnalyzedExpr,
-    pub ty: ConstType,
-}
-
-macro_rules! op {
-    (Bool) => {
-        vec!["==", ">", "<", "<=", ">="]
-    };
-    (Logical) => {
-        vec!["&&", "||"]
-    };
-    (Math) => {
-        vec!["+", "-", "*", "/", "%"]
-    };
-}
+const STROP: Vec<&'static str> = vec![COMPARE_OP, vec!["+", "-"]].concat();
+const ALLOPS: Vec<&'static str> = vec![COMPARE_OP, LOGIC_OP, MATH_OP].concat();
 
 impl ConstType {
     pub fn get_op(&self) -> Vec<&str> {
         match self {
-            &ConstType::Bool => [op!(Bool), op!(Logical)].concat(),
-            &ConstType::Float | &ConstType::Int => [op!(Math), op!(Bool)].concat(),
-            &ConstType::Str | &ConstType::List(_) => {
-                let mut ops = op!(Bool);
-                ops.push("+");
-                ops
-            }
-            &ConstType::Dynamic => [op!(Logical), op!(Bool), op!(Math)].concat(),
+            &ConstType::Bool => BOOL_OP,
+            &ConstType::Float | &ConstType::Int => MATH_OP,
+            &ConstType::Str | &ConstType::List(_) => STROP,
+            &ConstType::Dynamic => ALLOPS,
             &ConstType::Void | &ConstType::Obj(_) | &ConstType::Func(_, _) => Vec::new(),
         }
     }
@@ -111,19 +35,19 @@ pub fn supports_op(ty: &ConstType, op: &String) -> bool {
     ty.get_op().contains(&op.as_str())
 }
 
-fn get_ret_ty(expr: &TypedExpr, prev: ConstType) -> ConstType {
-    match expr.expr.clone() {
-        AnalyzedExpr::RetExpr(_) => {
+fn get_ret_ty(node: &Node, prev: ConstType) -> ConstType {
+    match node.expr.clone() {
+        Expr::RetExpr(_) => {
             if prev == ConstType::Void {
-                expr.ty.clone()
-            } else if prev != expr.ty {
+                node.ty
+            } else if prev != node.ty {
                 ConstType::Dynamic
             } else {
                 prev
             }
         }
 
-        AnalyzedExpr::If { body, alt, .. } => {
+        Expr::If { body, alt, .. } => {
             let mut ty = get_fn_type(&body, prev);
             if alt.is_some() {
                 ty = get_ret_ty(&*alt.unwrap(), ty);
@@ -131,13 +55,13 @@ fn get_ret_ty(expr: &TypedExpr, prev: ConstType) -> ConstType {
             ty
         }
 
-        AnalyzedExpr::While { body, .. } | AnalyzedExpr::Block(body) => get_fn_type(&body, prev),
+        Expr::While { body, .. } | Expr::Block(body) => get_fn_type(&body, prev),
         // get fn ty => Block , ifBody
         _ => prev,
     }
 }
 
-pub fn get_fn_type(body: &Vec<TypedExpr>, prev: ConstType) -> ConstType {
+pub fn get_fn_type(body: &Vec<Node>, prev: ConstType) -> ConstType {
     let mut ty = prev;
     for expr in body {
         ty = get_ret_ty(expr, ty);

@@ -1,13 +1,13 @@
-use crate::parser::ast::Expr;
+use crate::parser::ast::{Expr, Node};
 use crate::parser::Function;
 use crate::source::{ATErr, ConstType, ErrKind, Ident};
 
 use super::*;
 
 #[inline]
-fn ty_as(ty: &ConstType, expr: TypedExpr) -> TypedExpr {
-    TypedExpr {
-        expr: AnalyzedExpr::As(Box::new(expr)),
+fn ty_as(ty: &ConstType, expr: Node) -> Node {
+    Node {
+        expr: Expr::As(Box::new(expr)),
         ty: ty.clone(),
     }
 }
@@ -25,7 +25,7 @@ impl Analyzer {
     #[inline]
     fn import(
         &mut self,
-        body: &mut Vec<TypedExpr>,
+        body: &mut Vec<Node>,
         ty: ConstType,
         module: &str,
         name: &str,
@@ -42,8 +42,8 @@ impl Analyzer {
                 .collect(),
             ty.clone(),
         );
-        body.push(TypedExpr {
-            expr: AnalyzedExpr::Import {
+        body.push(Node {
+            expr: Expr::Import {
                 module: module.to_string(),
                 name: name.to_string(),
                 args: args.into_iter().map(|v| v.0).collect(),
@@ -52,7 +52,7 @@ impl Analyzer {
         })
     }
 
-    pub fn analyz_func(&mut self, func: Function) -> Result<TypedExpr, ErrKind> {
+    pub fn analyz_func(&mut self, func: Function) -> Result<Node, ErrKind> {
         self.env = self.env.child();
 
         let args = func.args;
@@ -82,20 +82,17 @@ impl Analyzer {
             ),
         );
 
-        let expr = AnalyzedExpr::Func {
+        let expr = Expr::Func {
             ret: ty.clone(),
             name: func.name.val,
             args,
             body,
         };
 
-        Ok(TypedExpr { expr, ty })
+        Ok(Node { expr, ty })
     }
 
-    pub fn analyz_prog(
-        exprs: Vec<Expr>,
-        functions: Vec<Function>,
-    ) -> Result<Vec<TypedExpr>, ErrKind> {
+    pub fn analyz_prog(exprs: Vec<Expr>, functions: Vec<Function>) -> Result<Vec<Node>, ErrKind> {
         let mut analyzer = Analyzer::new();
         let mut analyzed_prog = Vec::new();
 
@@ -127,7 +124,7 @@ impl Analyzer {
     }
 
     #[inline]
-    pub fn analyz_body(&mut self, body: Vec<Expr>) -> Result<Vec<TypedExpr>, ErrKind> {
+    pub fn analyz_body(&mut self, body: Vec<Expr>) -> Result<Vec<Node>, ErrKind> {
         let mut analyzed_body = vec![];
         self.env = self.env.child();
         for expr in body {
@@ -138,7 +135,7 @@ impl Analyzer {
     }
 
     #[inline]
-    pub fn analyz_items(&mut self, items: Vec<Expr>) -> Result<Vec<TypedExpr>, ErrKind> {
+    pub fn analyz_items(&mut self, items: Vec<Expr>) -> Result<Vec<Node>, ErrKind> {
         let mut analyzed_items = vec![];
         for expr in items {
             analyzed_items.push(self.analyz(expr)?);
@@ -146,12 +143,12 @@ impl Analyzer {
         Ok(analyzed_items)
     }
 
-    pub fn analyz(&mut self, expr: Expr) -> Result<TypedExpr, ErrKind> {
+    pub fn analyz(&mut self, expr: Expr) -> Result<Node, ErrKind> {
         match expr {
             Expr::Literal(literal) => {
                 let ty = literal.get_ty();
-                Ok(TypedExpr {
-                    expr: AnalyzedExpr::Literal(literal),
+                Ok(Node {
+                    expr: Expr::Literal(literal),
                     ty,
                 })
             }
@@ -172,8 +169,8 @@ impl Analyzer {
                     }
                 }
                 let ty = ConstType::List(Box::new(item_ty));
-                let expr = AnalyzedExpr::List(items);
-                Ok(TypedExpr { expr, ty })
+                let expr = Expr::List(items);
+                Ok(Node { expr, ty })
             }
 
             Expr::BinaryExpr { op, left, right } => self.analyz_binary_expr(*left, *right, op),
@@ -183,15 +180,15 @@ impl Analyzer {
             Expr::Discard(expr) => {
                 let ty = ConstType::Void;
                 let expr = self.analyz(*expr)?;
-                let expr = AnalyzedExpr::Discard(Box::new(expr));
+                let expr = Expr::Discard(Box::new(expr));
 
-                Ok(TypedExpr { expr, ty })
+                Ok(Node { expr, ty })
             }
             Expr::PosInfo(x, line, column) => {
                 self.line = line;
                 self.column = column;
-                Ok(TypedExpr {
-                    expr: AnalyzedExpr::Debug(x, line, column),
+                Ok(Node {
+                    expr: Expr::Debug(x, line, column),
                     ty: ConstType::Void,
                 })
             }
@@ -200,8 +197,8 @@ impl Analyzer {
                 let expr = self.analyz(*expr)?;
                 let ty = expr.ty.clone();
 
-                let expr = AnalyzedExpr::RetExpr(Box::new(expr));
-                Ok(TypedExpr { expr, ty })
+                let expr = Expr::RetExpr(Box::new(expr));
+                Ok(Node { expr, ty })
             }
 
             Expr::FnCall { name, args } => self.analyz_call(*name, args),
@@ -238,13 +235,13 @@ impl Analyzer {
                     last.unwrap().ty.clone()
                 };
 
-                let expr = AnalyzedExpr::If {
+                let expr = Expr::If {
                     cond,
                     body,
                     alt: analyzed_alt,
                 };
 
-                Ok(TypedExpr { expr, ty })
+                Ok(Node { expr, ty })
             }
             Expr::Block(block) => {
                 let block = self.analyz_body(block)?;
@@ -255,9 +252,9 @@ impl Analyzer {
                 } else {
                     last.unwrap().ty.clone()
                 };
-                let expr = AnalyzedExpr::Block(block);
+                let expr = Expr::Block(block);
 
-                Ok(TypedExpr { expr, ty })
+                Ok(Node { expr, ty })
             }
 
             Expr::WhileExpr { condition, body } => {
@@ -274,10 +271,10 @@ impl Analyzer {
                 }
                 let body = self.analyz_body(body)?;
 
-                let expr = AnalyzedExpr::While { cond, body };
+                let expr = Expr::While { cond, body };
                 let ty = ConstType::Void;
 
-                Ok(TypedExpr { expr, ty })
+                Ok(Node { expr, ty })
             }
 
             Expr::MemberExpr { parent, child } => self.analyz_member(*parent, child),
@@ -291,7 +288,7 @@ impl Analyzer {
         left: Expr,
         right: Expr,
         op: String,
-    ) -> Result<TypedExpr, ErrKind> {
+    ) -> Result<Node, ErrKind> {
         let mut lhs = self.analyz(left)?;
         let mut rhs = self.analyz(right)?;
         (lhs, rhs) = self.type_conv(lhs, rhs)?;
@@ -308,20 +305,20 @@ impl Analyzer {
         let left = Box::new(lhs);
         let right = Box::new(rhs);
 
-        let expr = AnalyzedExpr::BinaryExpr { op, left, right };
-        Ok(TypedExpr { expr, ty })
+        let expr = Expr::BinaryExpr { op, left, right };
+        Ok(Node { expr, ty })
     }
 
-    pub fn analyz_call(&mut self, name: Expr, params: Vec<Expr>) -> Result<TypedExpr, ErrKind> {
+    pub fn analyz_call(&mut self, name: Expr, params: Vec<Expr>) -> Result<Node, ErrKind> {
         let mut name = Box::new(self.analyz(name)?);
         if let ConstType::Func(ty, args_ty) = name.ty.clone() {
             let mut args = self.analyz_items(params)?;
 
             // if its a member call pass parent as first arg and call the child instead
-            if let AnalyzedExpr::Member(p, c) = (*name).clone().expr {
+            if let Expr::Member(p, c) = (*name).clone().expr {
                 if self.env.ty_parent_fn(&p.ty, &c).is_some() {
-                    name = Box::new(TypedExpr {
-                        expr: AnalyzedExpr::Id(c),
+                    name = Box::new(Node {
+                        expr: Expr::Id(c),
                         ty: name.ty,
                     });
                     let mut p = vec![*p];
@@ -341,9 +338,9 @@ impl Analyzer {
                 }
             }
 
-            let expr = AnalyzedExpr::FnCall { name, args };
+            let expr = Expr::FnCall { name, args };
 
-            Ok(TypedExpr { expr, ty: *ty })
+            Ok(Node { expr, ty: *ty })
         } else {
             self.err(
                 ErrKind::UnexceptedTokenE,
@@ -353,7 +350,7 @@ impl Analyzer {
         }
     }
 
-    pub fn analyz_index(&mut self, parent: Expr, index: Expr) -> Result<TypedExpr, ErrKind> {
+    pub fn analyz_index(&mut self, parent: Expr, index: Expr) -> Result<Node, ErrKind> {
         let parent = self.analyz(parent)?;
         let index = self.analyz(index)?;
         if index.ty != ConstType::Int {
@@ -365,11 +362,11 @@ impl Analyzer {
             _ => return Err(ErrKind::InvaildType),
         };
 
-        let expr = AnalyzedExpr::Index(Box::new(parent), Box::new(index));
-        Ok(TypedExpr { expr, ty })
+        let expr = Expr::Index(Box::new(parent), Box::new(index));
+        Ok(Node { expr, ty })
     }
 
-    pub fn analyz_member(&mut self, parent: Expr, child: String) -> Result<TypedExpr, ErrKind> {
+    pub fn analyz_member(&mut self, parent: Expr, child: String) -> Result<Node, ErrKind> {
         let parent = self.analyz(parent)?;
 
         let mut ty = parent.ty.get(&child);
@@ -380,26 +377,26 @@ impl Analyzer {
             }
         }
 
-        let expr = AnalyzedExpr::Member(Box::new(parent), child);
+        let expr = Expr::Member(Box::new(parent), child);
 
-        Ok(TypedExpr {
+        Ok(Node {
             ty: ty.unwrap(),
             expr,
         })
     }
 
-    pub fn analyz_id(&mut self, id: Ident) -> Result<TypedExpr, ErrKind> {
+    pub fn analyz_id(&mut self, id: Ident) -> Result<Node, ErrKind> {
         if !self.env.has(&id.val) {
             return Err(ErrKind::UndeclaredVar);
         }
 
         let ty = self.env.get_ty(&id.val).unwrap();
 
-        let expr = AnalyzedExpr::Id(id.val);
-        Ok(TypedExpr { expr, ty })
+        let expr = Expr::Id(id.val);
+        Ok(Node { expr, ty })
     }
 
-    pub fn analyz_var_declare(&mut self, name: Ident, val: Expr) -> Result<TypedExpr, ErrKind> {
+    pub fn analyz_var_declare(&mut self, name: Ident, val: Expr) -> Result<Node, ErrKind> {
         let val = self.analyz(val)?;
         let name = name.val;
         if self.env.has(&name) {
@@ -408,36 +405,36 @@ impl Analyzer {
         let ty = val.ty.clone();
         self.env.add(&name, ty.clone());
 
-        let expr = AnalyzedExpr::VarDeclare {
+        let expr = Expr::VarDeclare {
             name,
             val: Box::new(val),
         };
-        Ok(TypedExpr { expr, ty })
+        Ok(Node { expr, ty })
     }
 
-    pub fn analyz_var_assign(&mut self, id: Expr, val: Expr) -> Result<TypedExpr, ErrKind> {
+    pub fn analyz_var_assign(&mut self, id: Expr, val: Expr) -> Result<Node, ErrKind> {
         let val = self.analyz(val)?;
         let name = self.analyz(id)?;
         let ty = val.ty.clone();
-        if let AnalyzedExpr::Id(ref name) = name.expr {
+        if let Expr::Id(ref name) = name.expr {
             self.env.modify(name, ty.clone());
         } else if val.ty != name.ty {
             self.err(ErrKind::InvaildType, format!("cannot set the value of an Obj property to a value of different type, got type {:?} expected {:?}, in expr {:?} = {:?}", val.ty, name.ty, name, val));
             return Err(ErrKind::InvaildType);
         }
-        let expr = AnalyzedExpr::VarAssign {
+        let expr = Expr::VarAssign {
             name: Box::new(name),
             val: Box::new(val),
         };
-        Ok(TypedExpr { expr, ty })
+        Ok(Node { expr, ty })
     }
 
-    pub fn type_cast(&mut self, from: TypedExpr, into: ConstType) -> Result<TypedExpr, ErrKind> {
+    pub fn type_cast(&mut self, from: Node, into: ConstType) -> Result<Node, ErrKind> {
         if into == ConstType::Dynamic || into == ConstType::Str {
             Ok(ty_as(&into, from))
         } else {
-            let _tmp = AnalyzedExpr::Id("temp".to_string());
-            let _tmp = TypedExpr {
+            let _tmp = Expr::Id("temp".to_string());
+            let _tmp = Node {
                 expr: _tmp,
                 ty: into,
             };
@@ -453,11 +450,7 @@ impl Analyzer {
         }
     }
 
-    pub fn type_conv(
-        &mut self,
-        mut lhs: TypedExpr,
-        mut rhs: TypedExpr,
-    ) -> Result<(TypedExpr, TypedExpr), ErrKind> {
+    pub fn type_conv(&mut self, mut lhs: Node, mut rhs: Node) -> Result<(Node, Node), ErrKind> {
         if lhs.ty != rhs.ty {
             if lhs.ty == ConstType::Float && rhs.ty == ConstType::Int {
                 rhs = ty_as(&lhs.ty, rhs);

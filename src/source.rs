@@ -8,6 +8,7 @@ pub enum ConstType {
     Bool,
     Dynamic,
     Void,
+    Unknown,
     List(Box<Self>),
     Func(Box<Self>, Vec<Self>),
     Obj(HashMap<String, Self>),

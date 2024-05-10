@@ -82,23 +82,18 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Node {
     pub expr: Expr,
-    ty: Option<ConstType>,
+    pub ty: ConstType,
 }
 
 impl Node {
     pub fn is_typed(&self) -> bool {
-        self.ty.is_some()
-    }
-
-    pub fn ty(self) -> ConstType {
-        self.ty.unwrap()
+        self.ty != ConstType::Unknown
     }
 }
 
 pub fn untyped(expr: Expr) -> Node {
-    Node { expr, ty: None }
-}
-
-pub fn typed(expr: Expr, ty: ConstType) -> Node {
-    Node { expr, ty: Some(ty) }
+    Node {
+        expr,
+        ty: ConstType::Unknown,
+    }
 }
