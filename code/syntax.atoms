@@ -61,3 +61,58 @@ set object = {
   #listed_or: 
   varname == value |= value |< value
 *#
+
+# OOP
+# everything is an Atom expect base types like int char float bool etc to define a new atom  
+atom Vector2 { 
+  state int x 
+  state int y
+  set new: x, y { 
+    self.x = x
+    self.y = y 
+    # (a compiler init function would be automaticly executed before new to create the Atom)
+  }
+} 
+
+atom Player {  
+  # parts are immutable
+  part str name  
+  # avoid using states and attempt to use bonds when possible
+  state Vector2 pos 
+
+  set new: str name { 
+    # expect in new function
+    self.name = name 
+    self.pos = new Vector2: 0, 0
+  } 
+
+  set change_pos: int x, int y {
+    self.pos.x = x 
+    self.pos.y = y
+  }
+}
+
+# unlike Atoms bonds are stack allocated
+bond Lexer {
+  state int pos 
+  part str code 
+  
+  set new: str code {
+    self.pos = 0 
+    self.code = code
+  } 
+} 
+
+# use bonds for stuff like a Reader, Lexer, Parser, etc 
+
+# mod(modules) are simply a group of functions
+
+mod MyStdIO {
+  set my_write: x { 
+    writeln: x + 5
+  }
+} 
+
+MyStdIO::my_write: 5 
+use MyStdIO:my_write 
+my_write: 5
