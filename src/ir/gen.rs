@@ -1,7 +1,7 @@
 use super::{Codegen, IROp};
 
 use crate::{
-    analysis::{AnalyzedExpr, TypedExpr},
+    parser::ast::{Expr, Node},
     source::{ConstType, Ident},
 };
 
@@ -9,29 +9,23 @@ type IR = Vec<IROp>;
 type IRRes = Result<IR, u8>;
 
 pub trait IRGen {
-    fn gen_prog(&mut self, exprs: Vec<TypedExpr>) -> IR;
+    fn gen_prog(&mut self, exprs: Vec<Node>) -> IR;
     fn gen_func(
         &mut self,
         name: String,
         args: Vec<Ident>,
         ret: ConstType,
-        body: Vec<TypedExpr>,
+        body: Vec<Node>,
     ) -> IRRes;
-    fn gen_expr(&mut self, expr: TypedExpr) -> IRRes;
+    fn gen_expr(&mut self, expr: Node) -> IRRes;
 
-    fn gen_var_declare(&mut self, name: String, expr: TypedExpr) -> IRRes;
-    fn gen_var_assign(&mut self, name: TypedExpr, expr: TypedExpr) -> IRRes;
-    fn gen_binary_expr(
-        &mut self,
-        ty: ConstType,
-        op: String,
-        left: TypedExpr,
-        right: TypedExpr,
-    ) -> IRRes;
+    fn gen_var_declare(&mut self, name: String, expr: Node) -> IRRes;
+    fn gen_var_assign(&mut self, name: Node, expr: Node) -> IRRes;
+    fn gen_binary_expr(&mut self, ty: ConstType, op: String, left: Node, right: Node) -> IRRes;
 }
 
 impl IRGen for Codegen {
-    fn gen_prog(&mut self, exprs: Vec<TypedExpr>) -> IR {
+    fn gen_prog(&mut self, exprs: Vec<Node>) -> IR {
         let mut gen = vec![];
 
         for expr in exprs {
@@ -47,7 +41,7 @@ impl IRGen for Codegen {
         name: String,
         args: Vec<Ident>,
         ret: ConstType,
-        body: Vec<TypedExpr>,
+        body: Vec<Node>,
     ) -> IRRes {
         for arg in &args {
             // types arent needed in ir gen
@@ -62,29 +56,29 @@ impl IRGen for Codegen {
         Ok(vec![IROp::Def(ret, name, args, exprs)])
     }
 
-    fn gen_expr(&mut self, expr: TypedExpr) -> IRRes {
+    fn gen_expr(&mut self, expr: Node) -> IRRes {
         match expr.expr {
-            AnalyzedExpr::Import { module, name, args } => {
+            Expr::Import { module, name, args } => {
                 Ok(vec![IROp::Import(expr.ty, module, name, args)])
             }
 
-            AnalyzedExpr::Func {
+            Expr::Func {
                 ret,
                 name,
                 args,
                 body,
             } => self.gen_func(name, args, ret, body),
 
-            AnalyzedExpr::Literal(lit) => Ok(vec![IROp::Const(lit)]),
+            Expr::Literal(lit) => Ok(vec![IROp::Const(lit)]),
 
-            AnalyzedExpr::BinaryExpr { op, left, right } => {
+            Expr::BinaryExpr { op, left, right } => {
                 self.gen_binary_expr(expr.ty, op, *left, *right)
             }
-            AnalyzedExpr::VarDeclare { name, val } => self.gen_var_declare(name, *val),
-            AnalyzedExpr::VarAssign { name, val } => self.gen_var_assign(*name, *val),
-            AnalyzedExpr::Id(name) => Ok(vec![IROp::Load(expr.ty, name)]),
+            Expr::VarDeclare { name, val } => self.gen_var_declare(name.val, *val),
+            Expr::VarAssign { name, val } => self.gen_var_assign(*name, *val),
+            Expr::Id(name) => Ok(vec![IROp::Load(expr.ty, name)]),
 
-            AnalyzedExpr::List(items) => {
+            Expr::ListExpr(items) => {
                 let mut bonded = vec![];
                 for item in items {
                     bonded.push(self.gen_expr(item)?);
@@ -93,7 +87,7 @@ impl IRGen for Codegen {
                 Ok(vec![IROp::List(expr.ty, bonded)])
             }
 
-            AnalyzedExpr::Member(parent, child) => {
+            Expr::MemberExpr { parent, child } => {
                 let parent = self.gen_expr(*parent)?;
                 let mut res = parent;
                 res.push(IROp::LoadProp(expr.ty, child));
@@ -101,13 +95,16 @@ impl IRGen for Codegen {
                 Ok(res)
             }
 
-            AnalyzedExpr::Index(expr, index) => {
+            Expr::IndexExpr {
+                parent: expr,
+                index,
+            } => {
                 let expr = self.gen_expr(*expr)?;
                 let idx = self.gen_expr(*index.clone())?;
                 Ok([expr, idx, vec![IROp::LoadIdx(index.ty)]].concat())
             }
 
-            AnalyzedExpr::FnCall { name, args } => {
+            Expr::FnCall { name, args } => {
                 let mut res: Vec<IROp> = vec![];
                 let count = args.len().clone() as u16;
 
@@ -119,7 +116,7 @@ impl IRGen for Codegen {
 
                 Ok(res)
             }
-            AnalyzedExpr::RetExpr(expr) => {
+            Expr::RetExpr(expr) => {
                 let mut res = vec![];
                 let mut compiled_expr = self.gen_expr(*expr.clone())?;
 
@@ -128,7 +125,7 @@ impl IRGen for Codegen {
                 Ok(res)
             }
 
-            AnalyzedExpr::As(conv) => {
+            Expr::As(conv) => {
                 let mut res = vec![];
                 let mut inside = self.gen_expr(*conv.clone())?;
 
@@ -137,8 +134,8 @@ impl IRGen for Codegen {
                 Ok(res)
             }
 
-            AnalyzedExpr::Debug(_, _, _) => Ok(vec![]),
-            AnalyzedExpr::Discard(dis) => {
+            Expr::PosInfo(_, _, _) => Ok(vec![]),
+            Expr::Discard(dis) => {
                 let mut compiled = self.gen_expr(*dis.clone())?;
                 if dis.ty != ConstType::Void {
                     compiled.append(&mut vec![IROp::Pop]);
@@ -146,8 +143,12 @@ impl IRGen for Codegen {
                 Ok(compiled)
             }
 
-            AnalyzedExpr::If { cond, body, alt } => {
-                let mut cond = self.gen_expr(*cond)?;
+            Expr::IfExpr {
+                condition,
+                body,
+                alt,
+            } => {
+                let mut cond = self.gen_expr(*condition)?;
 
                 let mut compiled_body = vec![];
 
@@ -173,7 +174,7 @@ impl IRGen for Codegen {
                 Ok(res)
             }
 
-            AnalyzedExpr::Block(block) => {
+            Expr::Block(block) => {
                 let mut compiled_block = vec![];
                 self.env = self.env.child();
                 for expr in block {
@@ -187,8 +188,8 @@ impl IRGen for Codegen {
                 Ok(compiled_block)
             }
 
-            AnalyzedExpr::While { cond, body } => {
-                let mut cond = self.gen_expr(*cond)?;
+            Expr::WhileExpr { condition, body } => {
+                let mut cond = self.gen_expr(*condition)?;
 
                 let mut compiled_body = vec![];
                 self.env = self.env.child();
@@ -206,11 +207,12 @@ impl IRGen for Codegen {
 
                 self.env = self.env.parent().unwrap();
                 Ok(res)
-            } // _ => todo!("{:#?}", expr),
+            }
+            _ => todo!("{:#?}", expr),
         }
     }
 
-    fn gen_var_declare(&mut self, name: String, expr: TypedExpr) -> IRRes {
+    fn gen_var_declare(&mut self, name: String, expr: Node) -> IRRes {
         let mut res = vec![];
         let mut g = self.gen_expr(expr.clone())?;
         let ty = expr.ty;
@@ -223,7 +225,7 @@ impl IRGen for Codegen {
         Ok(res)
     }
 
-    fn gen_var_assign(&mut self, name: TypedExpr, expr: TypedExpr) -> IRRes {
+    fn gen_var_assign(&mut self, name: Node, expr: Node) -> IRRes {
         let mut res = vec![];
         res.append(&mut self.gen_expr(name)?);
         let mut compiled_expr = self.gen_expr(expr.clone())?;
@@ -241,13 +243,7 @@ impl IRGen for Codegen {
         Ok(res)
     }
 
-    fn gen_binary_expr(
-        &mut self,
-        ty: ConstType,
-        op: String,
-        left: TypedExpr,
-        right: TypedExpr,
-    ) -> IRRes {
+    fn gen_binary_expr(&mut self, ty: ConstType, op: String, left: Node, right: Node) -> IRRes {
         let mut res: IR = vec![];
         let mut lhs = self.gen_expr(left.clone())?;
         let mut rhs = self.gen_expr(right)?;

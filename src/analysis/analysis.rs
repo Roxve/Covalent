@@ -92,7 +92,7 @@ impl Analyzer {
         Ok(Node { expr, ty })
     }
 
-    pub fn analyz_prog(exprs: Vec<Expr>, functions: Vec<Function>) -> Result<Vec<Node>, ErrKind> {
+    pub fn analyz_prog(exprs: Vec<Node>, functions: Vec<Function>) -> Result<Vec<Node>, ErrKind> {
         let mut analyzer = Analyzer::new();
         let mut analyzed_prog = Vec::new();
 
@@ -124,7 +124,7 @@ impl Analyzer {
     }
 
     #[inline]
-    pub fn analyz_body(&mut self, body: Vec<Expr>) -> Result<Vec<Node>, ErrKind> {
+    pub fn analyz_body(&mut self, body: Vec<Node>) -> Result<Vec<Node>, ErrKind> {
         let mut analyzed_body = vec![];
         self.env = self.env.child();
         for expr in body {
@@ -135,7 +135,7 @@ impl Analyzer {
     }
 
     #[inline]
-    pub fn analyz_items(&mut self, items: Vec<Expr>) -> Result<Vec<Node>, ErrKind> {
+    pub fn analyz_items(&mut self, items: Vec<Node>) -> Result<Vec<Node>, ErrKind> {
         let mut analyzed_items = vec![];
         for expr in items {
             analyzed_items.push(self.analyz(expr)?);
@@ -143,8 +143,8 @@ impl Analyzer {
         Ok(analyzed_items)
     }
 
-    pub fn analyz(&mut self, expr: Expr) -> Result<Node, ErrKind> {
-        match expr {
+    pub fn analyz(&mut self, node: Node) -> Result<Node, ErrKind> {
+        match node.expr {
             Expr::Literal(literal) => {
                 let ty = literal.get_ty();
                 Ok(Node {
@@ -169,12 +169,13 @@ impl Analyzer {
                     }
                 }
                 let ty = ConstType::List(Box::new(item_ty));
-                let expr = Expr::List(items);
+                let expr = Expr::ListExpr(items);
                 Ok(Node { expr, ty })
             }
 
             Expr::BinaryExpr { op, left, right } => self.analyz_binary_expr(*left, *right, op),
             Expr::Ident(id) => self.analyz_id(id),
+            Expr::Id(id) => self.analyz_id(Ident { val: id, tag: None }),
             Expr::VarDeclare { name, val } => self.analyz_var_declare(name, *val),
             Expr::VarAssign { name, val } => self.analyz_var_assign(*name, *val),
             Expr::Discard(expr) => {
@@ -188,7 +189,7 @@ impl Analyzer {
                 self.line = line;
                 self.column = column;
                 Ok(Node {
-                    expr: Expr::Debug(x, line, column),
+                    expr: Expr::PosInfo(x, line, column),
                     ty: ConstType::Void,
                 })
             }
@@ -208,13 +209,13 @@ impl Analyzer {
                 body,
                 alt,
             } => {
-                let cond = Box::new(self.analyz(*condition)?);
-                if &cond.ty != &ConstType::Bool {
+                let condition = Box::new(self.analyz(*condition)?);
+                if &condition.ty != &ConstType::Bool {
                     self.err(
                         ErrKind::InvaildType,
                         format!(
                             "invaild condition for while loop expected Bool got {:?}",
-                            cond.ty
+                            condition.ty
                         ),
                     );
                     return Err(ErrKind::InvaildType);
@@ -235,8 +236,8 @@ impl Analyzer {
                     last.unwrap().ty.clone()
                 };
 
-                let expr = Expr::If {
-                    cond,
+                let expr = Expr::IfExpr {
+                    condition,
                     body,
                     alt: analyzed_alt,
                 };
@@ -258,20 +259,20 @@ impl Analyzer {
             }
 
             Expr::WhileExpr { condition, body } => {
-                let cond = Box::new(self.analyz(*condition)?);
-                if &cond.ty != &ConstType::Bool {
+                let condition = Box::new(self.analyz(*condition)?);
+                if &condition.ty != &ConstType::Bool {
                     self.err(
                         ErrKind::InvaildType,
                         format!(
                             "invaild condition for while loop expected Bool got {:?}",
-                            cond.ty
+                            condition.ty
                         ),
                     );
                     return Err(ErrKind::InvaildType);
                 }
                 let body = self.analyz_body(body)?;
 
-                let expr = Expr::While { cond, body };
+                let expr = Expr::WhileExpr { condition, body };
                 let ty = ConstType::Void;
 
                 Ok(Node { expr, ty })
@@ -279,14 +280,14 @@ impl Analyzer {
 
             Expr::MemberExpr { parent, child } => self.analyz_member(*parent, child),
             Expr::IndexExpr { parent, index } => self.analyz_index(*parent, *index),
-            // _ => todo!("expr {:#?}", expr),
+            _ => todo!("node {:#?}", node),
         }
     }
 
     pub fn analyz_binary_expr(
         &mut self,
-        left: Expr,
-        right: Expr,
+        left: Node,
+        right: Node,
         op: String,
     ) -> Result<Node, ErrKind> {
         let mut lhs = self.analyz(left)?;
@@ -309,13 +310,17 @@ impl Analyzer {
         Ok(Node { expr, ty })
     }
 
-    pub fn analyz_call(&mut self, name: Expr, params: Vec<Expr>) -> Result<Node, ErrKind> {
+    pub fn analyz_call(&mut self, name: Node, params: Vec<Node>) -> Result<Node, ErrKind> {
         let mut name = Box::new(self.analyz(name)?);
         if let ConstType::Func(ty, args_ty) = name.ty.clone() {
             let mut args = self.analyz_items(params)?;
 
             // if its a member call pass parent as first arg and call the child instead
-            if let Expr::Member(p, c) = (*name).clone().expr {
+            if let Expr::MemberExpr {
+                parent: p,
+                child: c,
+            } = (*name).clone().expr
+            {
                 if self.env.ty_parent_fn(&p.ty, &c).is_some() {
                     name = Box::new(Node {
                         expr: Expr::Id(c),
@@ -350,7 +355,7 @@ impl Analyzer {
         }
     }
 
-    pub fn analyz_index(&mut self, parent: Expr, index: Expr) -> Result<Node, ErrKind> {
+    pub fn analyz_index(&mut self, parent: Node, index: Node) -> Result<Node, ErrKind> {
         let parent = self.analyz(parent)?;
         let index = self.analyz(index)?;
         if index.ty != ConstType::Int {
@@ -362,11 +367,14 @@ impl Analyzer {
             _ => return Err(ErrKind::InvaildType),
         };
 
-        let expr = Expr::Index(Box::new(parent), Box::new(index));
+        let expr = Expr::IndexExpr {
+            parent: Box::new(parent),
+            index: Box::new(index),
+        };
         Ok(Node { expr, ty })
     }
 
-    pub fn analyz_member(&mut self, parent: Expr, child: String) -> Result<Node, ErrKind> {
+    pub fn analyz_member(&mut self, parent: Node, child: String) -> Result<Node, ErrKind> {
         let parent = self.analyz(parent)?;
 
         let mut ty = parent.ty.get(&child);
@@ -377,7 +385,10 @@ impl Analyzer {
             }
         }
 
-        let expr = Expr::Member(Box::new(parent), child);
+        let expr = Expr::MemberExpr {
+            parent: Box::new(parent),
+            child,
+        };
 
         Ok(Node {
             ty: ty.unwrap(),
@@ -396,14 +407,14 @@ impl Analyzer {
         Ok(Node { expr, ty })
     }
 
-    pub fn analyz_var_declare(&mut self, name: Ident, val: Expr) -> Result<Node, ErrKind> {
+    pub fn analyz_var_declare(&mut self, name: Ident, val: Node) -> Result<Node, ErrKind> {
         let val = self.analyz(val)?;
-        let name = name.val;
-        if self.env.has(&name) {
+
+        if self.env.has(&name.val) {
             return Err(ErrKind::VarAlreadyDeclared);
         }
         let ty = val.ty.clone();
-        self.env.add(&name, ty.clone());
+        self.env.add(&name.val, ty.clone());
 
         let expr = Expr::VarDeclare {
             name,
@@ -412,7 +423,7 @@ impl Analyzer {
         Ok(Node { expr, ty })
     }
 
-    pub fn analyz_var_assign(&mut self, id: Expr, val: Expr) -> Result<Node, ErrKind> {
+    pub fn analyz_var_assign(&mut self, id: Node, val: Node) -> Result<Node, ErrKind> {
         let val = self.analyz(val)?;
         let name = self.analyz(id)?;
         let ty = val.ty.clone();

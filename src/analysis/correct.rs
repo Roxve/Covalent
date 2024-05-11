@@ -1,37 +1,15 @@
 use crate::{
-    parser::ast::Expr,
-    source::{ConstType, ErrKind, Ident},
+    parser::ast::{Expr, Node},
+    source::{ConstType, ErrKind},
 };
 
-use super::{AnalyzedExpr, Analyzer, TypedExpr};
-
-impl TypedExpr {
-    pub fn to_expr(self) -> Expr {
-        match self.expr {
-            AnalyzedExpr::Id(id) => Expr::Ident(Ident { val: id, tag: None }),
-            AnalyzedExpr::Literal(lit) => Expr::Literal(lit),
-            AnalyzedExpr::As(a) => (*a).to_expr(),
-            AnalyzedExpr::Discard(dis) => Expr::Discard(Box::new((*dis).to_expr())),
-            AnalyzedExpr::BinaryExpr { op, left, right } => Expr::BinaryExpr {
-                op,
-                left: Box::new((*left).to_expr()),
-                right: Box::new((*right).to_expr()),
-            },
-            AnalyzedExpr::FnCall { name, args } => Expr::FnCall {
-                name: Box::new(name.to_expr()),
-                args: args.into_iter().map(|v| v.to_expr()).collect(),
-            },
-            AnalyzedExpr::Debug(name, line, column) => Expr::PosInfo(name, line, column),
-            _ => todo!(),
-        }
-    }
-}
+use super::Analyzer;
 
 impl Analyzer {
-    pub fn correct_prog(&mut self, exprs: Vec<TypedExpr>) -> Result<Vec<TypedExpr>, ErrKind> {
+    pub fn correct_prog(&mut self, exprs: Vec<Node>) -> Result<Vec<Node>, ErrKind> {
         let mut corrected = vec![];
         for expr in exprs.clone() {
-            if let AnalyzedExpr::Import { .. } = expr.expr {
+            if let Expr::Import { .. } = expr.expr {
                 corrected.push(expr);
             } else {
                 corrected.push(self.correct(expr)?);
@@ -41,25 +19,25 @@ impl Analyzer {
         Ok(corrected)
     }
 
-    fn correct(&mut self, expr: TypedExpr) -> Result<TypedExpr, ErrKind> {
+    fn correct(&mut self, expr: Node) -> Result<Node, ErrKind> {
         let matc = expr.clone();
         match matc.expr {
-            AnalyzedExpr::BinaryExpr { left, right, op } => {
+            Expr::BinaryExpr { left, right, op } => {
                 let left = self.correct(*left)?;
                 let right = self.correct(*right)?;
 
                 if &left.ty != &right.ty {
-                    return self.analyz_binary_expr(left.to_expr(), right.to_expr(), op);
+                    return self.analyz_binary_expr(left, right, op);
                 }
             }
-            AnalyzedExpr::FnCall { name, args } => {
+            Expr::FnCall { name, args } => {
                 let name = Box::new(self.correct(*name)?);
                 let mut corrected_args = vec![];
                 for arg in args {
                     let arg = self.correct(arg)?;
                     if arg.ty != ConstType::Dynamic {
-                        corrected_args.push(TypedExpr {
-                            expr: AnalyzedExpr::As(Box::new(arg)),
+                        corrected_args.push(Node {
+                            expr: Expr::As(Box::new(arg)),
                             ty: ConstType::Dynamic,
                         });
                     } else {
@@ -68,8 +46,8 @@ impl Analyzer {
                 }
 
                 if let ConstType::Func(ty, _) = name.ty.clone() {
-                    return Ok(TypedExpr {
-                        expr: AnalyzedExpr::FnCall {
+                    return Ok(Node {
+                        expr: Expr::FnCall {
                             name,
                             args: corrected_args,
                         },
@@ -80,20 +58,20 @@ impl Analyzer {
                 }
             }
 
-            AnalyzedExpr::Id(id) => {
+            Expr::Id(id) => {
                 let ty = if self.env.has(&id) {
                     self.env.get_ty(&id).unwrap()
                 } else {
                     self.env.add(&id, expr.ty.clone());
                     expr.ty
                 };
-                return Ok(TypedExpr {
+                return Ok(Node {
                     ty,
-                    expr: AnalyzedExpr::Id(id),
+                    expr: Expr::Id(id),
                 });
             }
 
-            AnalyzedExpr::Func {
+            Expr::Func {
                 ret,
                 name,
                 args,
@@ -102,8 +80,8 @@ impl Analyzer {
                 self.env.current = ret.clone();
                 let body = self.correct_prog(body.clone())?;
                 self.env.current = ConstType::Void;
-                return Ok(TypedExpr {
-                    expr: AnalyzedExpr::Func {
+                return Ok(Node {
+                    expr: Expr::Func {
                         ret,
                         name,
                         args,
@@ -113,17 +91,21 @@ impl Analyzer {
                 });
             }
 
-            AnalyzedExpr::If { cond, body, alt } => {
-                let cond = self.correct(*cond)?;
+            Expr::IfExpr {
+                condition,
+                body,
+                alt,
+            } => {
+                let cond = self.correct(*condition)?;
                 let body = self.correct_prog(body)?;
                 let alt = if alt.is_some() {
                     Some(Box::new(self.correct(*alt.unwrap())?))
                 } else {
                     None
                 };
-                return Ok(TypedExpr {
-                    expr: AnalyzedExpr::If {
-                        cond: Box::new(cond),
+                return Ok(Node {
+                    expr: Expr::IfExpr {
+                        condition: Box::new(cond),
                         body,
                         alt,
                     },
@@ -131,38 +113,38 @@ impl Analyzer {
                 });
             }
 
-            AnalyzedExpr::While { cond, body } => {
-                let cond = self.correct(*cond)?;
+            Expr::WhileExpr { condition, body } => {
+                let cond = self.correct(*condition)?;
                 let body = self.correct_prog(body)?;
 
-                return Ok(TypedExpr {
-                    expr: AnalyzedExpr::While {
-                        cond: Box::new(cond),
+                return Ok(Node {
+                    expr: Expr::WhileExpr {
+                        condition: Box::new(cond),
                         body,
                     },
                     ty: expr.ty,
                 });
             }
 
-            AnalyzedExpr::As(old) => {
+            Expr::As(old) => {
                 let old = self.correct(*old)?;
-                return Ok(TypedExpr {
-                    expr: AnalyzedExpr::As(Box::new(old)),
+                return Ok(Node {
+                    expr: Expr::As(Box::new(old)),
                     ty: expr.ty,
                 });
             }
-            AnalyzedExpr::RetExpr(ret) => {
+            Expr::RetExpr(ret) => {
                 let ret = Box::new(self.correct(*ret)?);
                 if ret.ty == self.env.current.clone() {
-                    return Ok(TypedExpr {
-                        expr: AnalyzedExpr::RetExpr(ret.clone()),
+                    return Ok(Node {
+                        expr: Expr::RetExpr(ret.clone()),
                         ty: ret.ty,
                     });
                 } else {
-                    return Ok(TypedExpr {
+                    return Ok(Node {
                         ty: self.env.current.clone(),
-                        expr: AnalyzedExpr::RetExpr(Box::new(TypedExpr {
-                            expr: AnalyzedExpr::As(ret),
+                        expr: Expr::RetExpr(Box::new(Node {
+                            expr: Expr::As(ret),
                             ty: self.env.current.clone(),
                         })),
                     });

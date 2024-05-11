@@ -34,7 +34,7 @@ impl Parse for Parser {
             let mut expr = self.parse_level(0);
 
             if !self.current_scope.is_used() {
-                expr = Expr::Discard(Box::new(expr));
+                expr = untyped(Expr::Discard(Box::new(expr)));
             }
 
             body.push(expr);

@@ -9,23 +9,22 @@ pub struct Analyzer {
     column: u32,
 }
 
-const COMPARE_OP: Vec<&'static str> = vec!["==", "<", ">", "<=", ">=", "+"];
-const LOGIC_OP: Vec<&'static str> = vec!["&&", "||"];
+const COMPARE_OP: &[&str] = &["==", "<", ">", "<=", ">="];
+const LOGIC_OP: &[&str] = &["&&", "||"];
 
-const MATH_OP: Vec<&'static str> = vec!["+", "-", "*", "/", "%"];
-const BOOL_OP: Vec<&'static str> = vec![vec!["=="], LOGIC_OP].concat();
-
-const STROP: Vec<&'static str> = vec![COMPARE_OP, vec!["+", "-"]].concat();
-const ALLOPS: Vec<&'static str> = vec![COMPARE_OP, LOGIC_OP, MATH_OP].concat();
+const MATH_OP: &[&str] = &["+", "-", "*", "/", "%"];
 
 impl ConstType {
     pub fn get_op(&self) -> Vec<&str> {
         match self {
-            &ConstType::Bool => BOOL_OP,
-            &ConstType::Float | &ConstType::Int => MATH_OP,
-            &ConstType::Str | &ConstType::List(_) => STROP,
-            &ConstType::Dynamic => ALLOPS,
-            &ConstType::Void | &ConstType::Obj(_) | &ConstType::Func(_, _) => Vec::new(),
+            &ConstType::Bool => [LOGIC_OP, &["=="]].concat(),
+            &ConstType::Float | &ConstType::Int => MATH_OP.to_vec(),
+            &ConstType::Str | &ConstType::List(_) => [COMPARE_OP, &["+"]].concat(),
+            &ConstType::Dynamic => [LOGIC_OP, COMPARE_OP, MATH_OP].concat(),
+            &ConstType::Void
+            | &ConstType::Obj(_)
+            | &ConstType::Func(_, _)
+            | &ConstType::Unknown => Vec::new(),
         }
     }
 }
@@ -39,7 +38,7 @@ fn get_ret_ty(node: &Node, prev: ConstType) -> ConstType {
     match node.expr.clone() {
         Expr::RetExpr(_) => {
             if prev == ConstType::Void {
-                node.ty
+                node.ty.clone()
             } else if prev != node.ty {
                 ConstType::Dynamic
             } else {
@@ -47,7 +46,7 @@ fn get_ret_ty(node: &Node, prev: ConstType) -> ConstType {
             }
         }
 
-        Expr::If { body, alt, .. } => {
+        Expr::IfExpr { body, alt, .. } => {
             let mut ty = get_fn_type(&body, prev);
             if alt.is_some() {
                 ty = get_ret_ty(&*alt.unwrap(), ty);
@@ -55,7 +54,7 @@ fn get_ret_ty(node: &Node, prev: ConstType) -> ConstType {
             ty
         }
 
-        Expr::While { body, .. } | Expr::Block(body) => get_fn_type(&body, prev),
+        Expr::WhileExpr { body, .. } | Expr::Block(body) => get_fn_type(&body, prev),
         // get fn ty => Block , ifBody
         _ => prev,
     }

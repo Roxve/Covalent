@@ -39,6 +39,7 @@ pub enum Expr {
         right: Box<Node>,
     },
     Ident(Ident),
+    Id(String),
     VarDeclare {
         name: Ident,
         val: Box<Node>,
@@ -51,6 +52,19 @@ pub enum Expr {
     FnCall {
         name: Box<Node>,
         args: Vec<Node>,
+    },
+
+    Import {
+        module: String,
+        name: String,
+        args: Vec<ConstType>,
+    },
+
+    Func {
+        ret: ConstType,
+        name: String,
+        args: Vec<Ident>,
+        body: Vec<Node>,
     },
 
     IfExpr {
@@ -77,6 +91,7 @@ pub enum Expr {
     Block(Vec<Node>),
     PosInfo(String, u32, u32), // debugging
     RetExpr(Box<Node>),
+    As(Box<Node>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
