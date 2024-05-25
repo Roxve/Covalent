@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::parser::ast::Node;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ConstType {
     Int,
@@ -11,6 +13,7 @@ pub enum ConstType {
     Unknown,
     List(Box<Self>),
     Func(Box<Self>, Vec<Self>),
+    Blueprint { argc: u32, name: String },
     Obj(HashMap<String, Self>),
 }
 
@@ -26,6 +29,16 @@ impl ConstType {
                 }
             }
             _ => None,
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            ConstType::Int => "int",
+            ConstType::Float => "float",
+            ConstType::Str => "str",
+            ConstType::Bool => "bool",
+            _ => todo!(),
         }
     }
 }
@@ -74,9 +87,10 @@ pub struct Ident {
 }
 
 #[derive(Debug, Clone)]
-pub struct CompiledFunction {
+pub struct Blueprint {
     pub name: String,
     pub args: Vec<Ident>,
+    pub body: Vec<Node>,
 }
 
 #[derive(Clone, Debug)]
@@ -84,14 +98,38 @@ pub struct Enviroment {
     pub vars: HashMap<String, ConstType>,
     pub current: ConstType,
     pub parent: Option<Box<Enviroment>>,
+    pub blueprints: Vec<Blueprint>,
 }
+pub fn type_mangle(name: String, types: Vec<ConstType>) -> String {
+    let mut mangle = String::new();
+    mangle.push_str(name.as_str());
 
+    for type_n in types {
+        mangle.push('_');
+        mangle.push_str(type_n.as_str());
+    }
+    return mangle;
+}
 impl Enviroment {
     pub fn new(parent: Option<Box<Self>>) -> Self {
         Self {
             vars: HashMap::new(),
             current: ConstType::Void,
             parent,
+            blueprints: Vec::new(),
+        }
+    }
+
+    pub fn blueprints(&self, blueprints: Vec<Blueprint>) {
+        self.blueprints = blueprints.clone();
+        for blueprint in blueprints {
+            self.add(
+                &blueprint.name,
+                ConstType::Blueprint {
+                    argc: blueprint.args.len() as u32,
+                    name: blueprint.name,
+                },
+            );
         }
     }
 
@@ -155,15 +193,21 @@ impl Enviroment {
         self.vars.insert(name.clone(), ty);
     }
 
-    pub fn push_function(&mut self, name: String, args: Vec<Ident>, ty: ConstType) {
+    pub fn get_blueprint(&self, name: &String) -> Option<Blueprint> {
+        let mut got = None;
+
+        for blueprint in self.blueprints {
+            if &blueprint.name == name {
+                got = Some(blueprint.clone());
+            }
+        }
+        return got;
+    }
+
+    pub fn push_function(&mut self, name: String, args: Vec<ConstType>, ty: ConstType) {
         self.vars.insert(
-            name.clone(),
-            ConstType::Func(
-                Box::new(ty),
-                args.iter()
-                    .map(|t| t.tag.clone().unwrap_or(ConstType::Dynamic))
-                    .collect(),
-            ),
+            type_mangle(name, args.clone()),
+            ConstType::Func(Box::new(ty), args),
         );
     }
 }

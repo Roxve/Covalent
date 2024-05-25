@@ -1,5 +1,5 @@
 set do_s! {
-	set list = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+	set list = [1, 2, 3, 4, 5, (factorial: 3), 7, 8, 9]
 
 	writeln: list.size
 
@@ -7,6 +7,14 @@ set do_s! {
 	#list.push: 11
 	#list.pop!
 	ret list
+}
+
+set factorial: x {
+	if x == 1 {
+		ret 1
+	}
+
+	ret x * factorial: x - 1
 }
 
 writeln: do_s![0]
@@ -17,3 +25,6 @@ x[0] = 0
 writeln: x[0]
 writeln: "last: "
 writeln: x[x.size - 1]
+
+writeln: x[5]
+writeln: factorial: x[4]
