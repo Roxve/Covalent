@@ -42,7 +42,11 @@ impl Parser {
     }
 
     pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Node>) {
-        self.functions.push(Blueprint { name, args, body });
+        self.functions.push(Blueprint {
+            name: name.val,
+            args,
+            body,
+        });
     }
     fn current(&mut self) -> Token {
         if self.current_tok.is_none() {

@@ -1,13 +1,13 @@
-set do_s! {
-	set list = [1, 2, 3, 4, 5, (factorial: 3), 7, 8, 9]
-
-	writeln: list.size
-
-	#list.push: 10
-	#list.push: 11
-	#list.pop!
-	ret list
-}
+# set do_s! {
+#  	set list = [1, 2, 3, 4, 5, (factorial: 3), 7, 8, 9]
+# 
+# 	writeln: list.size
+# 
+# 	#list.push: 10
+# 	#list.push: 11
+# 	#list.pop!
+# 	ret list
+# }
 
 set factorial: x {
 	if x == 1 {
@@ -17,14 +17,19 @@ set factorial: x {
 	ret x * factorial: x - 1
 }
 
-writeln: do_s![0]
+# writeln: do_s![0]
 
-set x = do_s!
+set x = factorial: 5
+set y = factorial: 5.0
+set z = factorial: 6
+writeln: x
+writeln: y
+writeln: z
 
-x[0] = 0
-writeln: x[0]
-writeln: "last: "
-writeln: x[x.size - 1]
+# x[0] = 0
+# writeln: x[0]
+# writeln: "last: "
+# writeln: x[x.size - 1]
 
-writeln: x[5]
-writeln: factorial: x[4]
+# writeln: x[5]
+# writeln: factorial: x[4]

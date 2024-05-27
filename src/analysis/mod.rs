@@ -7,6 +7,8 @@ use crate::source::{ConstType, Enviroment};
 
 pub struct Analyzer {
     pub env: Enviroment,
+    pub imports: Vec<Node>,   // Import nodes
+    pub functions: Vec<Node>, // Func nodes
     line: u32,
     column: u32,
 }
@@ -20,26 +22,27 @@ impl ConstType {
     pub fn get_op(&self) -> Vec<&str> {
         match self {
             &ConstType::Bool => [LOGIC_OP, &["=="]].concat(),
-            &ConstType::Float | &ConstType::Int => MATH_OP.to_vec(),
+            &ConstType::Float | &ConstType::Int => [MATH_OP, COMPARE_OP].concat(),
             &ConstType::Str | &ConstType::List(_) => [COMPARE_OP, &["+"]].concat(),
-            &ConstType::Dynamic => [LOGIC_OP, COMPARE_OP, MATH_OP].concat(),
+            &ConstType::Dynamic | &ConstType::Unknown => [LOGIC_OP, COMPARE_OP, MATH_OP].concat(),
             &ConstType::Void
             | &ConstType::Obj(_)
             | &ConstType::Func(_, _)
-            | &ConstType::Unknown => Vec::new(),
+            | &ConstType::Blueprint { .. } => Vec::new(),
         }
     }
 }
 
 #[inline]
 pub fn supports_op(ty: &ConstType, op: &String) -> bool {
-    ty.get_op().contains(&op.as_str())
+    let ops = ty.get_op();
+    ops.contains(&op.as_str())
 }
 
 fn get_ret_ty(name: &String, node: &Node, prev: ConstType) -> ConstType {
     match node.expr.clone() {
         Expr::RetExpr(node) => {
-            // if function calls itself
+            // if function calls itself (TODO: remove)
             if let Node {
                 expr: Expr::FnCall { name: fn_name, .. },
                 ty: ConstType::Unknown,
@@ -87,6 +90,8 @@ impl Analyzer {
     pub fn new() -> Self {
         Self {
             env: Enviroment::new(None),
+            functions: Vec::new(),
+            imports: Vec::new(),
             line: 0,
             column: 0,
         }

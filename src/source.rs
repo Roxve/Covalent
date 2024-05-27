@@ -38,7 +38,7 @@ impl ConstType {
             ConstType::Float => "float",
             ConstType::Str => "str",
             ConstType::Bool => "bool",
-            _ => todo!(),
+            _ => "none",
         }
     }
 }
@@ -120,14 +120,14 @@ impl Enviroment {
         }
     }
 
-    pub fn blueprints(&self, blueprints: Vec<Blueprint>) {
+    pub fn blueprints(&mut self, blueprints: Vec<Blueprint>) {
         self.blueprints = blueprints.clone();
         for blueprint in blueprints {
             self.add(
                 &blueprint.name,
                 ConstType::Blueprint {
                     argc: blueprint.args.len() as u32,
-                    name: blueprint.name,
+                    name: blueprint.name.clone(),
                 },
             );
         }
@@ -194,14 +194,19 @@ impl Enviroment {
     }
 
     pub fn get_blueprint(&self, name: &String) -> Option<Blueprint> {
-        let mut got = None;
-
-        for blueprint in self.blueprints {
+        for blueprint in &self.blueprints {
             if &blueprint.name == name {
-                got = Some(blueprint.clone());
+                return Some(blueprint.clone());
             }
         }
-        return got;
+        if self.parent.is_some() {
+            for blueprint in &self.parent().unwrap().blueprints {
+                if &blueprint.name == name {
+                    return Some(blueprint.clone());
+                }
+            }
+        }
+        return None;
     }
 
     pub fn push_function(&mut self, name: String, args: Vec<ConstType>, ty: ConstType) {

@@ -35,7 +35,8 @@ impl Analyzer {
         name: &str,
         args: Vec<ConstType>,
     ) {
-        self.env.push_function(name.to_string(), args, ty.clone());
+        self.env
+            .push_function(name.to_string(), args.clone(), ty.clone());
         body.push(Node {
             expr: Expr::Import {
                 module: module.to_string(),
@@ -112,9 +113,15 @@ impl Analyzer {
 
         for expr in exprs {
             let analyzed_expr = analyzer.analyz(expr)?;
+            dbg!(&analyzed_expr);
             analyzed_prog.push(analyzed_expr);
         }
-
+        analyzed_prog = [
+            analyzer.imports.clone(),
+            analyzer.functions.clone(),
+            analyzed_prog,
+        ]
+        .concat();
         analyzed_prog = analyzer.correct_prog(analyzed_prog)?;
         Ok(analyzed_prog)
     }
@@ -301,7 +308,7 @@ impl Analyzer {
         };
 
         if !supports_op(&lhs.ty, &op) {
-            self.err(ErrKind::OperationNotGranted, format!("one of possible types [{:?}] does not support operator {}, use the do keyword to do it anyways", ty, op));
+            self.err(ErrKind::OperationNotGranted, format!("one of possible types [{:?}] does not support operator {}, use the do keyword to do it anyways", lhs.ty, op));
             return Err(ErrKind::OperationNotGranted);
         }
         let left = Box::new(lhs);
@@ -312,9 +319,9 @@ impl Analyzer {
     }
 
     pub fn analyz_call(&mut self, name: Node, params: Vec<Node>) -> Result<Node, ErrKind> {
-        let mut name = Box::new(self.analyz(name)?);
+        let name = Box::new(self.analyz(name)?);
         if let ConstType::Blueprint { argc, name } = name.ty.clone() {
-            let mut args = self.analyz_items(params)?;
+            let args = self.analyz_items(params)?;
 
             // TODO! if its a member call pass parent as first arg and call the child instead
             // if let Expr::MemberExpr {
@@ -337,14 +344,15 @@ impl Analyzer {
                 self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), argc, name));
                 return Err(ErrKind::UndeclaredVar);
             }
-            let args_types: VecDeque<ConstType> = args.iter().map(|arg| arg.ty).collect();
-            let mangle = type_mangle(name, args_types.clone().into());
+            let mut args_types: VecDeque<ConstType> =
+                args.iter().map(|arg| arg.ty.clone()).collect();
+            let mangle = type_mangle(name.clone(), args_types.clone().into());
 
             let (expr, ty) = if self.env.has(&mangle) {
                 let id_ty = self.env.get_ty(&mangle).unwrap();
 
-                let ty = if let ConstType::Func(ret, _) = id_ty {
-                    *ret
+                let ty = if let ConstType::Func(ref ret, _) = id_ty {
+                    *ret.clone()
                 } else {
                     panic!()
                 };
@@ -360,17 +368,48 @@ impl Analyzer {
                     ty,
                 )
             } else {
+                dbg!(&self.functions);
                 // building a function from blueprint
                 let blueprint = self.env.get_blueprint(&name).unwrap();
                 self.env = self.env.child();
-
+                // allows for the function to call itself
+                self.env
+                    .push_function(mangle.clone(), Vec::new(), ConstType::Unknown);
                 for arg in &blueprint.args {
                     self.env.add(&arg.val, args_types.pop_front().unwrap());
                 }
 
-                let nodes = self.analyz_items(blueprint.body);
+                let body = self.analyz_items(blueprint.body)?;
+                // TODO: loop through the body check for unknown function calls and replace them with function type
                 self.env = self.env.parent().unwrap();
-                todo!() // TODO: make it return Vec<Node> instead so we return a function and a call for it!
+
+                let ty = get_fn_type(&mangle, &body, ConstType::Void);
+                self.env
+                    .push_function(mangle.clone(), Vec::new(), ty.clone());
+
+                let func = Expr::Func {
+                    ret: ty.clone(),
+                    name: mangle.clone(),
+                    args: blueprint.args,
+                    body,
+                };
+
+                self.functions.push(Node {
+                    ty: ty.clone(),
+                    expr: func,
+                });
+
+                dbg!(&self.functions);
+
+                // calling the built function
+                let expr = Expr::FnCall {
+                    name: Box::new(Node {
+                        expr: Expr::Id(mangle),
+                        ty: ty.clone(),
+                    }),
+                    args,
+                };
+                (expr, ty)
             };
 
             Ok(Node { expr, ty })
