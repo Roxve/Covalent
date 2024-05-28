@@ -34,7 +34,7 @@ impl Analyzer {
                 }
 
                 let ret = if &ret == &ConstType::Unknown {
-                    get_fn_type(&name, &corrected_body, ConstType::Void)
+                    get_fn_type(&mut corrected_body, ConstType::Void)
                 } else {
                     ret
                 };

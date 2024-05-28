@@ -379,11 +379,21 @@ impl Analyzer {
                     self.env.add(&arg.val, args_types.pop_front().unwrap());
                 }
 
-                let body = self.analyz_items(blueprint.body)?;
+                let mut body = self.analyz_items(blueprint.body)?;
                 // TODO: loop through the body check for unknown function calls and replace them with function type
+
+                let ty = get_fn_type(&body, ConstType::Void);
+                for node in &mut body {
+                    replace_ty(
+                        node,
+                        &ConstType::Func(Box::new(ConstType::Unknown), Vec::new()),
+                        &ConstType::Func(Box::new(ty.clone()), args_types.clone().into()),
+                    );
+                }
+
                 self.env = self.env.parent().unwrap();
 
-                let ty = get_fn_type(&mangle, &body, ConstType::Void);
+                dbg!(&body);
                 self.env
                     .push_function(mangle.clone(), Vec::new(), ty.clone());
 
@@ -549,10 +559,7 @@ impl Analyzer {
                 rhs = ty_as(&lhs.ty, rhs);
             } else if rhs.ty == ConstType::Dynamic {
                 lhs = ty_as(&rhs.ty, lhs);
-            } else if lhs.ty == ConstType::Unknown {
-                rhs.ty = ConstType::Unknown;
-            } else if rhs.ty == ConstType::Unknown {
-                lhs.ty = ConstType::Unknown;
+            } else if lhs.ty == ConstType::Unknown || rhs.ty == ConstType::Unknown {
             } else {
                 self.err(
                     ErrKind::InvaildType,
