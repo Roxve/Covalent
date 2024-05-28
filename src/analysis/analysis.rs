@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use crate::source::type_mangle;
 
 use crate::parser::ast::{Expr, Node};
@@ -344,8 +342,7 @@ impl Analyzer {
                 self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), argc, name));
                 return Err(ErrKind::UndeclaredVar);
             }
-            let mut args_types: VecDeque<ConstType> =
-                args.iter().map(|arg| arg.ty.clone()).collect();
+            let args_types: Vec<ConstType> = args.iter().map(|arg| arg.ty.clone()).collect();
             let mangle = type_mangle(name.clone(), args_types.clone().into());
 
             let (expr, ty) = if self.env.has(&mangle) {
@@ -375,21 +372,22 @@ impl Analyzer {
                 // allows for the function to call itself
                 self.env
                     .push_function(mangle.clone(), Vec::new(), ConstType::Unknown);
-                for arg in &blueprint.args {
-                    self.env.add(&arg.val, args_types.pop_front().unwrap());
+                for (i, arg) in (&blueprint.args).into_iter().enumerate() {
+                    self.env.add(&arg.val, args_types[i].clone());
                 }
 
                 let mut body = self.analyz_items(blueprint.body)?;
                 // TODO: loop through the body check for unknown function calls and replace them with function type
 
                 let ty = get_fn_type(&body, ConstType::Void);
-                for node in &mut body {
-                    replace_ty(
-                        node,
-                        &ConstType::Func(Box::new(ConstType::Unknown), Vec::new()),
-                        &ConstType::Func(Box::new(ty.clone()), args_types.clone().into()),
-                    );
-                }
+
+                replace_body_ty(
+                    &mut body,
+                    &ConstType::Func(Box::new(ConstType::Unknown), Vec::new()),
+                    &ConstType::Func(Box::new(ty.clone()), args_types.clone()),
+                );
+
+                replace_body_ty(&mut body, &ConstType::Unknown, &ty);
 
                 self.env = self.env.parent().unwrap();
 

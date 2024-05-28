@@ -37,8 +37,19 @@ pub fn supports_op(ty: &ConstType, op: &String) -> bool {
     let ops = ty.get_op();
     ops.contains(&op.as_str())
 }
+#[inline]
+pub fn replace_body_ty(body: &mut Vec<Node>, old: &ConstType, new: &ConstType) {
+    for node in &mut *body {
+        replace_ty(node, old, new)
+    }
+}
 
 pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
+    if &node.ty == old {
+        node.ty = new.to_owned()
+    }
+
+    // replacing the insides of a node
     match &mut (*node).expr {
         &mut Expr::RetExpr(ref mut ret) => replace_ty(&mut *ret, old, new),
         &mut Expr::BinaryExpr {
@@ -49,11 +60,42 @@ pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
             replace_ty(&mut *left, old, new);
             replace_ty(&mut *right, old, new);
         }
-        _ => {
-            if &node.ty == old {
-                node.ty = new.to_owned()
+
+        &mut Expr::IfExpr {
+            ref mut condition,
+            ref mut body,
+            ref mut alt,
+        } => {
+            replace_ty(&mut *condition, old, new);
+
+            if alt.is_some() {
+                replace_ty(alt.as_mut().unwrap(), old, new);
             }
+            replace_body_ty(&mut *body, old, new);
         }
+
+        &mut Expr::WhileExpr {
+            ref mut condition,
+            ref mut body,
+        } => {
+            replace_ty(&mut *condition, old, new);
+            replace_body_ty(&mut *body, old, new);
+        }
+
+        &mut Expr::Block(ref mut body) => replace_body_ty(&mut *body, old, new),
+
+        &mut Expr::FnCall {
+            ref mut name,
+            ref mut args,
+        } => {
+            replace_ty(&mut *name, old, new);
+            replace_body_ty(&mut *args, old, new);
+        }
+
+        &mut Expr::As(ref mut thing) | &mut Expr::Discard(ref mut thing) => {
+            replace_ty(&mut *thing, old, new)
+        }
+        _ => (),
     }
 }
 
