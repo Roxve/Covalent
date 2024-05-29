@@ -316,115 +316,149 @@ impl Analyzer {
         Ok(Node { expr, ty })
     }
 
-    pub fn analyz_call(&mut self, name: Node, params: Vec<Node>) -> Result<Node, ErrKind> {
+    pub fn analyz_call(&mut self, name: Node, args: Vec<Node>) -> Result<Node, ErrKind> {
         let name = Box::new(self.analyz(name)?);
-        if let ConstType::Blueprint { argc, name } = name.ty.clone() {
-            let args = self.analyz_items(params)?;
+        match name.ty.clone() {
+            ConstType::Blueprint { argc, name } => {
+                let args = self.analyz_items(args)?;
 
-            // TODO! if its a member call pass parent as first arg and call the child instead
-            // if let Expr::MemberExpr {
-            //     parent: p,
-            //     child: c,
-            // } = (*name).clone().expr
-            // {
-            //     if self.env.ty_parent_fn(&p.ty, &c).is_some() {
-            //         name = Box::new(Node {
-            //             expr: Expr::Id(c),
-            //             ty: name.ty,
-            //         });
-            //         let mut p = vec![*p];
-            //         p.append(&mut args);
-            //         args = p;
-            //     }
-            // }
+                // TODO! if its a member call pass parent as first arg and call the child instead
+                // if let Expr::MemberExpr {
+                //     parent: p,
+                //     child: c,
+                // } = (*name).clone().expr
+                // {
+                //     if self.env.ty_parent_fn(&p.ty, &c).is_some() {
+                //         name = Box::new(Node {
+                //             expr: Expr::Id(c),
+                //             ty: name.ty,
+                //         });
+                //         let mut p = vec![*p];
+                //         p.append(&mut args);
+                //         args = p;
+                //     }
+                // }
 
-            if &argc != &(args.len() as u32) {
-                self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), argc, name));
-                return Err(ErrKind::UndeclaredVar);
-            }
-            let args_types: Vec<ConstType> = args.iter().map(|arg| arg.ty.clone()).collect();
-            let mangle = type_mangle(name.clone(), args_types.clone().into());
+                if &argc != &(args.len() as u32) {
+                    self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), argc, name));
+                    return Err(ErrKind::UndeclaredVar);
+                }
+                let args_types: Vec<ConstType> = args.iter().map(|arg| arg.ty.clone()).collect();
+                let mangle = type_mangle(name.clone(), args_types.clone().into());
 
-            let (expr, ty) = if self.env.has(&mangle) {
-                let id_ty = self.env.get_ty(&mangle).unwrap();
+                let (expr, ty) = if self.env.has(&mangle) {
+                    let id_ty = self.env.get_ty(&mangle).unwrap();
 
-                let ty = if let ConstType::Func(ref ret, _) = id_ty {
-                    *ret.clone()
+                    let ty = if let ConstType::Func(ref ret, _) = id_ty {
+                        *ret.clone()
+                    } else {
+                        panic!()
+                    };
+
+                    (
+                        Expr::FnCall {
+                            name: Box::new(Node {
+                                expr: Expr::Id(mangle),
+                                ty: id_ty,
+                            }),
+                            args,
+                        },
+                        ty,
+                    )
                 } else {
-                    panic!()
-                };
+                    // building a function from blueprint
+                    let blueprint = self.env.get_blueprint(&name).unwrap();
+                    self.env = self.env.child();
+                    // allows for the function to call itself
+                    self.env
+                        .push_function(mangle.clone(), Vec::new(), ConstType::Unknown);
+                    for (i, arg) in (&blueprint.args).into_iter().enumerate() {
+                        self.env.add(&arg.val, args_types[i].clone());
+                    }
 
-                (
-                    Expr::FnCall {
+                    let mut body = self.analyz_items(blueprint.body)?;
+                    // TODO: loop through the body check for unknown function calls and replace them with function type
+
+                    let ty = get_fn_type(&body, ConstType::Void);
+
+                    replace_body_ty(
+                        &mut body,
+                        &ConstType::Func(Box::new(ConstType::Unknown), Vec::new()),
+                        &ConstType::Func(Box::new(ty.clone()), args_types.clone()),
+                    );
+
+                    self.env = self.env.parent().unwrap();
+
+                    self.env
+                        .push_function(mangle.clone(), args_types, ty.clone());
+
+                    let func = Expr::Func {
+                        ret: ty.clone(),
+                        name: mangle.clone(),
+                        args: blueprint.args,
+                        body,
+                    };
+
+                    self.functions.push(Node {
+                        ty: ty.clone(),
+                        expr: func,
+                    });
+
+                    dbg!(&self.functions);
+
+                    // calling the built function
+                    let expr = Expr::FnCall {
                         name: Box::new(Node {
+                            ty: self.env.get_ty(&mangle).unwrap(),
                             expr: Expr::Id(mangle),
-                            ty: id_ty,
                         }),
                         args,
-                    },
-                    ty,
-                )
-            } else {
-                dbg!(&self.functions);
-                // building a function from blueprint
-                let blueprint = self.env.get_blueprint(&name).unwrap();
-                self.env = self.env.child();
-                // allows for the function to call itself
-                self.env
-                    .push_function(mangle.clone(), Vec::new(), ConstType::Unknown);
-                for (i, arg) in (&blueprint.args).into_iter().enumerate() {
-                    self.env.add(&arg.val, args_types[i].clone());
+                    };
+                    (expr, ty)
+                };
+
+                Ok(Node { expr, ty })
+            }
+
+            ConstType::Func(ret, args_types) => {
+                let mut args = self.analyz_items(args)?;
+
+                if &args_types.len() != &args.len() {
+                    self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_types.len(), name));
+                    return Err(ErrKind::UndeclaredVar);
                 }
 
-                let mut body = self.analyz_items(blueprint.body)?;
-                // TODO: loop through the body check for unknown function calls and replace them with function type
+                for (i, arg) in (&mut args).iter_mut().enumerate() {
+                    if &arg.ty != &args_types[i] {
+                        let attempt = self.type_cast(arg.clone(), args_types[i].clone());
 
-                let ty = get_fn_type(&body, ConstType::Void);
+                        if attempt.is_ok() {
+                            *arg = attempt.unwrap();
+                        } else {
+                            self.err(
+                                ErrKind::UnexceptedArgs,
+                                format!(
+                                    "unexpected argument type, at arg {}, expected {:?}, got {:?}",
+                                    i, args_types[i], arg.ty
+                                ),
+                            );
+                            return Err(ErrKind::UnexceptedArgs);
+                        }
+                    }
+                }
 
-                replace_body_ty(
-                    &mut body,
-                    &ConstType::Func(Box::new(ConstType::Unknown), Vec::new()),
-                    &ConstType::Func(Box::new(ty.clone()), args_types.clone()),
+                let expr = Expr::FnCall { name, args };
+
+                Ok(Node { expr, ty: *ret })
+            }
+
+            _ => {
+                self.err(
+                    ErrKind::UnexceptedTokenE,
+                    format!("expected symbol to call got {:?}", name.expr),
                 );
-
-                self.env = self.env.parent().unwrap();
-
-                dbg!(&body);
-                self.env
-                    .push_function(mangle.clone(), args_types, ty.clone());
-
-                let func = Expr::Func {
-                    ret: ty.clone(),
-                    name: mangle.clone(),
-                    args: blueprint.args,
-                    body,
-                };
-
-                self.functions.push(Node {
-                    ty: ty.clone(),
-                    expr: func,
-                });
-
-                dbg!(&self.functions);
-
-                // calling the built function
-                let expr = Expr::FnCall {
-                    name: Box::new(Node {
-                        ty: self.env.get_ty(&mangle).unwrap(),
-                        expr: Expr::Id(mangle),
-                    }),
-                    args,
-                };
-                (expr, ty)
-            };
-
-            Ok(Node { expr, ty })
-        } else {
-            self.err(
-                ErrKind::UnexceptedTokenE,
-                format!("expected symbol to call got {:?}", name.expr),
-            );
-            Err(ErrKind::UnexceptedTokenE)
+                Err(ErrKind::UnexceptedTokenE)
+            }
         }
     }
 
