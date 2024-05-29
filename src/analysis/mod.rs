@@ -90,6 +90,13 @@ pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
         } => {
             replace_ty(&mut *name, old, new);
             replace_body_ty(&mut *args, old, new);
+
+            // if the call results is unknown and our new type has the results
+            if &node.ty == &ConstType::Unknown {
+                if let &ConstType::Func(ret, _) = &new {
+                    node.ty = *ret.clone();
+                }
+            }
         }
 
         &mut Expr::As(ref mut thing) | &mut Expr::Discard(ref mut thing) => {
