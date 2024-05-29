@@ -210,10 +210,7 @@ impl Enviroment {
     }
 
     pub fn push_function(&mut self, name: String, args: Vec<ConstType>, ty: ConstType) {
-        self.vars.insert(
-            type_mangle(name, args.clone()),
-            ConstType::Func(Box::new(ty), args),
-        );
+        self.vars.insert(name, ConstType::Func(Box::new(ty), args));
     }
 }
 #[derive(Debug, Clone, PartialEq)]

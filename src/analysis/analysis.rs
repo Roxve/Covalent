@@ -387,13 +387,11 @@ impl Analyzer {
                     &ConstType::Func(Box::new(ty.clone()), args_types.clone()),
                 );
 
-                replace_body_ty(&mut body, &ConstType::Unknown, &ty);
-
                 self.env = self.env.parent().unwrap();
 
                 dbg!(&body);
                 self.env
-                    .push_function(mangle.clone(), Vec::new(), ty.clone());
+                    .push_function(mangle.clone(), args_types, ty.clone());
 
                 let func = Expr::Func {
                     ret: ty.clone(),
@@ -412,8 +410,8 @@ impl Analyzer {
                 // calling the built function
                 let expr = Expr::FnCall {
                     name: Box::new(Node {
+                        ty: self.env.get_ty(&mangle).unwrap(),
                         expr: Expr::Id(mangle),
-                        ty: ty.clone(),
                     }),
                     args,
                 };
