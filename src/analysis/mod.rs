@@ -109,16 +109,16 @@ pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
 fn get_ret_ty(node: &Node, prev: ConstType) -> ConstType {
     match node.expr.clone() {
         Expr::RetExpr(node) => {
-            if prev == ConstType::Void {
-                if &node.ty != &ConstType::Unknown
-                    && &node.ty != &ConstType::Func(Box::new(ConstType::Unknown), Vec::new())
-                {
-                    return node.ty.clone();
-                }
-            } else if prev != node.ty {
+            if &node.ty == &ConstType::Unknown
+                || &node.ty == &ConstType::Func(Box::new(ConstType::Unknown), Vec::new())
+            {
+                return prev;
+            } else if &prev != &node.ty && &prev != &ConstType::Void {
                 return ConstType::Dynamic;
             }
-            prev
+
+            dbg!(&node);
+            return node.ty.clone();
         }
 
         Expr::IfExpr { body, alt, .. } => {

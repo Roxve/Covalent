@@ -145,7 +145,9 @@ impl Analyzer {
     }
 
     pub fn analyz(&mut self, node: Node) -> Result<Node, ErrKind> {
-        match node.expr {
+        match node.expr.clone() {
+            Expr::As(_) => Ok(node), // this type of expressions happens in correction
+
             Expr::Literal(literal) => {
                 let ty = literal.get_ty();
                 Ok(Node {
@@ -302,7 +304,13 @@ impl Analyzer {
 
         let ty = match op.as_str() {
             "==" | ">" | "<" | ">=" | "<=" => ConstType::Bool,
-            _ => lhs.ty.clone(),
+            _ => {
+                if &rhs.ty == &ConstType::Unknown {
+                    ConstType::Unknown // unknownize the expression if any of the sides is unknown so we can figure it out later
+                } else {
+                    lhs.ty.clone()
+                }
+            }
         };
 
         if !supports_op(&lhs.ty, &op) {
