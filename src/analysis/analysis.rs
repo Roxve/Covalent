@@ -372,8 +372,14 @@ impl Analyzer {
                     // allows for the function to call itself
                     self.env
                         .push_function(mangle.clone(), Vec::new(), ConstType::Unknown);
+
+                    let mut typed_params = Vec::new();
                     for (i, arg) in (&blueprint.args).into_iter().enumerate() {
                         self.env.add(&arg.val, args_types[i].clone());
+                        typed_params.push(Ident {
+                            val: arg.val.clone(),
+                            tag: Some(args_types[i].clone()),
+                        })
                     }
 
                     let mut body = self.analyz_items(blueprint.body)?;
@@ -395,7 +401,7 @@ impl Analyzer {
                     let func = Expr::Func {
                         ret: ty.clone(),
                         name: mangle.clone(),
-                        args: blueprint.args,
+                        args: typed_params,
                         body,
                     };
 
