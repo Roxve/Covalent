@@ -27,15 +27,18 @@ impl Analyzer {
                 args,
                 body,
             } => {
+                self.env = self.env.child();
                 let mut corrected_body = vec![];
 
+                self.env.current = ret.clone();
+                for arg in &args {
+                    self.env
+                        .add(&arg.val, arg.tag.clone().unwrap_or(ConstType::Dynamic));
+                }
                 for node in body {
                     corrected_body.push(self.correct(node)?);
                 }
 
-                self.env = self.env.child();
-
-                self.env.current = ret.clone();
                 // let ret = if &ret == &ConstType::Unknown {
                 //     get_fn_type(&mut corrected_body, ConstType::Void)
                 // } else {
@@ -44,15 +47,18 @@ impl Analyzer {
 
                 if &self.env.current != &ret {
                     for node in &mut corrected_body {
-                        if let &mut Expr::RetExpr(ref mut ret) = &mut node.expr {
-                            *ret = Box::new(self.type_cast(*ret.clone(), ConstType::Dynamic)?);
+                        match &mut node.expr {
+                            &mut Expr::RetExpr(ref mut ret) => {
+                                *ret = Box::new(self.type_cast(*ret.clone(), ConstType::Dynamic)?);
+                            }
+                            _ => (),
                         }
                     }
                 }
 
                 self.env = self.env.parent().unwrap();
 
-                dbg!(&corrected_body);
+                // dbg!(&corrected_body);
                 Ok(Node {
                     expr: Expr::Func {
                         ret: ret.clone(),
