@@ -357,7 +357,7 @@ impl Analyzer {
                 let (expr, ty) = if self.env.has(&mangle) {
                     let id_ty = self.env.get_ty(&mangle).unwrap();
 
-                    let ty = if let ConstType::Func(ref ret, _) = id_ty {
+                    let ty = if let ConstType::Func(ref ret, _, _) = id_ty {
                         *ret.clone()
                     } else {
                         panic!()
@@ -397,8 +397,8 @@ impl Analyzer {
 
                     replace_body_ty(
                         &mut body,
-                        &ConstType::Func(Box::new(ConstType::Unknown), Vec::new()),
-                        &ConstType::Func(Box::new(ty.clone()), args_types.clone()),
+                        &ConstType::Func(Box::new(ConstType::Unknown), Vec::new(), mangle.clone()),
+                        &ConstType::Func(Box::new(ty.clone()), args_types.clone(), mangle.clone()),
                     );
 
                     self.env = self.env.parent().unwrap();
@@ -434,7 +434,7 @@ impl Analyzer {
                 Ok(Node { expr, ty })
             }
 
-            ConstType::Func(ret, args_types) => {
+            ConstType::Func(ret, args_types, _) => {
                 let mut args = self.analyz_items(args)?;
 
                 if &args_types.len() != &args.len() {

@@ -12,7 +12,7 @@ pub enum ConstType {
     Void,
     Unknown,
     List(Box<Self>),
-    Func(Box<Self>, Vec<Self>),
+    Func(Box<Self>, Vec<Self>, String),
     Blueprint { argc: u32, name: String },
     Obj(HashMap<String, Self>),
 }
@@ -172,7 +172,7 @@ impl Enviroment {
     pub fn ty_parent_fn(&self, ty: &ConstType, name: &String) -> Option<ConstType> {
         let parent = self.vars.get(name);
         if parent.is_some() {
-            if let ConstType::Func(_, args) = parent.unwrap() {
+            if let ConstType::Func(_, args, _) = parent.unwrap() {
                 if &args[0] == ty {
                     return Some(parent.unwrap().to_owned());
                 }
@@ -210,7 +210,7 @@ impl Enviroment {
     }
 
     pub fn push_function(&mut self, name: String, args: Vec<ConstType>, ty: ConstType) {
-        self.vars.insert(name, ConstType::Func(Box::new(ty), args));
+        self.vars.insert(name.clone(), ConstType::Func(Box::new(ty), args, name));
     }
 }
 #[derive(Debug, Clone, PartialEq)]
