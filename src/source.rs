@@ -10,7 +10,7 @@ pub enum ConstType {
     Bool,
     Dynamic,
     Void,
-    Unknown,
+    Unknown(Option<Box<ConstType>>),
     List(Box<Self>),
     Func(Box<Self>, Vec<Self>, String),
     Blueprint { argc: u32, name: String },
@@ -210,7 +210,8 @@ impl Enviroment {
     }
 
     pub fn push_function(&mut self, name: String, args: Vec<ConstType>, ty: ConstType) {
-        self.vars.insert(name.clone(), ConstType::Func(Box::new(ty), args, name));
+        self.vars
+            .insert(name.clone(), ConstType::Func(Box::new(ty), args, name));
     }
 }
 #[derive(Debug, Clone, PartialEq)]

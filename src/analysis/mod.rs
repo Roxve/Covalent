@@ -23,7 +23,9 @@ impl ConstType {
             &ConstType::Bool => [LOGIC_OP, &["=="]].concat(),
             &ConstType::Float | &ConstType::Int => [MATH_OP, COMPARE_OP].concat(),
             &ConstType::Str | &ConstType::List(_) => [COMPARE_OP, &["+"]].concat(),
-            &ConstType::Dynamic | &ConstType::Unknown => [LOGIC_OP, COMPARE_OP, MATH_OP].concat(),
+            &ConstType::Dynamic | &ConstType::Unknown(_) => {
+                [LOGIC_OP, COMPARE_OP, MATH_OP].concat()
+            }
             &ConstType::Void
             | &ConstType::Obj(_)
             | &ConstType::Func(_, _, _)
@@ -92,7 +94,7 @@ pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
             replace_body_ty(&mut *args, old, new);
 
             // if the call results is unknown and our new type has the results
-            if &node.ty == &ConstType::Unknown {
+            if let &ConstType::Unknown(_) = &node.ty {
                 if let &ConstType::Func(ret, _, _) = &new {
                     node.ty = *ret.clone();
                 }
@@ -109,10 +111,10 @@ pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
 fn get_ret_ty(node: &Node, prev: ConstType) -> ConstType {
     match node.expr.clone() {
         Expr::RetExpr(node) => {
-            if &node.ty == &ConstType::Unknown {
+            if let &ConstType::Unknown(_) = &node.ty {
                 return prev;
             } else if let &ConstType::Func(ref ret, ref args, _) = &node.ty {
-                if args == &Vec::new() && ret == &Box::new(ConstType::Unknown) {
+                if let &ConstType::Unknown(_) = &**ret {
                     return prev;
                 }
             } else if &prev != &node.ty && &prev != &ConstType::Void {

@@ -93,7 +93,7 @@ impl Analyzer {
             }
 
             _ => {
-                if node.clone().ty == ConstType::Unknown {
+                if let ConstType::Unknown(_) = node.ty.clone() {
                     dbg!(&node);
                     let n = self.analyz(node);
                     dbg!(&n);

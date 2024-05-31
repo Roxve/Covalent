@@ -166,8 +166,7 @@ impl Analyzer {
                 };
 
                 for (i, item) in (&items).iter().enumerate() {
-                    if &item.ty == &ConstType::Unknown {
-                        item_ty = ConstType::Unknown;
+                    if let &ConstType::Unknown(_) = &item_ty {
                         break;
                     }
 
@@ -305,8 +304,8 @@ impl Analyzer {
         let ty = match op.as_str() {
             "==" | ">" | "<" | ">=" | "<=" => ConstType::Bool,
             _ => {
-                if &rhs.ty == &ConstType::Unknown {
-                    ConstType::Unknown // unknownize the expression if any of the sides is unknown so we can figure it out later
+                if let &ConstType::Unknown(_) = &rhs.ty {
+                    ConstType::Unknown(Some(Box::new(lhs.ty.clone()))) // unknownize the expression if any of the sides is unknown so we can figure it out later
                 } else {
                     lhs.ty.clone()
                 }
@@ -379,7 +378,7 @@ impl Analyzer {
                     self.env = self.env.child();
                     // allows for the function to call itself
                     self.env
-                        .push_function(mangle.clone(), Vec::new(), ConstType::Unknown);
+                        .push_function(mangle.clone(), Vec::new(), ConstType::Unknown(None));
 
                     let mut typed_params = Vec::new();
                     for (i, arg) in (&blueprint.args).into_iter().enumerate() {
@@ -397,7 +396,11 @@ impl Analyzer {
 
                     replace_body_ty(
                         &mut body,
-                        &ConstType::Func(Box::new(ConstType::Unknown), Vec::new(), mangle.clone()),
+                        &ConstType::Func(
+                            Box::new(ConstType::Unknown(None)),
+                            Vec::new(),
+                            mangle.clone(),
+                        ),
                         &ConstType::Func(Box::new(ty.clone()), args_types.clone(), mangle.clone()),
                     );
 
@@ -552,8 +555,8 @@ impl Analyzer {
         if let Expr::Id(ref name) = name.expr {
             self.env.modify(name, ty.clone());
         } else if val.ty != name.ty {
-            if name.ty == ConstType::Unknown {
-                ty = ConstType::Unknown;
+            if let ConstType::Unknown(assume) = name.ty.clone() {
+                ty = ConstType::Unknown(assume);
             } else {
                 self.err(ErrKind::InvaildType, format!("cannot set the value of an Obj property to a value of different type, got type {:?} expected {:?}, in expr {:?} = {:?}", val.ty, name.ty, name, val));
                 return Err(ErrKind::InvaildType);
@@ -603,7 +606,7 @@ impl Analyzer {
                 rhs = ty_as(&lhs.ty, rhs);
             } else if rhs.ty == ConstType::Dynamic {
                 lhs = ty_as(&rhs.ty, lhs);
-            } else if lhs.ty == ConstType::Unknown || rhs.ty == ConstType::Unknown {
+            // } else if lhs.ty == ConstType::Unknown || rhs.ty == ConstType::Unknown {
             } else {
                 self.err(
                     ErrKind::InvaildType,

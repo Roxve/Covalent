@@ -102,13 +102,17 @@ pub struct Node {
 
 impl Node {
     pub fn is_typed(&self) -> bool {
-        self.ty != ConstType::Unknown
+        if let &ConstType::Unknown(None) = &self.ty {
+            false
+        } else {
+            true
+        }
     }
 }
 
 pub fn untyped(expr: Expr) -> Node {
     Node {
         expr,
-        ty: ConstType::Unknown,
+        ty: ConstType::Unknown(None),
     }
 }
