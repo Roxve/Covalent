@@ -108,45 +108,71 @@ pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
     }
 }
 
-fn get_ret_ty(node: &Node, prev: ConstType) -> ConstType {
+fn get_ret_ty(node: &Node) -> Vec<ConstType> {
     match node.expr.clone() {
         Expr::RetExpr(node) => {
-            if let &ConstType::Unknown(_) = &node.ty {
-                return prev;
-            } else if let &ConstType::Func(ref ret, ref args, _) = &node.ty {
-                if let &ConstType::Unknown(_) = &**ret {
-                    return prev;
-                }
-            } else if &prev != &node.ty && &prev != &ConstType::Void {
-                return ConstType::Dynamic;
-            }
+            // if let &ConstType::Unknown(_) = &node.ty {
+            //     return vec![prev];
+            // } else if let &ConstType::Func(ref ret, ref args, _) = &node.ty {
+            //     if let &ConstType::Unknown(_) = &**ret {
+            //         return vec![prev];
+            //     }
+            // } else if &prev != &node.ty && &prev != &ConstType::Void {
+            //     return vec![ConstType::Dynamic];
+            // }
 
             dbg!(&node);
-            return node.ty.clone();
+            if let &ConstType::Unknown(Some(ref ty)) = &node.ty {
+                return vec![(**ty).clone()];
+            }
+            return vec![node.ty.clone()];
         }
 
         Expr::IfExpr { body, alt, .. } => {
-            let mut ty = get_fn_type(&body, prev);
+            let mut ty = get_body_types(&body);
             if alt.is_some() {
-                ty = get_ret_ty(&alt.unwrap(), ty);
+                ty = get_ret_ty(&alt.unwrap());
             }
             ty
         }
 
-        Expr::WhileExpr { body, .. } | Expr::Block(body) => get_fn_type(&body, prev),
+        Expr::WhileExpr { body, .. } | Expr::Block(body) => get_body_types(&body),
         // get fn ty => Block , ifBody
-        _ => prev,
+        _ => Vec::new(),
     }
 }
 
-pub fn get_fn_type(body: &Vec<Node>, prev: ConstType) -> ConstType {
-    let mut ty = prev;
+pub fn get_body_types(body: &Vec<Node>) -> Vec<ConstType> {
+    let mut types = Vec::new();
     for node in body {
-        ty = get_ret_ty(node, ty);
+        for ty in get_ret_ty(node) {
+            if !types.contains(&ty) {
+                types.push(ty);
+            }
+        }
     }
-    ty
+    types
 }
 
+pub fn get_fn_type(body: &Vec<Node>) -> ConstType {
+    let possible = get_body_types(body);
+
+    if possible.len() > 1 {
+        // int | float -> float
+        // otherwise -> dynamic
+
+        if possible.len() == 2
+            && possible.contains(&ConstType::Int)
+            && possible.contains(&ConstType::Float)
+        {
+            return ConstType::Float;
+        }
+
+        return ConstType::Dynamic;
+    }
+
+    possible[0].clone()
+}
 impl Analyzer {
     pub fn new() -> Self {
         Self {

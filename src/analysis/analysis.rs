@@ -392,7 +392,7 @@ impl Analyzer {
                     let mut body = self.analyz_items(blueprint.body)?;
                     // TODO: loop through the body check for unknown function calls and replace them with function type
 
-                    let ty = get_fn_type(&body, ConstType::Void);
+                    let ty = get_fn_type(&body);
 
                     replace_body_ty(
                         &mut body,
