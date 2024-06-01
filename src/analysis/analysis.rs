@@ -6,14 +6,6 @@ use crate::source::{ATErr, Blueprint, ConstType, ErrKind, Ident};
 
 use super::*;
 
-#[inline]
-fn ty_as(ty: &ConstType, expr: Node) -> Node {
-    Node {
-        expr: Expr::As(Box::new(expr)),
-        ty: ty.clone(),
-    }
-}
-
 impl Analyzer {
     pub fn err(&mut self, kind: ErrKind, msg: String) {
         let err = ATErr {
@@ -120,7 +112,7 @@ impl Analyzer {
             analyzed_prog,
         ]
         .concat();
-        analyzed_prog = analyzer.correct_prog(analyzed_prog)?;
+        // analyzed_prog = analyzer.correct_prog(analyzed_prog)?;
         Ok(analyzed_prog)
     }
 
@@ -159,7 +151,7 @@ impl Analyzer {
             Expr::ListExpr(items) => {
                 let items = self.analyz_items(items)?;
 
-                let mut item_ty = if items.len() > 0 {
+                let item_ty = if items.len() > 0 {
                     (&items.first().unwrap()).ty.clone()
                 } else {
                     ConstType::Void // empty list unknown type figure out type on push
@@ -299,13 +291,20 @@ impl Analyzer {
     ) -> Result<Node, ErrKind> {
         let mut lhs = self.analyz(left)?;
         let mut rhs = self.analyz(right)?;
-        (lhs, rhs) = self.type_conv(lhs, rhs)?;
 
+        if &rhs.ty == &ConstType::Unknown(None) && &lhs.ty == &ConstType::Unknown(None) {
+        } else if let &ConstType::Unknown(None) = &rhs.ty {
+            rhs.ty = ConstType::Unknown(Some(Box::new(lhs.ty.clone()))); // unknownize the expression if any of the sides is unknown so we can figure it out later
+        } else if let &ConstType::Unknown(None) = &lhs.ty {
+            lhs.ty = ConstType::Unknown(Some(Box::new(rhs.ty.clone())));
+        }
+
+        (lhs, rhs) = self.type_conv(lhs, rhs)?;
         let ty = match op.as_str() {
             "==" | ">" | "<" | ">=" | "<=" => ConstType::Bool,
             _ => {
-                if let &ConstType::Unknown(_) = &rhs.ty {
-                    ConstType::Unknown(Some(Box::new(lhs.ty.clone()))) // unknownize the expression if any of the sides is unknown so we can figure it out later
+                if let &ConstType::Unknown(Some(ref ty)) = &lhs.ty {
+                    (**ty).clone()
                 } else {
                     lhs.ty.clone()
                 }
@@ -330,22 +329,6 @@ impl Analyzer {
                 let args = self.analyz_items(args)?;
 
                 // TODO! if its a member call pass parent as first arg and call the child instead
-                // if let Expr::MemberExpr {
-                //     parent: p,
-                //     child: c,
-                // } = (*name).clone().expr
-                // {
-                //     if self.env.ty_parent_fn(&p.ty, &c).is_some() {
-                //         name = Box::new(Node {
-                //             expr: Expr::Id(c),
-                //             ty: name.ty,
-                //         });
-                //         let mut p = vec![*p];
-                //         p.append(&mut args);
-                //         args = p;
-                //     }
-                // }
-
                 if &argc != &(args.len() as u32) {
                     self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), argc, name));
                     return Err(ErrKind::UndeclaredVar);
@@ -594,6 +577,18 @@ impl Analyzer {
     pub fn type_conv(&mut self, mut lhs: Node, mut rhs: Node) -> Result<(Node, Node), ErrKind> {
         // this code is not good rn
         if lhs.ty != rhs.ty {
+            if let &ConstType::Unknown(Some(ref ty)) = &lhs.ty {
+                if &**ty == &rhs.ty {
+                    return Ok((lhs, rhs));
+                }
+            }
+
+            if let &ConstType::Unknown(Some(ref ty)) = &rhs.ty {
+                if &**ty == &lhs.ty {
+                    return Ok((lhs, rhs));
+                }
+            }
+
             if lhs.ty == ConstType::Float && rhs.ty == ConstType::Int {
                 rhs = ty_as(&lhs.ty, rhs);
             } else if lhs.ty == ConstType::Int && rhs.ty == ConstType::Float {
@@ -606,7 +601,6 @@ impl Analyzer {
                 rhs = ty_as(&lhs.ty, rhs);
             } else if rhs.ty == ConstType::Dynamic {
                 lhs = ty_as(&rhs.ty, lhs);
-            // } else if lhs.ty == ConstType::Unknown || rhs.ty == ConstType::Unknown {
             } else {
                 self.err(
                     ErrKind::InvaildType,

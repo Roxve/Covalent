@@ -1,5 +1,4 @@
 pub mod analysis;
-pub mod correct;
 
 use crate::parser::ast::{Expr, Node};
 use crate::source::{ConstType, Enviroment};
@@ -35,6 +34,14 @@ impl ConstType {
 }
 
 #[inline]
+pub fn ty_as(ty: &ConstType, expr: Node) -> Node {
+    Node {
+        expr: Expr::As(Box::new(expr)),
+        ty: ty.clone(),
+    }
+}
+
+#[inline]
 pub fn supports_op(ty: &ConstType, op: &String) -> bool {
     let ops = ty.get_op();
     ops.contains(&op.as_str())
@@ -47,7 +54,11 @@ pub fn replace_body_ty(body: &mut Vec<Node>, old: &ConstType, new: &ConstType) {
 }
 
 pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
-    if &node.ty == old {
+    if let &ConstType::Unknown(None) = &node.ty {
+        if let &ConstType::Func(ret, _, _) = &new {
+            node.ty = *ret.clone();
+        }
+    } else if &node.ty == old {
         node.ty = new.to_owned()
     }
 
@@ -93,10 +104,17 @@ pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
             replace_ty(&mut *name, old, new);
             replace_body_ty(&mut *args, old, new);
 
-            // if the call results is unknown and our new type has the results
-            if let &ConstType::Unknown(_) = &node.ty {
-                if let &ConstType::Func(ret, _, _) = &new {
-                    node.ty = *ret.clone();
+            if let &ConstType::Func(ref ret, _, _) = new {
+                // if the call results is Unknown and expected of a type
+                if let &ConstType::Unknown(Some(ref ty)) = &node.ty {
+                    if ret == ty {
+                        node.ty = (**ret).clone();
+                    } else {
+                        // if it doesnt return what is expected then convert it to that
+                        let ty = ty.to_owned();
+                        node.ty = (**ret).clone();
+                        *node = ty_as(&ty, node.to_owned());
+                    }
                 }
             }
         }
