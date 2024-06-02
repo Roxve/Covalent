@@ -99,8 +99,7 @@ impl Analyzer {
         // }
 
         // setting our env blueprints to our uncompiled functions (blueprints are then compiled pased on call arguments)
-        analyzer.env.blueprints(functions);
-
+        analyzer.blueprints(functions);
         for expr in exprs {
             let analyzed_expr = analyzer.analyz(expr)?;
             dbg!(&analyzed_expr);

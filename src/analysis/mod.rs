@@ -1,7 +1,7 @@
 pub mod analysis;
 
 use crate::parser::ast::{Expr, Node};
-use crate::source::{ConstType, Enviroment};
+use crate::source::{Blueprint, ConstType, Enviroment};
 
 pub struct Analyzer {
     pub env: Enviroment,
@@ -64,7 +64,17 @@ pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
 
     // replacing the insides of a node
     match &mut (*node).expr {
-        &mut Expr::RetExpr(ref mut ret) => replace_ty(&mut *ret, old, new),
+        &mut Expr::RetExpr(ref mut ret) => {
+            replace_ty(&mut *ret, old, new);
+
+            // convert the return to the return type if its not already (if we are replacing with a function type)
+            if let &ConstType::Func(ref ret_ty, _, _) = new {
+                if &**ret_ty != &ret.ty {
+                    **ret = ty_as(&ret_ty, (**ret).clone());
+                    node.ty = (**ret_ty).clone()
+                }
+            }
+        }
         &mut Expr::BinaryExpr {
             ref mut left,
             ref mut right,
@@ -199,6 +209,18 @@ impl Analyzer {
             imports: Vec::new(),
             line: 0,
             column: 0,
+        }
+    }
+    pub fn blueprints(&mut self, blueprints: Vec<Blueprint>) {
+        self.env.blueprints = blueprints.clone();
+        for blueprint in blueprints {
+            self.env.add(
+                &blueprint.name,
+                ConstType::Blueprint {
+                    argc: blueprint.args.len() as u32,
+                    name: blueprint.name.clone(),
+                },
+            );
         }
     }
 }

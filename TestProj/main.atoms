@@ -1,13 +1,13 @@
-# set do_s! {
-#  	set list = [1, 2, 3, 4, 5, (factorial: 3), 7, 8, 9]
-# 
-# 	writeln: list.size
-# 
-# 	#list.push: 10
-# 	#list.push: 11
-# 	#list.pop!
-# 	ret list
-# }
+# FUNCTION TEST
+
+set do_s! {
+	set list = [1, 2, 3, 4, 5, (factorial: 3), 7, 8, 9]
+ 
+ 	#list.push: 10
+ 	#list.push: 11
+ 	#list.pop!
+ 	ret list
+}
 
 set factorial: x {
 	if x == 1 {
@@ -17,19 +17,32 @@ set factorial: x {
 	ret x * factorial: x - 1
 }
 
-# writeln: do_s![0]
 
 set x = factorial: 5
 set y = factorial: 5.0
 set z = factorial: 6
+
+writeln: "5! ->"
 writeln: x
+writeln: "5.0! ->"
 writeln: y
+writeln: "6! ->"
 writeln: z
 
-# x[0] = 0
-# writeln: x[0]
-# writeln: "last: "
-# writeln: x[x.size - 1]
+# LIST TEST
+writeln: "LIST[0]: "
+writeln: do_s![0]
 
-# writeln: x[5]
-# writeln: factorial: x[4]
+set s = do_s!
+s[0] = 0
+
+writeln: "s[0] = 0:"
+writeln: s[0]
+
+writeln: "last: "
+writeln: s[s.size - 1]
+
+writeln: "factorial of "
+writeln: s[4]
+writeln: "is "
+writeln: factorial: s[4]
