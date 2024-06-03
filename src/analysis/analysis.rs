@@ -102,7 +102,6 @@ impl Analyzer {
         analyzer.blueprints(functions);
         for expr in exprs {
             let analyzed_expr = analyzer.analyz(expr)?;
-            dbg!(&analyzed_expr);
             analyzed_prog.push(analyzed_expr);
         }
         analyzed_prog = [
@@ -402,8 +401,6 @@ impl Analyzer {
                         ty: ty.clone(),
                         expr: func,
                     });
-
-                    dbg!(&self.functions);
 
                     // calling the built function
                     let expr = Expr::FnCall {

@@ -149,7 +149,6 @@ fn get_ret_ty(node: &Node) -> Vec<ConstType> {
             //     return vec![ConstType::Dynamic];
             // }
 
-            dbg!(&node);
             if let &ConstType::Unknown(Some(ref ty)) = &node.ty {
                 return vec![(**ty).clone()];
             }
