@@ -1,3 +1,5 @@
+use core::panic;
+
 use super::type_to_c;
 use super::Emit;
 
@@ -311,7 +313,11 @@ impl Codegen {
                 ConstType::Dynamic => item,
                 _ => todo!("add conv dynamic from {:?}", from),
             },
-            _ => todo!("add conv into {:?}", into),
+            &ConstType::Float => match from {
+                ConstType::Int => format!("(float){}", item),
+                _ => panic!(),
+            },
+            _ => todo!("add conv into {:?} from {:?}", into, from),
         };
 
         self.push(Item::Expr(into, conv));

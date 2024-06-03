@@ -1,16 +1,10 @@
+use crate::source::type_mangle;
+
 use crate::parser::ast::{Expr, Node};
-use crate::parser::Function;
-use crate::source::{ATErr, ConstType, ErrKind, Ident};
+// use crate::parser::Function;
+use crate::source::{ATErr, Blueprint, ConstType, ErrKind, Ident};
 
 use super::*;
-
-#[inline]
-fn ty_as(ty: &ConstType, expr: Node) -> Node {
-    Node {
-        expr: Expr::As(Box::new(expr)),
-        ty: ty.clone(),
-    }
-}
 
 impl Analyzer {
     pub fn err(&mut self, kind: ErrKind, msg: String) {
@@ -29,70 +23,59 @@ impl Analyzer {
         ty: ConstType,
         module: &str,
         name: &str,
-        args: Vec<(ConstType, String)>,
+        args: Vec<ConstType>,
     ) {
-        self.env.push_function(
-            name.to_string(),
-            args.clone()
-                .into_iter()
-                .map(|v| Ident {
-                    tag: Some(v.0),
-                    val: v.1,
-                })
-                .collect(),
-            ty.clone(),
-        );
+        self.env
+            .push_function(name.to_string(), args.clone(), ty.clone());
         body.push(Node {
             expr: Expr::Import {
                 module: module.to_string(),
                 name: name.to_string(),
-                args: args.into_iter().map(|v| v.0).collect(),
+                args,
             },
             ty,
         })
     }
 
-    pub fn analyz_func(&mut self, func: Function) -> Result<Node, ErrKind> {
-        self.env = self.env.child();
+    // pub fn analyz_func(&mut self, func: Function) -> Result<Node, ErrKind> {
+    //     self.env = self.env.child();
 
-        let args = func.args;
+    //     let args = func.args;
 
-        for arg in &args {
-            self.env
-                .add(&arg.val, arg.tag.clone().unwrap_or(ConstType::Dynamic));
-        }
+    //     for arg in &args {
+    //         self.env
+    //             .add(&arg.val, arg.tag.clone().unwrap_or(ConstType::Dynamic));
+    //     }
 
-        // allow calling self
+    //     let mut body = vec![];
+    //     for expr in func.body {
+    //         body.push(self.analyz(expr)?);
+    //     }
 
-        let mut body = vec![];
-        for expr in func.body {
-            body.push(self.analyz(expr)?);
-        }
+    //     let ty = get_fn_type(&func.name.val, &body, ConstType::Void);
+    //     self.env = self.env.parent().unwrap();
+    //     self.env.modify(
+    //         &func.name.val,
+    //         ConstType::Func(
+    //             Box::new(ty.clone()),
+    //             args.clone()
+    //                 .iter()
+    //                 .map(|t| t.tag.clone().unwrap_or(ConstType::Dynamic))
+    //                 .collect(),
+    //         ),
+    //     );
 
-        let ty = get_fn_type(&body, ConstType::Void);
-        self.env = self.env.parent().unwrap();
-        self.env.modify(
-            &func.name.val,
-            ConstType::Func(
-                Box::new(ty.clone()),
-                args.clone()
-                    .iter()
-                    .map(|t| t.tag.clone().unwrap_or(ConstType::Dynamic))
-                    .collect(),
-            ),
-        );
+    //     let expr = Expr::Func {
+    //         ret: ty.clone(),
+    //         name: func.name.val,
+    //         args,
+    //         body,
+    //     };
 
-        let expr = Expr::Func {
-            ret: ty.clone(),
-            name: func.name.val,
-            args,
-            body,
-        };
+    //     Ok(Node { expr, ty })
+    // }
 
-        Ok(Node { expr, ty })
-    }
-
-    pub fn analyz_prog(exprs: Vec<Node>, functions: Vec<Function>) -> Result<Vec<Node>, ErrKind> {
+    pub fn analyz_prog(exprs: Vec<Node>, functions: Vec<Blueprint>) -> Result<Vec<Node>, ErrKind> {
         let mut analyzer = Analyzer::new();
         let mut analyzed_prog = Vec::new();
 
@@ -101,25 +84,33 @@ impl Analyzer {
             ConstType::Void,
             "std",
             "writeln",
-            vec![(ConstType::Dynamic, "x".to_string())],
+            vec![ConstType::Dynamic],
         );
-        for func in functions.clone() {
-            analyzer.env.push_function(
-                func.name.val.clone(),
-                func.args.clone(),
-                ConstType::Dynamic,
-            );
-        }
-        for func in functions {
-            analyzed_prog.push(analyzer.analyz_func(func)?);
-        }
 
+        // for func in functions.clone() {
+        //     analyzer.env.push_function(
+        //         func.name.val.clone(),
+        //         func.args.clone(),
+        //         ConstType::Unknown,
+        //     );
+        // }
+        // for func in functions {
+        //     analyzed_prog.push(analyzer.analyz_func(func)?);
+        // }
+
+        // setting our env blueprints to our uncompiled functions (blueprints are then compiled pased on call arguments)
+        analyzer.blueprints(functions);
         for expr in exprs {
             let analyzed_expr = analyzer.analyz(expr)?;
             analyzed_prog.push(analyzed_expr);
         }
-
-        analyzed_prog = analyzer.correct_prog(analyzed_prog)?;
+        analyzed_prog = [
+            analyzer.imports.clone(),
+            analyzer.functions.clone(),
+            analyzed_prog,
+        ]
+        .concat();
+        // analyzed_prog = analyzer.correct_prog(analyzed_prog)?;
         Ok(analyzed_prog)
     }
 
@@ -144,7 +135,9 @@ impl Analyzer {
     }
 
     pub fn analyz(&mut self, node: Node) -> Result<Node, ErrKind> {
-        match node.expr {
+        match node.expr.clone() {
+            Expr::As(_) => Ok(node), // this type of expressions happens in correction
+
             Expr::Literal(literal) => {
                 let ty = literal.get_ty();
                 Ok(Node {
@@ -154,7 +147,7 @@ impl Analyzer {
             }
 
             Expr::ListExpr(items) => {
-                let mut items = self.analyz_items(items)?;
+                let items = self.analyz_items(items)?;
 
                 let item_ty = if items.len() > 0 {
                     (&items.first().unwrap()).ty.clone()
@@ -163,6 +156,10 @@ impl Analyzer {
                 };
 
                 for (i, item) in (&items).iter().enumerate() {
+                    if let &ConstType::Unknown(_) = &item_ty {
+                        break;
+                    }
+
                     if &item.ty != &item_ty {
                         self.err(ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
                         return Err(ErrKind::InvaildType);
@@ -292,15 +289,28 @@ impl Analyzer {
     ) -> Result<Node, ErrKind> {
         let mut lhs = self.analyz(left)?;
         let mut rhs = self.analyz(right)?;
-        (lhs, rhs) = self.type_conv(lhs, rhs)?;
 
+        if &rhs.ty == &ConstType::Unknown(None) && &lhs.ty == &ConstType::Unknown(None) {
+        } else if let &ConstType::Unknown(None) = &rhs.ty {
+            rhs.ty = ConstType::Unknown(Some(Box::new(lhs.ty.clone()))); // unknownize the expression if any of the sides is unknown so we can figure it out later
+        } else if let &ConstType::Unknown(None) = &lhs.ty {
+            lhs.ty = ConstType::Unknown(Some(Box::new(rhs.ty.clone())));
+        }
+
+        (lhs, rhs) = self.type_conv(lhs, rhs)?;
         let ty = match op.as_str() {
             "==" | ">" | "<" | ">=" | "<=" => ConstType::Bool,
-            _ => lhs.ty.clone(),
+            _ => {
+                if let &ConstType::Unknown(Some(ref ty)) = &lhs.ty {
+                    (**ty).clone()
+                } else {
+                    lhs.ty.clone()
+                }
+            }
         };
 
         if !supports_op(&lhs.ty, &op) {
-            self.err(ErrKind::OperationNotGranted, format!("one of possible types [{:?}] does not support operator {}, use the do keyword to do it anyways", ty, op));
+            self.err(ErrKind::OperationNotGranted, format!("one of possible types [{:?}] does not support operator {}, use the do keyword to do it anyways", lhs.ty, op));
             return Err(ErrKind::OperationNotGranted);
         }
         let left = Box::new(lhs);
@@ -310,48 +320,141 @@ impl Analyzer {
         Ok(Node { expr, ty })
     }
 
-    pub fn analyz_call(&mut self, name: Node, params: Vec<Node>) -> Result<Node, ErrKind> {
-        let mut name = Box::new(self.analyz(name)?);
-        if let ConstType::Func(ty, args_ty) = name.ty.clone() {
-            let mut args = self.analyz_items(params)?;
+    pub fn analyz_call(&mut self, name: Node, args: Vec<Node>) -> Result<Node, ErrKind> {
+        let name = Box::new(self.analyz(name)?);
+        match name.ty.clone() {
+            ConstType::Blueprint { argc, name } => {
+                let args = self.analyz_items(args)?;
 
-            // if its a member call pass parent as first arg and call the child instead
-            if let Expr::MemberExpr {
-                parent: p,
-                child: c,
-            } = (*name).clone().expr
-            {
-                if self.env.ty_parent_fn(&p.ty, &c).is_some() {
-                    name = Box::new(Node {
-                        expr: Expr::Id(c),
-                        ty: name.ty,
+                // TODO! if its a member call pass parent as first arg and call the child instead
+                if &argc != &(args.len() as u32) {
+                    self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), argc, name));
+                    return Err(ErrKind::UndeclaredVar);
+                }
+                let args_types: Vec<ConstType> = args.iter().map(|arg| arg.ty.clone()).collect();
+                let mangle = type_mangle(name.clone(), args_types.clone().into());
+
+                let (expr, ty) = if self.env.has(&mangle) {
+                    let id_ty = self.env.get_ty(&mangle).unwrap();
+
+                    let ty = if let ConstType::Func(ref ret, _, _) = id_ty {
+                        *ret.clone()
+                    } else {
+                        panic!()
+                    };
+
+                    (
+                        Expr::FnCall {
+                            name: Box::new(Node {
+                                expr: Expr::Id(mangle),
+                                ty: id_ty,
+                            }),
+                            args,
+                        },
+                        ty,
+                    )
+                } else {
+                    // building a function from blueprint
+                    let blueprint = self.env.get_blueprint(&name).unwrap();
+                    self.env = self.env.child();
+                    // allows for the function to call itself
+                    self.env
+                        .push_function(mangle.clone(), Vec::new(), ConstType::Unknown(None));
+
+                    let mut typed_params = Vec::new();
+                    for (i, arg) in (&blueprint.args).into_iter().enumerate() {
+                        self.env.add(&arg.val, args_types[i].clone());
+                        typed_params.push(Ident {
+                            val: arg.val.clone(),
+                            tag: Some(args_types[i].clone()),
+                        })
+                    }
+
+                    let mut body = self.analyz_items(blueprint.body)?;
+                    // TODO: loop through the body check for unknown function calls and replace them with function type
+
+                    let ty = get_fn_type(&body);
+
+                    replace_body_ty(
+                        &mut body,
+                        &ConstType::Func(
+                            Box::new(ConstType::Unknown(None)),
+                            Vec::new(),
+                            mangle.clone(),
+                        ),
+                        &ConstType::Func(Box::new(ty.clone()), args_types.clone(), mangle.clone()),
+                    );
+
+                    self.env = self.env.parent().unwrap();
+
+                    self.env
+                        .push_function(mangle.clone(), args_types, ty.clone());
+
+                    let func = Expr::Func {
+                        ret: ty.clone(),
+                        name: mangle.clone(),
+                        args: typed_params,
+                        body,
+                    };
+
+                    self.functions.push(Node {
+                        ty: ty.clone(),
+                        expr: func,
                     });
-                    let mut p = vec![*p];
-                    p.append(&mut args);
-                    args = p;
+
+                    // calling the built function
+                    let expr = Expr::FnCall {
+                        name: Box::new(Node {
+                            ty: self.env.get_ty(&mangle).unwrap(),
+                            expr: Expr::Id(mangle),
+                        }),
+                        args,
+                    };
+                    (expr, ty)
+                };
+
+                Ok(Node { expr, ty })
+            }
+
+            ConstType::Func(ret, args_types, _) => {
+                let mut args = self.analyz_items(args)?;
+
+                if &args_types.len() != &args.len() {
+                    self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_types.len(), name));
+                    return Err(ErrKind::UndeclaredVar);
                 }
-            }
 
-            if &args_ty.len() != &args.len() {
-                self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_ty.len(), name.expr));
-                return Err(ErrKind::UndeclaredVar);
-            }
+                for (i, arg) in (&mut args).iter_mut().enumerate() {
+                    if &arg.ty != &args_types[i] {
+                        let attempt = self.type_cast(arg.clone(), args_types[i].clone());
 
-            for (i, ty) in args_ty.into_iter().enumerate() {
-                if &args[i].ty != &ty {
-                    args[i] = self.type_cast(args[i].clone(), ty)?;
+                        if attempt.is_ok() {
+                            *arg = attempt.unwrap();
+                        } else {
+                            self.err(
+                                ErrKind::UnexceptedArgs,
+                                format!(
+                                    "unexpected argument type, at arg {}, expected {:?}, got {:?}",
+                                    i, args_types[i], arg.ty
+                                ),
+                            );
+                            return Err(ErrKind::UnexceptedArgs);
+                        }
+                    }
                 }
+
+                let expr = Expr::FnCall { name, args };
+
+                Ok(Node { expr, ty: *ret })
             }
 
-            let expr = Expr::FnCall { name, args };
-
-            Ok(Node { expr, ty: *ty })
-        } else {
-            self.err(
-                ErrKind::UnexceptedTokenE,
-                format!("expected symbol to call got {:?}", name.expr),
-            );
-            Err(ErrKind::UnexceptedTokenE)
+            _ => {
+                self.err(
+                    ErrKind::UnexceptedTokenE,
+                    format!("expected symbol to call got {:?}", name.expr),
+                );
+                Err(ErrKind::UnexceptedTokenE)
+            }
         }
     }
 
@@ -426,13 +529,19 @@ impl Analyzer {
     pub fn analyz_var_assign(&mut self, id: Node, val: Node) -> Result<Node, ErrKind> {
         let val = self.analyz(val)?;
         let name = self.analyz(id)?;
-        let ty = val.ty.clone();
+        let mut ty = val.ty.clone();
+
         if let Expr::Id(ref name) = name.expr {
             self.env.modify(name, ty.clone());
         } else if val.ty != name.ty {
-            self.err(ErrKind::InvaildType, format!("cannot set the value of an Obj property to a value of different type, got type {:?} expected {:?}, in expr {:?} = {:?}", val.ty, name.ty, name, val));
-            return Err(ErrKind::InvaildType);
+            if let ConstType::Unknown(assume) = name.ty.clone() {
+                ty = ConstType::Unknown(assume);
+            } else {
+                self.err(ErrKind::InvaildType, format!("cannot set the value of an Obj property to a value of different type, got type {:?} expected {:?}, in expr {:?} = {:?}", val.ty, name.ty, name, val));
+                return Err(ErrKind::InvaildType);
+            }
         }
+
         let expr = Expr::VarAssign {
             name: Box::new(name),
             val: Box::new(val),
@@ -462,7 +571,20 @@ impl Analyzer {
     }
 
     pub fn type_conv(&mut self, mut lhs: Node, mut rhs: Node) -> Result<(Node, Node), ErrKind> {
+        // this code is not good rn
         if lhs.ty != rhs.ty {
+            if let &ConstType::Unknown(Some(ref ty)) = &lhs.ty {
+                if &**ty == &rhs.ty {
+                    return Ok((lhs, rhs));
+                }
+            }
+
+            if let &ConstType::Unknown(Some(ref ty)) = &rhs.ty {
+                if &**ty == &lhs.ty {
+                    return Ok((lhs, rhs));
+                }
+            }
+
             if lhs.ty == ConstType::Float && rhs.ty == ConstType::Int {
                 rhs = ty_as(&lhs.ty, rhs);
             } else if lhs.ty == ConstType::Int && rhs.ty == ConstType::Float {

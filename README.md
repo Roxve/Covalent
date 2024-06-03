@@ -1,7 +1,8 @@
 # Covalent
-(WIP Language)
+WIP DOP Compiled Language, with a cool type system that supports completly optional typing (no need to type even the function arguments) and a dynamic system(avoided as much as possible, may be discarded)
+
 ```
-covalent path/to/file # builds results in ./
+covalent path/to/file # builds results in ./ and C code in /tmp/covalent
 ```
 
 to enter the repl
@@ -21,5 +22,7 @@ you can compile gc.o from [bdwgc](https://github.com/ivmai/bdwgc) (put it in lib
 - while loops
 - variables
 - functions
-- built-in types: str, int, float, bool
-- basic static until it has to be dynamic type-system(1/5 of planned implented) with bdwgc
+- built-in types: Str, Int, Float, Bool, List(T), Any, Dynamic
+- operators: -, +, *, /, %, &&, ||, ==, >, <, <=, >=
+
+test project in /TestProj, examples in /code

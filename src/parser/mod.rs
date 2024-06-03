@@ -2,22 +2,9 @@ pub mod ast;
 pub mod parse;
 use crate::lexer::Lexer;
 use crate::lexer::Token;
+use crate::source::Blueprint;
 use crate::source::{ATErr, ErrKind, Ident, Scope};
 use ast::Node;
-
-#[derive(Debug, Clone)]
-
-pub struct Function {
-    pub name: Ident,
-    pub args: Vec<Ident>,
-    pub body: Vec<Node>,
-}
-
-impl Function {
-    /*pub fn get_name(&self) -> String {
-        self.name.val.clone()
-    }*/
-}
 
 #[derive(Debug, Clone)]
 pub struct Parser {
@@ -25,7 +12,7 @@ pub struct Parser {
     line: u32,
     column: u32,
     current_tok: Option<Token>,
-    pub functions: Vec<Function>,
+    pub functions: Vec<Blueprint>,
     current_scope: Scope,
     pub errors: Vec<ATErr>,
 }
@@ -55,7 +42,11 @@ impl Parser {
     }
 
     pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Node>) {
-        self.functions.push(Function { name, args, body });
+        self.functions.push(Blueprint {
+            name: name.val,
+            args,
+            body,
+        });
     }
     fn current(&mut self) -> Token {
         if self.current_tok.is_none() {

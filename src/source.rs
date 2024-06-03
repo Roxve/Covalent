@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::parser::ast::Node;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ConstType {
     Int,
@@ -8,9 +10,10 @@ pub enum ConstType {
     Bool,
     Dynamic,
     Void,
-    Unknown,
+    Unknown(Option<Box<ConstType>>),
     List(Box<Self>),
-    Func(Box<Self>, Vec<Self>),
+    Func(Box<Self>, Vec<Self>, String),
+    Blueprint { argc: u32, name: String },
     Obj(HashMap<String, Self>),
 }
 
@@ -26,6 +29,16 @@ impl ConstType {
                 }
             }
             _ => None,
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            ConstType::Int => "int",
+            ConstType::Float => "float",
+            ConstType::Str => "str",
+            ConstType::Bool => "bool",
+            _ => "none",
         }
     }
 }
@@ -74,9 +87,10 @@ pub struct Ident {
 }
 
 #[derive(Debug, Clone)]
-pub struct CompiledFunction {
+pub struct Blueprint {
     pub name: String,
     pub args: Vec<Ident>,
+    pub body: Vec<Node>,
 }
 
 #[derive(Clone, Debug)]
@@ -84,14 +98,30 @@ pub struct Enviroment {
     pub vars: HashMap<String, ConstType>,
     pub current: ConstType,
     pub parent: Option<Box<Enviroment>>,
+    pub blueprints: Vec<Blueprint>,
 }
+pub fn type_mangle(name: String, types: Vec<ConstType>) -> String {
+    let mut mangle = String::new();
+    mangle.push_str(name.as_str());
 
+    // if we only have no args, later we should analyze blueprints with only 1 possible instance
+    if types.len() == 0 {
+        mangle.push_str("_void");
+    }
+    for type_n in types {
+        mangle.push('_');
+        mangle.push_str(type_n.as_str());
+    }
+
+    return mangle;
+}
 impl Enviroment {
     pub fn new(parent: Option<Box<Self>>) -> Self {
         Self {
             vars: HashMap::new(),
             current: ConstType::Void,
             parent,
+            blueprints: Vec::new(),
         }
     }
 
@@ -134,7 +164,7 @@ impl Enviroment {
     pub fn ty_parent_fn(&self, ty: &ConstType, name: &String) -> Option<ConstType> {
         let parent = self.vars.get(name);
         if parent.is_some() {
-            if let ConstType::Func(_, args) = parent.unwrap() {
+            if let ConstType::Func(_, args, _) = parent.unwrap() {
                 if &args[0] == ty {
                     return Some(parent.unwrap().to_owned());
                 }
@@ -155,16 +185,25 @@ impl Enviroment {
         self.vars.insert(name.clone(), ty);
     }
 
-    pub fn push_function(&mut self, name: String, args: Vec<Ident>, ty: ConstType) {
-        self.vars.insert(
-            name.clone(),
-            ConstType::Func(
-                Box::new(ty),
-                args.iter()
-                    .map(|t| t.tag.clone().unwrap_or(ConstType::Dynamic))
-                    .collect(),
-            ),
-        );
+    pub fn get_blueprint(&self, name: &String) -> Option<Blueprint> {
+        for blueprint in &self.blueprints {
+            if &blueprint.name == name {
+                return Some(blueprint.clone());
+            }
+        }
+        if self.parent.is_some() {
+            for blueprint in &self.parent().unwrap().blueprints {
+                if &blueprint.name == name {
+                    return Some(blueprint.clone());
+                }
+            }
+        }
+        return None;
+    }
+
+    pub fn push_function(&mut self, name: String, args: Vec<ConstType>, ty: ConstType) {
+        self.vars
+            .insert(name.clone(), ConstType::Func(Box::new(ty), args, name));
     }
 }
 #[derive(Debug, Clone, PartialEq)]
