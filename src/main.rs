@@ -8,7 +8,6 @@ mod ir;
 mod lexer;
 mod parser;
 mod scope;
-mod source;
 mod types;
 
 use std::path::Path;

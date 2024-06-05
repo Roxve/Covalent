@@ -7,5 +7,4 @@ pub mod ir;
 pub mod lexer;
 pub mod parser;
 pub mod scope;
-pub mod source;
 pub mod types;
