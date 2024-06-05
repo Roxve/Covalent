@@ -2,7 +2,7 @@ pub mod gen;
 use crate::compiler::CompilerConfig;
 use crate::ir::IROp;
 use crate::parser::ast::Literal;
-use crate::source::ConstType;
+use crate::types::AtomKind;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -40,20 +40,20 @@ pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
         .wait();
 }
 
-pub fn type_to_c(ty: ConstType) -> String {
+pub fn type_to_c(ty: AtomKind) -> String {
     match ty {
-        ConstType::Int => "int".to_string(),
-        ConstType::Float => "float".to_string(),
-        ConstType::Dynamic => "Obj".to_string(),
-        ConstType::Str => "Str*".to_string(),
-        ConstType::List(_) => "List*".to_string(),
-        ConstType::Bool => "_Bool".to_string(),
-        ConstType::Void => "void".to_string(),
+        AtomKind::Int => "int".to_string(),
+        AtomKind::Float => "float".to_string(),
+        AtomKind::Dynamic => "Obj".to_string(),
+        AtomKind::Str => "Str*".to_string(),
+        AtomKind::List(_) => "List*".to_string(),
+        AtomKind::Bool => "_Bool".to_string(),
+        AtomKind::Void => "void".to_string(),
         _ => todo!("{:?}", ty),
     }
 }
 
-pub fn types_to_cnamed(tys: Vec<(ConstType, String)>) -> String {
+pub fn types_to_cnamed(tys: Vec<(AtomKind, String)>) -> String {
     let mut str = String::from("");
     let tys_len = tys.len();
     for (i, ty) in tys.into_iter().enumerate() {
@@ -70,18 +70,18 @@ pub fn types_to_cnamed(tys: Vec<(ConstType, String)>) -> String {
 #[derive(Debug, Clone)]
 pub enum Item {
     Const(Literal),
-    Var(ConstType, String),
-    Expr(ConstType, String),
-    List(ConstType, u16 /* size */),
+    Var(AtomKind, String),
+    Expr(AtomKind, String),
+    List(AtomKind, u16 /* size */),
 }
 
 impl Item {
     #[inline]
-    pub fn get_ty(&self) -> ConstType {
+    pub fn get_ty(&self) -> AtomKind {
         match self.clone() {
             Self::Expr(ty, _) => ty,
             Self::Var(ty, _) => ty,
-            Self::List(ty, _) => ConstType::List(Box::new(ty)),
+            Self::List(ty, _) => AtomKind::List(Box::new(ty)),
             Self::Const(literal) => (&literal).get_ty(),
         }
     }
@@ -201,10 +201,10 @@ impl Module {
     }
 }
 
-// const fn sizeof(ty: &ConstType) -> &'static str {
+// const fn sizeof(ty: &AtomKind) -> &'static str {
 //     match ty {
-//         ConstType::Int => "sizeof(int)",
-//         ConstType::Float => "sizeof(float)",
+//         AtomKind::Int => "sizeof(int)",
+//         AtomKind::Float => "sizeof(float)",
 //         _ => todo!(),
 //     }
 // }
@@ -212,8 +212,8 @@ impl Module {
 #[derive(Debug, Clone)]
 pub struct Codegen {
     stack: Vec<Item>,
-    variables: HashMap<String, (i32, ConstType)>, // c doesnt allow redeclaration of vars with different types
-    pub module: Module,                           // code we are generating
+    variables: HashMap<String, (i32, AtomKind)>, // c doesnt allow redeclaration of vars with different types
+    pub module: Module,                          // code we are generating
 }
 
 impl Codegen {
@@ -285,7 +285,7 @@ impl Codegen {
         }
     }
 
-    pub fn var(&mut self, name: String, ty: ConstType) -> String {
+    pub fn var(&mut self, name: String, ty: AtomKind) -> String {
         let count = self.variables.get(&name);
         if count.is_none() {
             self.variables.insert(name.clone(), (0, ty));

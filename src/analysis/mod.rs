@@ -1,7 +1,8 @@
 pub mod analysis;
 
-use crate::parser::ast::{Expr, Node};
-use crate::source::{Blueprint, ConstType, Enviroment};
+use crate::enviroment::Enviroment;
+use crate::parser::ast::{Blueprint, Expr, Node};
+use crate::types::AtomKind;
 
 pub struct Analyzer {
     pub env: Enviroment,
@@ -16,25 +17,22 @@ const LOGIC_OP: &[&str] = &["&&", "||"];
 
 const MATH_OP: &[&str] = &["+", "-", "*", "/", "%"];
 
-impl ConstType {
+impl AtomKind {
     pub fn get_op(&self) -> Vec<&str> {
         match self {
-            &ConstType::Bool => [LOGIC_OP, &["=="]].concat(),
-            &ConstType::Float | &ConstType::Int => [MATH_OP, COMPARE_OP].concat(),
-            &ConstType::Str | &ConstType::List(_) => [COMPARE_OP, &["+"]].concat(),
-            &ConstType::Dynamic | &ConstType::Unknown(_) => {
-                [LOGIC_OP, COMPARE_OP, MATH_OP].concat()
+            &Self::Bool => [LOGIC_OP, &["=="]].concat(),
+            &Self::Float | &Self::Int => [MATH_OP, COMPARE_OP].concat(),
+            &Self::Str | &Self::List(_) => [COMPARE_OP, &["+"]].concat(),
+            &Self::Dynamic | &Self::Unknown(_) => [LOGIC_OP, COMPARE_OP, MATH_OP].concat(),
+            &Self::Void | &Self::Obj(_) | &Self::Func(_, _, _) | &Self::Blueprint { .. } => {
+                Vec::new()
             }
-            &ConstType::Void
-            | &ConstType::Obj(_)
-            | &ConstType::Func(_, _, _)
-            | &ConstType::Blueprint { .. } => Vec::new(),
         }
     }
 }
 
 #[inline]
-pub fn ty_as(ty: &ConstType, expr: Node) -> Node {
+pub fn ty_as(ty: &AtomKind, expr: Node) -> Node {
     Node {
         expr: Expr::As(Box::new(expr)),
         ty: ty.clone(),
@@ -42,20 +40,20 @@ pub fn ty_as(ty: &ConstType, expr: Node) -> Node {
 }
 
 #[inline]
-pub fn supports_op(ty: &ConstType, op: &String) -> bool {
+pub fn supports_op(ty: &AtomKind, op: &String) -> bool {
     let ops = ty.get_op();
     ops.contains(&op.as_str())
 }
 #[inline]
-pub fn replace_body_ty(body: &mut Vec<Node>, old: &ConstType, new: &ConstType) {
+pub fn replace_body_ty(body: &mut Vec<Node>, old: &AtomKind, new: &AtomKind) {
     for node in &mut *body {
         replace_ty(node, old, new)
     }
 }
 
-pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
-    if let &ConstType::Unknown(None) = &node.ty {
-        if let &ConstType::Func(ret, _, _) = &new {
+pub fn replace_ty(node: &mut Node, old: &AtomKind, new: &AtomKind) {
+    if let &AtomKind::Unknown(None) = &node.ty {
+        if let &AtomKind::Func(ret, _, _) = &new {
             node.ty = *ret.clone();
         }
     } else if &node.ty == old {
@@ -68,7 +66,7 @@ pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
             replace_ty(&mut *ret, old, new);
 
             // convert the return to the return type if its not already (if we are replacing with a function type)
-            if let &ConstType::Func(ref ret_ty, _, _) = new {
+            if let &AtomKind::Func(ref ret_ty, _, _) = new {
                 if &**ret_ty != &ret.ty {
                     **ret = ty_as(&ret_ty, (**ret).clone());
                     node.ty = (**ret_ty).clone()
@@ -114,9 +112,9 @@ pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
             replace_ty(&mut *name, old, new);
             replace_body_ty(&mut *args, old, new);
 
-            if let &ConstType::Func(ref ret, _, _) = new {
+            if let &AtomKind::Func(ref ret, _, _) = new {
                 // if the call results is Unknown and expected of a type
-                if let &ConstType::Unknown(Some(ref ty)) = &node.ty {
+                if let &AtomKind::Unknown(Some(ref ty)) = &node.ty {
                     if ret == ty {
                         node.ty = (**ret).clone();
                     } else {
@@ -136,20 +134,20 @@ pub fn replace_ty(node: &mut Node, old: &ConstType, new: &ConstType) {
     }
 }
 
-fn get_ret_ty(node: &Node) -> Vec<ConstType> {
+fn get_ret_ty(node: &Node) -> Vec<AtomKind> {
     match node.expr.clone() {
         Expr::RetExpr(node) => {
-            // if let &ConstType::Unknown(_) = &node.ty {
+            // if let &AtomKind::Unknown(_) = &node.ty {
             //     return vec![prev];
-            // } else if let &ConstType::Func(ref ret, ref args, _) = &node.ty {
-            //     if let &ConstType::Unknown(_) = &**ret {
+            // } else if let &AtomKind::Func(ref ret, ref args, _) = &node.ty {
+            //     if let &AtomKind::Unknown(_) = &**ret {
             //         return vec![prev];
             //     }
-            // } else if &prev != &node.ty && &prev != &ConstType::Void {
-            //     return vec![ConstType::Dynamic];
+            // } else if &prev != &node.ty && &prev != &AtomKind::Void {
+            //     return vec![AtomKind::Dynamic];
             // }
 
-            if let &ConstType::Unknown(Some(ref ty)) = &node.ty {
+            if let &AtomKind::Unknown(Some(ref ty)) = &node.ty {
                 return vec![(**ty).clone()];
             }
             return vec![node.ty.clone()];
@@ -169,7 +167,7 @@ fn get_ret_ty(node: &Node) -> Vec<ConstType> {
     }
 }
 
-pub fn get_body_types(body: &Vec<Node>) -> Vec<ConstType> {
+pub fn get_body_types(body: &Vec<Node>) -> Vec<AtomKind> {
     let mut types = Vec::new();
     for node in body {
         for ty in get_ret_ty(node) {
@@ -181,7 +179,7 @@ pub fn get_body_types(body: &Vec<Node>) -> Vec<ConstType> {
     types
 }
 
-pub fn get_fn_type(body: &Vec<Node>) -> ConstType {
+pub fn get_fn_type(body: &Vec<Node>) -> AtomKind {
     let possible = get_body_types(body);
 
     if possible.len() > 1 {
@@ -189,13 +187,13 @@ pub fn get_fn_type(body: &Vec<Node>) -> ConstType {
         // otherwise -> dynamic
 
         if possible.len() == 2
-            && possible.contains(&ConstType::Int)
-            && possible.contains(&ConstType::Float)
+            && possible.contains(&AtomKind::Int)
+            && possible.contains(&AtomKind::Float)
         {
-            return ConstType::Float;
+            return AtomKind::Float;
         }
 
-        return ConstType::Dynamic;
+        return AtomKind::Dynamic;
     }
 
     possible[0].clone()
@@ -214,10 +212,10 @@ impl Analyzer {
         self.env.blueprints = blueprints.clone();
         for blueprint in blueprints {
             self.env.add(
-                &blueprint.name,
-                ConstType::Blueprint {
+                &blueprint.name.val(),
+                AtomKind::Blueprint {
                     argc: blueprint.args.len() as u32,
-                    name: blueprint.name.clone(),
+                    name: blueprint.name.val().clone(),
                 },
             );
         }

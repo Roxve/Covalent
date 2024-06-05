@@ -1,4 +1,4 @@
-use crate::source::{ConstType, Ident};
+use crate::types::AtomKind;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Int(i32),
@@ -8,12 +8,12 @@ pub enum Literal {
 }
 
 impl Literal {
-    pub fn get_ty(&self) -> ConstType {
+    pub fn get_ty(&self) -> AtomKind {
         match self {
-            &Self::Int(_) => ConstType::Int,
-            &Self::Float(_) => ConstType::Float,
-            &Self::Str(_) => ConstType::Str,
-            &Self::Bool(_) => ConstType::Bool,
+            &Self::Int(_) => AtomKind::Int,
+            &Self::Float(_) => AtomKind::Float,
+            &Self::Str(_) => AtomKind::Str,
+            &Self::Bool(_) => AtomKind::Bool,
         }
     }
 }
@@ -39,7 +39,6 @@ pub enum Expr {
         right: Box<Node>,
     },
     Ident(Ident),
-    Id(String),
     VarDeclare {
         name: Ident,
         val: Box<Node>,
@@ -57,11 +56,11 @@ pub enum Expr {
     Import {
         module: String,
         name: String,
-        args: Vec<ConstType>,
+        args: Vec<AtomKind>,
     },
 
     Func {
-        ret: ConstType,
+        ret: AtomKind,
         name: String,
         args: Vec<Ident>,
         body: Vec<Node>,
@@ -97,12 +96,12 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Node {
     pub expr: Expr,
-    pub ty: ConstType,
+    pub ty: AtomKind,
 }
 
 impl Node {
     pub fn is_typed(&self) -> bool {
-        if let &ConstType::Unknown(None) = &self.ty {
+        if let &AtomKind::Unknown(None) = &self.ty {
             false
         } else {
             true
@@ -113,6 +112,41 @@ impl Node {
 pub fn untyped(expr: Expr) -> Node {
     Node {
         expr,
-        ty: ConstType::Unknown(None),
+        ty: AtomKind::Unknown(None),
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Ident {
+    Tagged(AtomKind, String),
+    UnTagged(String),
+}
+
+impl Ident {
+    pub fn val(&self) -> &String {
+        match self {
+            Ident::Tagged(_, ref val) | Ident::UnTagged(ref val) => val,
+        }
+    }
+
+    pub fn tuple(self) -> (AtomKind, String) {
+        match self {
+            Ident::Tagged(ty, val) => (ty, val),
+            Ident::UnTagged(val) => (AtomKind::Dynamic, val),
+        }
+    }
+
+    pub fn ty(&self) -> &AtomKind {
+        match self {
+            Ident::Tagged(ref ty, _) => ty,
+            Ident::UnTagged(_) => &AtomKind::Dynamic,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Blueprint {
+    pub name: Ident,
+    pub args: Vec<Ident>,
+    pub body: Vec<Node>,
 }

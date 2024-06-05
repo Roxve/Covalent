@@ -1,27 +1,20 @@
 use super::{Codegen, IROp};
 
-use crate::{
-    parser::ast::{Expr, Node},
-    source::{ConstType, Ident},
-};
+use crate::parser::ast::{Expr, Ident, Node};
+use crate::types::AtomKind;
 
 type IR = Vec<IROp>;
 type IRRes = Result<IR, u8>;
 
 pub trait IRGen {
     fn gen_prog(&mut self, exprs: Vec<Node>) -> IR;
-    fn gen_func(
-        &mut self,
-        name: String,
-        args: Vec<Ident>,
-        ret: ConstType,
-        body: Vec<Node>,
-    ) -> IRRes;
+    fn gen_func(&mut self, name: String, args: Vec<Ident>, ret: AtomKind, body: Vec<Node>)
+        -> IRRes;
     fn gen_expr(&mut self, expr: Node) -> IRRes;
 
     fn gen_var_declare(&mut self, name: String, expr: Node) -> IRRes;
     fn gen_var_assign(&mut self, name: Node, expr: Node) -> IRRes;
-    fn gen_binary_expr(&mut self, ty: ConstType, op: String, left: Node, right: Node) -> IRRes;
+    fn gen_binary_expr(&mut self, ty: AtomKind, op: String, left: Node, right: Node) -> IRRes;
 }
 
 impl IRGen for Codegen {
@@ -40,12 +33,11 @@ impl IRGen for Codegen {
         &mut self,
         name: String,
         args: Vec<Ident>,
-        ret: ConstType,
+        ret: AtomKind,
         body: Vec<Node>,
     ) -> IRRes {
         for arg in &args {
-            // types arent needed in ir gen
-            self.env.add(&arg.val, ConstType::Dynamic);
+            self.env.add(arg.val(), arg.ty().clone());
         }
         let mut exprs = vec![];
 
@@ -74,9 +66,9 @@ impl IRGen for Codegen {
             Expr::BinaryExpr { op, left, right } => {
                 self.gen_binary_expr(expr.ty, op, *left, *right)
             }
-            Expr::VarDeclare { name, val } => self.gen_var_declare(name.val, *val),
+            Expr::VarDeclare { name, val } => self.gen_var_declare(name.val().clone(), *val),
             Expr::VarAssign { name, val } => self.gen_var_assign(*name, *val),
-            Expr::Id(name) => Ok(vec![IROp::Load(expr.ty, name)]),
+            Expr::Ident(name) => Ok(vec![IROp::Load(expr.ty, name.val().clone())]),
 
             Expr::ListExpr(items) => {
                 let mut bonded = vec![];
@@ -137,7 +129,7 @@ impl IRGen for Codegen {
             Expr::PosInfo(_, _, _) => Ok(vec![]),
             Expr::Discard(dis) => {
                 let mut compiled = self.gen_expr(*dis.clone())?;
-                if dis.ty != ConstType::Void {
+                if dis.ty != AtomKind::Void {
                     compiled.append(&mut vec![IROp::Pop]);
                 }
                 Ok(compiled)
@@ -243,7 +235,7 @@ impl IRGen for Codegen {
         Ok(res)
     }
 
-    fn gen_binary_expr(&mut self, ty: ConstType, op: String, left: Node, right: Node) -> IRRes {
+    fn gen_binary_expr(&mut self, ty: AtomKind, op: String, left: Node, right: Node) -> IRRes {
         let mut res: IR = vec![];
         let mut lhs = self.gen_expr(left.clone())?;
         let mut rhs = self.gen_expr(right)?;

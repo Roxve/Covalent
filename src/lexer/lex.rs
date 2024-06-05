@@ -1,5 +1,6 @@
+use super::token::Token;
 use super::*;
-use crate::source::ErrKind;
+use crate::err::ErrKind;
 
 pub fn is_num(c: char) -> bool {
     return "01234.56789".contains(c);

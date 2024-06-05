@@ -1,38 +1,9 @@
-use crate::source::{ATErr, ErrKind};
+use crate::err::{ATErr, ErrKind};
 
 pub mod lex;
-#[derive(Debug, Clone, PartialEq)]
-pub enum Token {
-    Operator(String),
-    // convert these into literal
-    Int(i32),
-    Float(f32),
-    Str(String),
-    Bool(bool),
+pub mod token;
 
-    Ident(String),
-    Tag(String),
-    Err(String), // error code and msg
-    LeftParen,
-    RightParen,
-    LeftBrace,
-    RightBrace,
-    LeftBracket,
-    RightBracket,
-    Exec,
-    Colon,
-    Comma,
-    Dot,
-    Access,
-    IfKw,
-    ElseKw,
-    WhileKw,
-    BreakKw,
-    Continuekw,
-    SetKw,
-    RetKw,
-    EOF,
-}
+use self::token::Token;
 #[derive(Debug, Clone)]
 pub struct Lexer {
     line: u32,
