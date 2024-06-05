@@ -2,10 +2,15 @@ use std::io::{self, Write};
 mod analysis;
 mod backend;
 mod compiler;
+mod enviroment;
+mod err;
 mod ir;
 mod lexer;
 mod parser;
+mod scope;
 mod source;
+mod types;
+
 use std::path::Path;
 // use std::process::Command;
 use crate::compiler::{Backend, CSettings, CompilerConfig};

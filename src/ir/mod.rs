@@ -1,44 +1,47 @@
-use crate::parser::ast::Literal;
-use crate::source::{ConstType, Enviroment};
+use crate::parser::ast::{Ident, Literal};
+
+use crate::enviroment::Enviroment;
+use crate::types::AtomKind;
 
 pub mod gen;
 pub mod tools;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum IROp {
-    Import(ConstType, String, String, Vec<ConstType>), // ty mod fun arg count
-    Def(ConstType, String, Vec<Ident>, Vec<IROp>),
-    Call(ConstType, u16),
-    Ret(ConstType),
-    Add(ConstType),
-    Sub(ConstType),
-    Mul(ConstType),
-    Div(ConstType),
-    Mod(ConstType),
+    Import(AtomKind, String, String, Vec<AtomKind>), // ty mod fun arg count
+    Def(AtomKind, String, Vec<Ident>, Vec<IROp>),
+    Call(AtomKind, u16),
+    Ret(AtomKind),
+    Add(AtomKind),
+    Sub(AtomKind),
+    Mul(AtomKind),
+    Div(AtomKind),
+    Mod(AtomKind),
     Comp, // acts like GE to peform LE switch left and right
     EComp,
     Eq,
     And,
     Or,
     Const(Literal),
-    List(ConstType, Vec<Vec<IROp>>), // each item is a bunch of operations
-    Conv(ConstType, ConstType),
-    Alloc(ConstType, String),
-    Dealloc(ConstType, String), // when allocing a var with a new type we dealloc the old val
-    Store(ConstType, String),
-    Set(ConstType),
-    Load(ConstType, String),     // load loads an id
-    LoadProp(ConstType, String), // load prop loads a property from the id
-    LoadIdx(ConstType),          // loads an index
+    List(AtomKind, Vec<Vec<IROp>>), // each item is a bunch of operations
+    Conv(AtomKind, AtomKind),
+    Alloc(AtomKind, String),
+    Dealloc(AtomKind, String), // when allocing a var with a new type we dealloc the old val
+    Store(AtomKind, String),
+    Set(AtomKind),
+    Load(AtomKind, String),     // load loads an id
+    LoadProp(AtomKind, String), // load prop loads a property from the id
+    LoadIdx(AtomKind),          // loads an index
 
-    If(ConstType, Vec<IROp>, Vec<IROp>),
+    If(AtomKind, Vec<IROp>, Vec<IROp>),
     While(Vec<IROp>),
     Pop,
 }
-use crate::source::{ATErr, Ident};
+use crate::err::ATErr;
 
 use self::IROp::*;
-pub fn get_op_type(op: &IROp) -> ConstType {
+// TODO: better op impl
+pub fn get_op_type(op: &IROp) -> AtomKind {
     match op {
         Import(t, _, _, _) => t,
         Def(t, _, _, _) => t,
@@ -49,12 +52,12 @@ pub fn get_op_type(op: &IROp) -> ConstType {
         Mul(t) => t,
         Div(t) => t,
         Mod(t) => t,
-        And => &ConstType::Bool,
-        Or => &ConstType::Bool,
-        Comp => &ConstType::Bool,
-        EComp => &ConstType::Bool,
-        Eq => &ConstType::Bool,
-        List(ref ty, _) => return ConstType::List(Box::new(ty.clone())),
+        And => &AtomKind::Bool,
+        Or => &AtomKind::Bool,
+        Comp => &AtomKind::Bool,
+        EComp => &AtomKind::Bool,
+        Eq => &AtomKind::Bool,
+        List(ref ty, _) => return AtomKind::List(Box::new(ty.clone())),
         Const(lit) => return lit.get_ty(),
         Conv(t, _) => t,
         Store(t, _) => t,
@@ -66,8 +69,8 @@ pub fn get_op_type(op: &IROp) -> ConstType {
         Alloc(t, _) => t,
         Dealloc(t, _) => t,
         If(t, _, _) => t,
-        While(_) => &ConstType::Void,
-        Pop => &ConstType::Void,
+        While(_) => &AtomKind::Void,
+        Pop => &AtomKind::Void,
     }
     .clone()
 }

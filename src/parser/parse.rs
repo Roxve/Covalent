@@ -1,9 +1,9 @@
-use super::Scope;
+use crate::scope::Scope;
 
 use super::ast::*;
 use super::Parser;
-use crate::lexer::Token;
-use crate::source::{ErrKind, Ident};
+use crate::err::ErrKind;
+use crate::lexer::token::Token;
 
 pub trait ParserError {}
 
@@ -129,7 +129,7 @@ impl Parse for Parser {
             if let Expr::Ident(id) = right.expr {
                 untyped(Expr::MemberExpr {
                     parent: Box::new(left),
-                    child: id.val,
+                    child: id.val().clone(),
                 })
             } else {
                 self.err(
@@ -181,7 +181,7 @@ impl Parse for Parser {
 
             Token::Ident(id) => {
                 self.next();
-                untyped(Expr::Ident(Ident { val: id, tag: None }))
+                untyped(Expr::Ident(Ident::UnTagged(id)))
             }
             // Token::Tag(tag) => {
             //     self.next();
@@ -279,7 +279,7 @@ impl Parse for Parser {
 
         self.push_function(id.clone(), id_args, body);
         self.current_scope = Scope::Value;
-        untyped(Expr::PosInfo(id.val, self.line, self.column))
+        untyped(Expr::PosInfo(id.val().clone(), self.line, self.column))
     }
 
     fn parse_if_expr(&mut self) -> Node {
