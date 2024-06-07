@@ -1,6 +1,7 @@
 pub mod analysis;
 
 use crate::enviroment::Enviroment;
+use crate::err::ErrKind;
 use crate::parser::ast::{Blueprint, Expr, Node};
 use crate::types::AtomKind;
 
@@ -208,16 +209,23 @@ impl Analyzer {
             column: 0,
         }
     }
-    pub fn blueprints(&mut self, blueprints: Vec<Blueprint>) {
+    pub fn blueprints(&mut self, blueprints: Vec<Blueprint>) -> Result<(), ErrKind> {
         self.env.blueprints = blueprints.clone();
-        for blueprint in blueprints {
-            self.env.add(
-                &blueprint.name.val(),
-                AtomKind::Blueprint {
-                    argc: blueprint.args.len() as u32,
-                    name: blueprint.name.val().clone(),
-                },
-            );
+        for blueprint in blueprints.clone() {
+            let blueprint_ty = AtomKind::Blueprint {
+                argc: blueprint.args.len() as u32,
+                name: blueprint.name.val().clone(),
+            };
+
+            self.env.add(&blueprint.name.val(), blueprint_ty);
         }
+
+        for blueprint in blueprints {
+            if blueprint.args.len() == 0 {
+                self.analyz_blueprint(blueprint, Vec::new())?;
+            }
+        }
+
+        Ok(())
     }
 }

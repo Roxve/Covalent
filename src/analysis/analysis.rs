@@ -42,6 +42,12 @@ impl Analyzer {
         types: Vec<AtomKind>,
     ) -> Result<String, ErrKind> {
         let mangle = type_mangle(blueprint.name.val().clone(), types.clone());
+        if self.env.has(&mangle) {
+            if let AtomKind::Func(_, _, _) = self.env.get_ty(&mangle).unwrap() {
+                return Ok(mangle);
+            }
+        }
+
         self.env = self.env.child();
         // allows for the function to call itself
         self.env
@@ -54,8 +60,6 @@ impl Analyzer {
         }
 
         let mut body = self.analyz_items(blueprint.body)?;
-        // TODO: loop through the body check for unknown function calls and replace them with function type
-
         let ty = get_fn_type(&body);
 
         replace_body_ty(
@@ -99,7 +103,7 @@ impl Analyzer {
             vec![AtomKind::Dynamic],
         );
         // setting our env blueprints to our uncompiled functions (blueprints are then compiled pased on call arguments)
-        analyzer.blueprints(functions);
+        analyzer.blueprints(functions)?;
         for expr in exprs {
             let analyzed_expr = analyzer.analyz(expr)?;
             analyzed_prog.push(analyzed_expr);
@@ -470,6 +474,7 @@ impl Analyzer {
 
     pub fn analyz_id(&mut self, id: Ident) -> Result<Node, ErrKind> {
         if !self.env.has(&id.val()) {
+            dbg!(id);
             return Err(ErrKind::UndeclaredVar);
         }
 

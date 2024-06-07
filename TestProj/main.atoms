@@ -17,7 +17,6 @@ set factorial: x {
 	ret x * factorial: x - 1
 }
 
-
 set x = factorial: 5
 set y = factorial: 5.0
 set z = factorial: 6

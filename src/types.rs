@@ -45,10 +45,6 @@ pub fn type_mangle(name: String, types: Vec<AtomKind>) -> String {
     let mut mangle = String::new();
     mangle.push_str(name.as_str());
 
-    // if we only have no args, later we should analyze blueprints with only 1 possible instance
-    if types.len() == 0 {
-        mangle.push_str("_void");
-    }
     for type_n in types {
         mangle.push('_');
         mangle.push_str(type_n.as_str());

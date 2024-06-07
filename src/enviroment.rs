@@ -78,7 +78,11 @@ impl Enviroment {
     }
 
     pub fn add(&mut self, name: &String, ty: AtomKind) {
-        self.vars.insert(name.clone(), ty);
+        if self.vars.contains_key(name) {
+            self.modify(name, ty)
+        } else {
+            self.vars.insert(name.clone(), ty);
+        }
     }
 
     pub fn get_blueprint(&self, name: &String) -> Option<Blueprint> {
@@ -96,9 +100,16 @@ impl Enviroment {
         }
         return None;
     }
-
+    pub fn top(&mut self) -> &mut Enviroment {
+        if self.parent.is_none() {
+            self
+        } else {
+            self.parent.as_mut().unwrap().top()
+        }
+    } // returns the top level enviroment
     pub fn push_function(&mut self, name: String, args: Vec<AtomKind>, ty: AtomKind) {
-        self.vars
+        self.top()
+            .vars
             .insert(name.clone(), AtomKind::Func(Box::new(ty), args, name));
     }
 }
