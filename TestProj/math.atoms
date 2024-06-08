@@ -1,0 +1,8 @@
+set factorial: x {
+	if x == 1 {
+		ret 1
+	}
+
+	ret x * factorial: x - 1
+}
+
