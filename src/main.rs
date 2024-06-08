@@ -1,3 +1,4 @@
+use std::env::current_exe;
 use std::io::{self, Write};
 mod analysis;
 mod backend;
@@ -16,13 +17,15 @@ use crate::compiler::{Backend, CSettings, CompilerConfig};
 use std::{env, fs, process::Command};
 #[test]
 fn test() {
-    let prog = fs::read_to_string("TestProg/main.atoms").unwrap();
+    let path = "TestProg/main.atoms";
+    let prog = fs::read_to_string(path).unwrap();
 
     CompilerConfig::new(
         prog,
         Backend::C(CSettings::new(None, Vec::new())),
         true,
         "/tmp/covalent/test.c".to_string(),
+        path.to_string(),
     )
     .compile();
 }
@@ -44,6 +47,7 @@ fn repl(is_debug: bool) {
             Backend::C(CSettings::new(None, Vec::new())),
             is_debug,
             "/tmp/covalent/repl".to_string(),
+            current_exe().unwrap().to_str().unwrap().to_string(),
         )
         .compile();
         let _ = Command::new("/tmp/covalent/repl")
@@ -92,6 +96,11 @@ fn main() {
         Backend::C(CSettings::new(None, Vec::new())),
         is_debug,
         filename.replace(".atoms", ""),
+        path.parent()
+            .unwrap_or(&Path::new(""))
+            .to_str()
+            .unwrap()
+            .to_string(),
     )
     .compile();
 }

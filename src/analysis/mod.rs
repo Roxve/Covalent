@@ -1,11 +1,11 @@
 pub mod analysis;
 
 use crate::enviroment::Enviroment;
-use crate::err::ErrKind;
 use crate::parser::ast::{Blueprint, Expr, Node};
 use crate::types::AtomKind;
 
 pub struct Analyzer {
+    workdir: String,
     pub env: Enviroment,
     pub imports: Vec<Node>,   // Import nodes
     pub functions: Vec<Node>, // Func nodes
@@ -200,17 +200,18 @@ pub fn get_fn_type(body: &Vec<Node>) -> AtomKind {
     possible[0].clone()
 }
 impl Analyzer {
-    pub fn new() -> Self {
+    pub fn new(workdir: String) -> Self {
         Self {
             env: Enviroment::new(None),
             functions: Vec::new(),
             imports: Vec::new(),
             line: 0,
             column: 0,
+            workdir,
         }
     }
-    pub fn blueprints(&mut self, blueprints: Vec<Blueprint>) -> Result<(), ErrKind> {
-        self.env.blueprints = blueprints.clone();
+    pub fn blueprints(&mut self, blueprints: Vec<Blueprint>) {
+        self.env.blueprints.append(&mut blueprints.clone());
         for blueprint in blueprints.clone() {
             let blueprint_ty = AtomKind::Blueprint {
                 argc: blueprint.args.len() as u32,
@@ -220,12 +221,10 @@ impl Analyzer {
             self.env.add(&blueprint.name.val(), blueprint_ty);
         }
 
-        for blueprint in blueprints {
-            if blueprint.args.len() == 0 {
-                self.analyz_blueprint(blueprint, Vec::new())?;
-            }
-        }
-
-        Ok(())
+        // for blueprint in blueprints {
+        //     if blueprint.args.len() == 0 {
+        //         self.analyz_blueprint(blueprint, Vec::new())?;
+        //     }
+        // }
     }
 }

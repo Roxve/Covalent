@@ -28,5 +28,6 @@ pub enum Token {
     Continuekw,
     SetKw,
     RetKw,
+    UseKw,
     EOF,
 }

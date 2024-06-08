@@ -44,6 +44,9 @@ impl AtomKind {
 pub fn type_mangle(name: String, types: Vec<AtomKind>) -> String {
     let mut mangle = String::new();
     mangle.push_str(name.as_str());
+    if types.len() == 0 {
+        mangle.push_str("_empty");
+    }
 
     for type_n in types {
         mangle.push('_');

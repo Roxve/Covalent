@@ -5,12 +5,11 @@ pub enum Scope {
     Value,
     _Func(String),
     Top,
+    Use,
 }
 
 impl Scope {
     pub fn is_used(&self) -> bool {
-        let owned = self.to_owned();
-
-        owned == Scope::Value
+        self == &Scope::Value || self == &Scope::Use
     }
 }

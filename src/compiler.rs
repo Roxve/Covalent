@@ -30,9 +30,16 @@ pub struct CompilerConfig {
     pub backend: Backend,
     pub debug: bool,
     pub output: String,
+    pub workdir: String,
 }
 impl CompilerConfig {
-    pub fn new(input: String, backend: Backend, debug: bool, output: String) -> Self {
+    pub fn new(
+        input: String,
+        backend: Backend,
+        debug: bool,
+        output: String,
+        workdir: String,
+    ) -> Self {
         Self {
             input,
             libdir: format!(
@@ -42,13 +49,14 @@ impl CompilerConfig {
             backend,
             debug,
             output,
+            workdir,
         }
     }
     pub fn compile(&self) {
         let mut parser = Parser::new(self.input.clone());
         let prog = parser.parse_prog();
 
-        let prog = Analyzer::analyz_prog(prog, parser.functions).unwrap();
+        let prog = Analyzer::analyz_prog(prog, parser.functions, self.workdir.clone()).unwrap();
         if self.debug {
             dbg!(&prog);
         }

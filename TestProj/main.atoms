@@ -1,4 +1,6 @@
 # FUNCTION TEST
+# use macro
+use "math.atoms" # deploys "main.atoms" AST here
 
 set do_s! {
 	set list = [1, 2, 3, 4, 5, (factorial: 3), 7, 8, 9]
@@ -9,13 +11,6 @@ set do_s! {
  	ret list
 }
 
-set factorial: x {
-	if x == 1 {
-		ret 1
-	}
-
-	ret x * factorial: x - 1
-}
 
 set x = factorial: 5
 set y = factorial: 5.0

@@ -1,3 +1,6 @@
+use std::fs;
+
+use crate::parser::parse::Parse;
 use crate::types::{type_mangle, AtomKind};
 
 use crate::err::{ATErr, ErrKind};
@@ -59,7 +62,7 @@ impl Analyzer {
             typed_params.push(Ident::Tagged(types[i].clone(), arg.val().clone()))
         }
 
-        let mut body = self.analyz_items(blueprint.body)?;
+        let mut body = self.analyz_body(blueprint.body, false)?;
         let ty = get_fn_type(&body);
 
         replace_body_ty(
@@ -91,8 +94,12 @@ impl Analyzer {
         Ok(mangle)
     }
 
-    pub fn analyz_prog(exprs: Vec<Node>, functions: Vec<Blueprint>) -> Result<Vec<Node>, ErrKind> {
-        let mut analyzer = Analyzer::new();
+    pub fn analyz_prog(
+        exprs: Vec<Node>,
+        functions: Vec<Blueprint>,
+        workdir: String,
+    ) -> Result<Vec<Node>, ErrKind> {
+        let mut analyzer = Analyzer::new(workdir);
         let mut analyzed_prog = Vec::new();
 
         analyzer.import(
@@ -103,11 +110,9 @@ impl Analyzer {
             vec![AtomKind::Dynamic],
         );
         // setting our env blueprints to our uncompiled functions (blueprints are then compiled pased on call arguments)
-        analyzer.blueprints(functions)?;
-        for expr in exprs {
-            let analyzed_expr = analyzer.analyz(expr)?;
-            analyzed_prog.push(analyzed_expr);
-        }
+        analyzer.blueprints(functions);
+        analyzed_prog.append(&mut analyzer.analyz_body(exprs, true)?);
+
         analyzed_prog = [
             analyzer.imports.clone(),
             analyzer.functions.clone(),
@@ -119,21 +124,43 @@ impl Analyzer {
     }
 
     #[inline]
-    pub fn analyz_body(&mut self, body: Vec<Node>) -> Result<Vec<Node>, ErrKind> {
+    pub fn analyz_body(&mut self, body: Vec<Node>, top: bool) -> Result<Vec<Node>, ErrKind> {
         let mut analyzed_body = vec![];
-        self.env = self.env.child();
-        for expr in body {
-            analyzed_body.push(self.analyz(expr)?);
+        if !top {
+            self.env = self.env.child();
         }
-        self.env = self.env.parent().unwrap();
+
+        for node in body {
+            if let &Expr::Use(ref path) = &node.expr {
+                let abs = format!("{}/{}", self.workdir.clone(), path);
+                let read = fs::read_to_string(abs)
+                    .expect(format!("failed to open path {} to use", path).as_str());
+
+                use crate::parser::Parser;
+                let mut parser = Parser::new(read);
+
+                let ast = parser.parse_prog();
+
+                self.blueprints(parser.functions);
+                let mut ast = self.analyz_body(ast, true)?;
+
+                analyzed_body.append(&mut ast);
+                continue;
+            }
+            analyzed_body.push(self.analyz(node)?);
+        }
+
+        if !top {
+            self.env = self.env.parent().unwrap();
+        }
         Ok(analyzed_body)
     }
 
     #[inline]
     pub fn analyz_items(&mut self, items: Vec<Node>) -> Result<Vec<Node>, ErrKind> {
         let mut analyzed_items = vec![];
-        for expr in items {
-            analyzed_items.push(self.analyz(expr)?);
+        for node in items {
+            analyzed_items.push(self.analyz(node)?);
         }
         Ok(analyzed_items)
     }
@@ -220,7 +247,7 @@ impl Analyzer {
                     );
                     return Err(ErrKind::InvaildType);
                 }
-                let body = self.analyz_body(body)?;
+                let body = self.analyz_body(body, false)?;
 
                 let analyzed_alt = if alt.is_none() {
                     None
@@ -245,7 +272,7 @@ impl Analyzer {
                 Ok(Node { expr, ty })
             }
             Expr::Block(block) => {
-                let block = self.analyz_body(block)?;
+                let block = self.analyz_body(block, false)?;
 
                 let last = block.last();
                 let ty = if last.is_none() {
@@ -270,7 +297,7 @@ impl Analyzer {
                     );
                     return Err(ErrKind::InvaildType);
                 }
-                let body = self.analyz_body(body)?;
+                let body = self.analyz_body(body, false)?;
 
                 let expr = Expr::WhileExpr { condition, body };
                 let ty = AtomKind::Void;

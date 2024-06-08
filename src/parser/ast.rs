@@ -31,6 +31,7 @@ pub fn get_operator_level(op: &str) -> u8 {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
+    Use(String),
     Literal(Literal),
     ListExpr(Vec<Node>),
     BinaryExpr {

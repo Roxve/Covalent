@@ -182,6 +182,7 @@ impl Lexer {
                     match res.as_str() {
                         // keywords
                         "set" => Token::SetKw,
+                        "use" => Token::UseKw,
                         "if" => Token::IfKw,
                         "else" => Token::ElseKw,
                         "while" => Token::WhileKw,

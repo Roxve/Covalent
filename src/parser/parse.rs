@@ -207,7 +207,20 @@ impl Parse for Parser {
                 self.except(Token::RightBrace);
                 untyped(Expr::ListExpr(values))
             }
-
+            Token::UseKw => {
+                if let Token::Str(path) = self.next() {
+                    self.current_scope = Scope::Use;
+                    self.next();
+                    untyped(Expr::Use(path))
+                } else {
+                    let tok = self.current();
+                    self.err(
+                        ErrKind::UnexceptedTokenE,
+                        format!("unexcepted token [{:#?}]", tok),
+                    );
+                    todo!()
+                }
+            }
             Token::SetKw => self.parse_declare(),
             Token::WhileKw => self.parse_while_expr(),
             Token::IfKw => self.parse_if_expr(),
@@ -219,7 +232,7 @@ impl Parse for Parser {
                 );
                 self.next();
 
-                // todo!(); // add null TODO <-
+                // todo!(); // add ERR TODO <-
                 untyped(Expr::Literal(Literal::Int(0)))
             }
         }
