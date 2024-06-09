@@ -24,14 +24,20 @@ impl Lexer {
         }
     }
 
-    fn at(&self) -> char {
-        self.code.clone().chars().nth(self.pos).unwrap()
+    fn at(&mut self) -> char {
+        let c = (&self.code).as_bytes()[self.pos].clone() as char;
+        if &c == &'\n' {
+            self.line += 1;
+            self.column = 0;
+        }
+
+        c.clone()
     }
 
     fn eat(&mut self) -> char {
         self.pos += 1;
         self.column += 1;
-        self.code.clone().chars().nth(self.pos - 1).unwrap()
+        (&self.code).as_bytes()[self.pos - 1].clone() as char
     }
 
     fn not_eof(&self) -> bool {

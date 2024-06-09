@@ -28,8 +28,8 @@ impl Lexer {
                 }
                 '\n' => {
                     self.eat();
-                    self.column = 0;
                     self.line += 1;
+                    self.column = 0;
                 }
                 _ => break,
             }
@@ -37,10 +37,21 @@ impl Lexer {
 
         match self.at() {
             '#' => {
-                while self.not_eof() && self.at() != '\n' {
-                    self.eat();
+                self.eat();
+                if self.at() == '*' {
+                    while self.not_eof() {
+                        // eats then checks if its * and the next char is #
+                        if self.eat() == '*' && self.at() == '#' {
+                            self.eat();
+                            break;
+                        }
+                    }
+                } else {
+                    while self.not_eof() && self.at() != '\n' {
+                        self.eat();
+                    }
                 }
-                self.line += 1;
+
                 self.tokenize()
             }
             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
@@ -172,6 +183,11 @@ impl Lexer {
                 Token::Exec
             }
 
+            '@' => {
+                self.eat();
+                Token::Dash
+            }
+
             c => {
                 if is_id(c) {
                     let mut res = String::from("");
@@ -189,9 +205,6 @@ impl Lexer {
                         "break" => Token::BreakKw,
                         "continue" => Token::Continuekw,
                         "ret" => Token::RetKw,
-                        // tags(types(old WIP))
-                        "__int__" => Token::Tag("int".to_string()),
-                        "__float__" => Token::Tag("float".to_string()),
                         // bools
                         "true" => Token::Bool(true),
                         "false" => Token::Bool(false),

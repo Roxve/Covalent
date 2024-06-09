@@ -6,9 +6,7 @@ pub enum Token {
     Float(f32),
     Str(String),
     Bool(bool),
-
     Ident(String),
-    Tag(String),
     Err(String), // error code and msg
     LeftParen,
     RightParen,
@@ -17,6 +15,7 @@ pub enum Token {
     LeftBracket,
     RightBracket,
     Exec,
+    Dash,
     Colon,
     Comma,
     Dot,
