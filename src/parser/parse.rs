@@ -188,12 +188,14 @@ impl Parse for Parser {
                 self.next();
                 if self.current() == Token::Dash {
                     if let Token::Ident(tag) = self.next() {
+                        self.next();
                         untyped(Expr::Ident(Ident::Tagged(tag, id)))
                     } else {
                         self.err(
                             ErrKind::UnexceptedTokenE,
                             format!("unexpected token after '@' expected type to tag {}", id),
                         );
+
                         tmp!()
                     }
                 } else {

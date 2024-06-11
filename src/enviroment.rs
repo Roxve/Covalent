@@ -109,7 +109,6 @@ impl Enviroment {
     } // returns the top level enviroment
     pub fn push_function(&mut self, name: String, args: Vec<AtomKind>, ty: AtomKind) {
         self.top()
-            .vars
-            .insert(name.clone(), AtomKind::Func(Box::new(ty), args, name));
+            .add(&name, AtomKind::Func(Box::new(ty), args, name.clone()));
     }
 }

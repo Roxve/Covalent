@@ -133,6 +133,14 @@ impl Ident {
         }
     }
 
+    pub fn val_mut(&mut self) -> &mut String {
+        match self {
+            Ident::Tagged(_, ref mut val)
+            | Ident::UnTagged(ref mut val)
+            | Ident::Typed(_, ref mut val) => val,
+        }
+    }
+
     pub fn tuple(self) -> (AtomKind, String) {
         match self {
             Ident::Typed(ty, val) => (ty, val),

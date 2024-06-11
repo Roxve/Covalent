@@ -121,7 +121,7 @@ impl Analyzer {
         btype!("float", AtomKind::Float);
 
         // setting our env blueprints to our uncompiled functions (blueprints are then compiled pased on call arguments)
-        analyzer.blueprints(functions);
+        analyzer.blueprints(functions)?;
         analyzed_prog.append(&mut analyzer.analyz_body(exprs, true)?);
 
         analyzed_prog = [
@@ -152,7 +152,7 @@ impl Analyzer {
 
                 let ast = parser.parse_prog();
 
-                self.blueprints(parser.functions);
+                self.blueprints(parser.functions)?;
                 let mut ast = self.analyz_body(ast, true)?;
 
                 analyzed_body.append(&mut ast);
@@ -375,49 +375,51 @@ impl Analyzer {
                 let args_types: Vec<AtomKind> = args.iter().map(|arg| arg.ty.clone()).collect();
                 let mangle = type_mangle(name.clone(), args_types.clone());
 
-                let (expr, ty) = if self.env.has(&mangle) {
+                if self.env.has(&mangle) {
+                    dbg!(&mangle);
                     let id_ty = self.env.get_ty(&mangle).unwrap();
+                    dbg!(&id_ty);
 
-                    let ty = if let AtomKind::Func(ref ret, _, _) = id_ty {
-                        *ret.clone()
-                    } else {
-                        panic!()
+                    match id_ty {
+                        AtomKind::Func(ref ret, _, _) => {
+                            return Ok(Node {
+                                expr: Expr::FnCall {
+                                    name: Box::new(Node {
+                                        expr: Expr::Ident(Ident::UnTagged(mangle)),
+                                        ty: id_ty.clone(),
+                                    }),
+                                    args,
+                                },
+                                ty: *ret.clone(),
+                            })
+                        }
+
+                        AtomKind::Blueprint { .. } => (), // continue building blueprint
+                        _ => panic!(),
                     };
+                }
 
-                    (
-                        Expr::FnCall {
-                            name: Box::new(Node {
-                                expr: Expr::Ident(Ident::UnTagged(mangle)),
-                                ty: id_ty,
-                            }),
-                            args,
-                        },
-                        ty,
-                    )
+                // building a function from blueprint
+                let blueprint = self.env.get_blueprint(&name).unwrap();
+
+                let fun = self.analyz_blueprint(blueprint, args_types)?;
+                let ty = self.env.get_ty(&fun).unwrap(); // calling the built function
+
+                let ret = if let AtomKind::Func(ret, _, _) = ty.clone() {
+                    *ret
                 } else {
-                    // building a function from blueprint
-                    let blueprint = self.env.get_blueprint(&name).unwrap();
-
-                    let fun = self.analyz_blueprint(blueprint, args_types)?;
-                    let ty = self.env.get_ty(&fun).unwrap(); // calling the built function
-
-                    let ret = if let AtomKind::Func(ret, _, _) = ty.clone() {
-                        *ret
-                    } else {
-                        panic!()
-                    };
-
-                    let expr = Expr::FnCall {
-                        name: Box::new(Node {
-                            ty: ty.clone(),
-                            expr: Expr::Ident(Ident::UnTagged(fun)),
-                        }),
-                        args,
-                    };
-                    (expr, ret)
+                    panic!()
                 };
 
-                Ok(Node { expr, ty })
+                let expr = Expr::FnCall {
+                    name: Box::new(Node {
+                        ty: ty.clone(),
+                        expr: Expr::Ident(Ident::UnTagged(fun)),
+                    }),
+                    args,
+                };
+
+                Ok(Node { expr, ty: ret })
             }
 
             AtomKind::Func(ret, args_types, _) => {

@@ -1,8 +1,9 @@
 pub mod analysis;
 
 use crate::enviroment::Enviroment;
-use crate::parser::ast::{Blueprint, Expr, Node};
-use crate::types::AtomKind;
+use crate::err::ErrKind;
+use crate::parser::ast::{Blueprint, Expr, Ident, Node};
+use crate::types::{type_mangle, AtomKind};
 
 pub struct Analyzer {
     workdir: String,
@@ -208,21 +209,59 @@ impl Analyzer {
             workdir,
         }
     }
-    pub fn blueprints(&mut self, blueprints: Vec<Blueprint>) {
-        self.env.blueprints.append(&mut blueprints.clone());
-        for blueprint in blueprints.clone() {
+
+    pub fn blueprints(&mut self, blueprints: Vec<Blueprint>) -> Result<(), ErrKind> {
+        let blueprints = &mut blueprints.clone();
+
+        for blueprint in &mut *blueprints {
+            let mut params = Vec::new();
+            let mut types = Vec::new();
+            for arg in blueprint.args.clone() {
+                match arg {
+                    Ident::Tagged(tag, id) => {
+                        let tag = self.env.get_ty(&tag);
+
+                        if let Some(AtomKind::Type(t)) = tag {
+                            types.push((*t).clone());
+
+                            params.push(Ident::Typed(*t, id));
+                        } else {
+                            return Err(ErrKind::InvaildType);
+                        }
+                    }
+
+                    Ident::UnTagged(_) => {
+                        types.push(AtomKind::Any);
+
+                        params.push(arg)
+                    }
+                    _ => params.push(arg),
+                }
+            }
+
+            blueprint.args = params;
+            let old = blueprint.name.val().clone();
+
+            *blueprint.name.val_mut() = type_mangle(blueprint.name.val().clone(), types);
+
+            dbg!(&blueprint.name);
+
             let blueprint_ty = AtomKind::Blueprint {
                 argc: blueprint.args.len() as u32,
                 name: blueprint.name.val().clone(),
             };
 
-            self.env.add(&blueprint.name.val(), blueprint_ty);
+            self.env.add(&blueprint.name.val(), blueprint_ty.clone());
+            self.env.add(&old, blueprint_ty);
         }
+
+        self.env.blueprints.append(blueprints);
 
         // for blueprint in blueprints {
         //     if blueprint.args.len() == 0 {
         //         self.analyz_blueprint(blueprint, Vec::new())?;
         //     }
         // }
+        Ok(())
     }
 }

@@ -1,3 +1,4 @@
+use core::fmt::Display;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -8,6 +9,7 @@ pub enum AtomKind {
     Str,
     Bool,
     Dynamic,
+    Any,
     Void,
     Unknown(Option<Box<Self>>),
     List(Box<Self>),
@@ -30,29 +32,78 @@ impl AtomKind {
             _ => None,
         }
     }
-
-    pub fn as_str(&self) -> &str {
-        match self {
-            Self::Int => "int",
-            Self::Float => "float",
-            Self::Str => "str",
-            Self::Bool => "bool",
-            _ => "none",
-        }
-    }
 }
 
-pub fn type_mangle(name: String, types: Vec<AtomKind>) -> String {
+pub fn type_mangle(mut name: String, types: Vec<AtomKind>) -> String {
+    let name = {
+        let idx = name.find('$');
+        if idx.is_some() {
+            let idx = idx.unwrap();
+            name.truncate(idx);
+        }
+        name
+    }; // removes any previous mangles from name
+
     let mut mangle = String::new();
     mangle.push_str(name.as_str());
+    mangle.push('$'); // type start
+
     if types.len() == 0 {
-        mangle.push_str("_empty");
+        mangle.push_str("empty");
     }
 
+    let mut first = true; // if its the first time running loop (under)
+
     for type_n in types {
-        mangle.push('_');
-        mangle.push_str(type_n.as_str());
+        if !first {
+            mangle.push('_');
+        } else {
+            first = false
+        }
+
+        mangle.push_str(type_n.to_string().as_str());
     }
 
     return mangle;
+}
+
+impl Display for AtomKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            &AtomKind::Int => write!(f, "int"),
+            &AtomKind::Float => write!(f, "float"),
+            &AtomKind::Bool => write!(f, "bool"),
+            &AtomKind::Str => write!(f, "str"),
+            &AtomKind::Any => write!(f, "any"),
+            &AtomKind::Dynamic => write!(f, "dynamic"),
+            &AtomKind::Void => write!(f, "void"),
+
+            &AtomKind::Unknown(ref assume) => match assume {
+                &Some(ref t) => write!(f, "Unknown(some({}))", t.to_string()),
+                &None => write!(f, "Unknown(none)"),
+            },
+
+            &AtomKind::List(ref ty) => write!(f, "List({})", ty.to_string()),
+            &AtomKind::Type(ref ty) => write!(f, "Type({})", ty.to_string()),
+            &AtomKind::Func(ref ret, ref args, ref name) => write!(
+                f,
+                "{}@{}{}",
+                name,
+                ret,
+                if args.len() > 0 {
+                    ": ".to_owned()
+                        + &args
+                            .iter()
+                            .map(|arg| arg.to_string())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                } else {
+                    "!".to_string()
+                }
+            ),
+
+            &AtomKind::Blueprint { argc, ref name } => write!(f, "{}: {}", name, argc),
+            &AtomKind::Obj(_) => todo!(),
+        }
+    }
 }
