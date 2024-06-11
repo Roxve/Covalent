@@ -26,6 +26,11 @@ pub trait Parse {
     fn parse_list(&mut self) -> Vec<Node>;
 }
 
+macro_rules! tmp {
+    () => {
+        untyped(Expr::Literal(Literal::Int(0)))
+    };
+}
 impl Parse for Parser {
     fn parse_prog(&mut self) -> Vec<Node> {
         let mut body = Vec::new();
@@ -181,7 +186,19 @@ impl Parse for Parser {
 
             Token::Ident(id) => {
                 self.next();
-                untyped(Expr::Ident(Ident::UnTagged(id)))
+                if self.current() == Token::Dash {
+                    if let Token::Ident(tag) = self.next() {
+                        untyped(Expr::Ident(Ident::Tagged(tag, id)))
+                    } else {
+                        self.err(
+                            ErrKind::UnexceptedTokenE,
+                            format!("unexpected token after '@' expected type to tag {}", id),
+                        );
+                        tmp!()
+                    }
+                } else {
+                    untyped(Expr::Ident(Ident::UnTagged(id)))
+                }
             }
             // Token::Tag(tag) => {
             //     self.next();
@@ -233,7 +250,7 @@ impl Parse for Parser {
                 self.next();
 
                 // todo!(); // add ERR TODO <-
-                untyped(Expr::Literal(Literal::Int(0)))
+                tmp!()
             }
         }
     }

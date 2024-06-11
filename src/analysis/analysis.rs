@@ -59,7 +59,7 @@ impl Analyzer {
         let mut typed_params = Vec::new();
         for (i, arg) in (&blueprint.args).into_iter().enumerate() {
             self.env.add(&arg.val(), types[i].clone());
-            typed_params.push(Ident::Tagged(types[i].clone(), arg.val().clone()))
+            typed_params.push(Ident::Typed(types[i].clone(), arg.val().clone()))
         }
 
         let mut body = self.analyz_body(blueprint.body, false)?;
@@ -109,6 +109,17 @@ impl Analyzer {
             "writeln",
             vec![AtomKind::Dynamic],
         );
+
+        macro_rules! btype {
+            ($name: expr, $ty: path) => {
+                analyzer
+                    .env
+                    .add(&($name).to_string(), AtomKind::Type(Box::new($ty)));
+            };
+        }
+        btype!("int", AtomKind::Int);
+        btype!("float", AtomKind::Float);
+
         // setting our env blueprints to our uncompiled functions (blueprints are then compiled pased on call arguments)
         analyzer.blueprints(functions);
         analyzed_prog.append(&mut analyzer.analyz_body(exprs, true)?);

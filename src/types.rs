@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AtomKind {
+    Type(Box<Self>),
     Int,
     Float,
     Str,

@@ -1,3 +1,5 @@
+use core::panic;
+
 use crate::types::AtomKind;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
@@ -119,28 +121,31 @@ pub fn untyped(expr: Expr) -> Node {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ident {
-    Tagged(AtomKind, String),
+    Tagged(String, String),
+    Typed(AtomKind, String),
     UnTagged(String),
 }
 
 impl Ident {
     pub fn val(&self) -> &String {
         match self {
-            Ident::Tagged(_, ref val) | Ident::UnTagged(ref val) => val,
+            Ident::Tagged(_, ref val) | Ident::UnTagged(ref val) | Ident::Typed(_, ref val) => val,
         }
     }
 
     pub fn tuple(self) -> (AtomKind, String) {
         match self {
-            Ident::Tagged(ty, val) => (ty, val),
+            Ident::Typed(ty, val) => (ty, val),
             Ident::UnTagged(val) => (AtomKind::Dynamic, val),
+            _ => panic!(),
         }
     }
 
     pub fn ty(&self) -> &AtomKind {
         match self {
-            Ident::Tagged(ref ty, _) => ty,
+            Ident::Typed(ref ty, _) => ty,
             Ident::UnTagged(_) => &AtomKind::Dynamic,
+            _ => panic!(),
         }
     }
 }

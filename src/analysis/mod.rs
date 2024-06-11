@@ -25,9 +25,7 @@ impl AtomKind {
             &Self::Float | &Self::Int => [MATH_OP, COMPARE_OP].concat(),
             &Self::Str | &Self::List(_) => [COMPARE_OP, &["+"]].concat(),
             &Self::Dynamic | &Self::Unknown(_) => [LOGIC_OP, COMPARE_OP, MATH_OP].concat(),
-            &Self::Void | &Self::Obj(_) | &Self::Func(_, _, _) | &Self::Blueprint { .. } => {
-                Vec::new()
-            }
+            _ => Vec::new(),
         }
     }
 }
