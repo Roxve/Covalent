@@ -1,7 +1,7 @@
 use std::fs;
 
 use crate::parser::parse::Parse;
-use crate::types::{type_mangle, AtomKind};
+use crate::types::{mangle_types, type_mangle, AtomKind};
 
 use crate::err::{ATErr, ErrKind};
 use crate::parser::ast::{Blueprint, Expr, Ident, Node};
@@ -364,21 +364,20 @@ impl Analyzer {
     pub fn analyz_call(&mut self, name: Node, args: Vec<Node>) -> Result<Node, ErrKind> {
         let name = Box::new(self.analyz(name)?);
         match name.ty.clone() {
-            AtomKind::Blueprint { argc, name } => {
+            AtomKind::Blueprint(ref_name, names) => {
                 let args = self.analyz_items(args)?;
 
-                // TODO! if its a member call pass parent as first arg and call the child instead
-                if &argc != &(args.len() as u32) {
-                    self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), argc, name));
-                    return Err(ErrKind::UndeclaredVar);
-                }
                 let args_types: Vec<AtomKind> = args.iter().map(|arg| arg.ty.clone()).collect();
-                let mangle = type_mangle(name.clone(), args_types.clone());
+
+                let mangle = type_mangle(ref_name, args_types.clone());
+                // TODO! if its a member call pass parent as first arg and call the child instead
+                // if &argc != &(args.len() as u32) {
+                //     self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), argc, name));
+                //     return Err(ErrKind::UndeclaredVar);
+                // }
 
                 if self.env.has(&mangle) {
-                    dbg!(&mangle);
                     let id_ty = self.env.get_ty(&mangle).unwrap();
-                    dbg!(&id_ty);
 
                     match id_ty {
                         AtomKind::Func(ref ret, _, _) => {
@@ -394,13 +393,61 @@ impl Analyzer {
                             })
                         }
 
-                        AtomKind::Blueprint { .. } => (), // continue building blueprint
+                        AtomKind::Blueprint(_, _) => (), // continue building blueprint
                         _ => panic!(),
                     };
                 }
 
+                let mut blueprint = None;
+                let mut possible = Vec::new();
+
+                for name in names {
+                    if name == mangle {
+                        blueprint = Some(self.env.get_blueprint(&name).unwrap());
+                        break;
+                    }
+
+                    let mangle = mangle_types(mangle.clone());
+
+                    let mut found = true;
+                    for (i, ty) in mangle_types(name.clone()).iter().enumerate() {
+                        let m_ty = &mangle[i];
+
+                        if !(ty == m_ty || ty == &String::from("any")) {
+                            found = false;
+                            break;
+                        }
+                    }
+
+                    if found {
+                        possible.push(name);
+                    }
+                }
+
+                if blueprint.is_none() {
+                    // choose the name with least possible any
+                    let mut least_count = args_types.len(); // least possible count where all types are any;
+
+                    let mut choosen = String::new();
+                    for name in possible {
+                        let types = mangle_types(name.clone());
+                        let mut count = 0;
+
+                        types.iter().for_each(|ty| {
+                            if ty == &String::from("any") {
+                                count += 1
+                            }
+                        });
+
+                        if count <= least_count {
+                            least_count = count;
+                            choosen = name;
+                        }
+                    }
+                    blueprint = Some(self.env.get_blueprint(&choosen).unwrap());
+                }
                 // building a function from blueprint
-                let blueprint = self.env.get_blueprint(&name).unwrap();
+                let blueprint = blueprint.unwrap();
 
                 let fun = self.analyz_blueprint(blueprint, args_types)?;
                 let ty = self.env.get_ty(&fun).unwrap(); // calling the built function

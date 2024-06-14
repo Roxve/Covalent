@@ -14,7 +14,7 @@ pub enum AtomKind {
     Unknown(Option<Box<Self>>),
     List(Box<Self>),
     Func(Box<Self>, Vec<Self>, String),
-    Blueprint { argc: u32, name: String },
+    Blueprint(String, Vec<String>),
     Obj(HashMap<String, Self>),
 }
 
@@ -67,6 +67,10 @@ pub fn type_mangle(mut name: String, types: Vec<AtomKind>) -> String {
     return mangle;
 }
 
+pub fn mangle_types(mangle: String) -> Vec<String> {
+    let types = mangle.get(mangle.find('$').unwrap() + 1..).unwrap();
+    types.split('_').map(|s| s.to_string()).collect()
+}
 impl Display for AtomKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -102,7 +106,7 @@ impl Display for AtomKind {
                 }
             ),
 
-            &AtomKind::Blueprint { argc, ref name } => write!(f, "{}: {}", name, argc),
+            &AtomKind::Blueprint(ref ref_name, _) => write!(f, "Function(\"{}\")", ref_name),
             &AtomKind::Obj(_) => todo!(),
         }
     }

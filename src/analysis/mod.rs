@@ -1,5 +1,7 @@
 pub mod analysis;
 
+use std::vec;
+
 use crate::enviroment::Enviroment;
 use crate::err::ErrKind;
 use crate::parser::ast::{Blueprint, Expr, Ident, Node};
@@ -240,19 +242,27 @@ impl Analyzer {
             }
 
             blueprint.args = params;
-            let old = blueprint.name.val().clone();
+            let ref_name = blueprint.name.val().clone();
 
             *blueprint.name.val_mut() = type_mangle(blueprint.name.val().clone(), types);
 
-            dbg!(&blueprint.name);
+            let blueprint_ty = {
+                let get = self.env.get_ty(&ref_name);
+                let name = blueprint.name.val().clone();
 
-            let blueprint_ty = AtomKind::Blueprint {
-                argc: blueprint.args.len() as u32,
-                name: blueprint.name.val().clone(),
+                if get.is_none() {
+                    AtomKind::Blueprint(ref_name.clone(), vec![name])
+                } else {
+                    if let AtomKind::Blueprint(_, mut names) = get.unwrap().clone() {
+                        names.push(name);
+                        AtomKind::Blueprint(ref_name.clone(), names)
+                    } else {
+                        panic!()
+                    }
+                }
             };
 
-            self.env.add(&blueprint.name.val(), blueprint_ty.clone());
-            self.env.add(&old, blueprint_ty);
+            self.env.add(&ref_name, blueprint_ty);
         }
 
         self.env.blueprints.append(blueprints);
