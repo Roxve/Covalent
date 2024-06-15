@@ -9,14 +9,15 @@ use crate::parser::ast::{Blueprint, Expr, Ident, Node};
 use super::*;
 
 impl Analyzer {
-    pub fn err(&mut self, kind: ErrKind, msg: String) {
+    pub fn err(&mut self, kind: ErrKind, msg: String) -> Result<Node, ErrKind> {
         let err = ATErr {
-            kind,
+            kind: kind.clone(),
             msg,
             line: self.line,
             column: self.column,
         };
         err.out_error();
+        Err(kind)
     }
     #[inline]
     fn import(
@@ -203,8 +204,7 @@ impl Analyzer {
                     }
 
                     if &item.ty != &item_ty {
-                        self.err(ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
-                        return Err(ErrKind::InvaildType);
+                        return self.err(ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
                     }
                 }
                 let ty = AtomKind::List(Box::new(item_ty));
@@ -249,14 +249,13 @@ impl Analyzer {
             } => {
                 let condition = Box::new(self.analyz(*condition)?);
                 if &condition.ty != &AtomKind::Bool {
-                    self.err(
+                    return self.err(
                         ErrKind::InvaildType,
                         format!(
                             "invaild condition for while loop expected Bool got {:?}",
                             condition.ty
                         ),
                     );
-                    return Err(ErrKind::InvaildType);
                 }
                 let body = self.analyz_body(body, false)?;
 
@@ -299,14 +298,13 @@ impl Analyzer {
             Expr::WhileExpr { condition, body } => {
                 let condition = Box::new(self.analyz(*condition)?);
                 if &condition.ty != &AtomKind::Bool {
-                    self.err(
+                    return self.err(
                         ErrKind::InvaildType,
                         format!(
                             "invaild condition for while loop expected Bool got {:?}",
                             condition.ty
                         ),
                     );
-                    return Err(ErrKind::InvaildType);
                 }
                 let body = self.analyz_body(body, false)?;
 
@@ -351,8 +349,7 @@ impl Analyzer {
         };
 
         if !supports_op(&lhs.ty, &op) {
-            self.err(ErrKind::OperationNotGranted, format!("one of possible types [{:?}] does not support operator {}, use the do keyword to do it anyways", lhs.ty, op));
-            return Err(ErrKind::OperationNotGranted);
+            return self.err(ErrKind::OperationNotGranted, format!("one of possible types [{:?}] does not support operator {}, use the do keyword to do it anyways", lhs.ty, op));
         }
         let left = Box::new(lhs);
         let right = Box::new(rhs);
@@ -473,8 +470,7 @@ impl Analyzer {
                 let mut args = self.analyz_items(args)?;
 
                 if &args_types.len() != &args.len() {
-                    self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_types.len(), name));
-                    return Err(ErrKind::UndeclaredVar);
+                    return self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_types.len(), name));
                 }
 
                 for (i, arg) in (&mut args).iter_mut().enumerate() {
@@ -484,14 +480,13 @@ impl Analyzer {
                         if attempt.is_ok() {
                             *arg = attempt.unwrap();
                         } else {
-                            self.err(
+                            return self.err(
                                 ErrKind::UnexceptedArgs,
                                 format!(
                                     "unexpected argument type, at arg {}, expected {:?}, got {:?}",
                                     i, args_types[i], arg.ty
                                 ),
                             );
-                            return Err(ErrKind::UnexceptedArgs);
                         }
                     }
                 }
@@ -502,11 +497,10 @@ impl Analyzer {
             }
 
             _ => {
-                self.err(
+                return self.err(
                     ErrKind::UnexceptedTokenE,
                     format!("expected symbol to call got {:?}", name.expr),
                 );
-                Err(ErrKind::UnexceptedTokenE)
             }
         }
     }
@@ -515,18 +509,16 @@ impl Analyzer {
         let parent = self.analyz(parent)?;
         let index = self.analyz(index)?;
         if index.ty != AtomKind::Int {
-            self.err(ErrKind::InvaildType, format!("index is not an int"));
-            return Err(ErrKind::InvaildType);
+            return self.err(ErrKind::InvaildType, format!("index is not an int"));
         }
         let ty = match parent.ty.clone() {
             AtomKind::Str => AtomKind::Str,
             AtomKind::List(t) => *t,
             _ => {
-                self.err(
+                return self.err(
                     ErrKind::InvaildType,
                     format!("cannot index {:?}", parent.ty),
                 );
-                return Err(ErrKind::InvaildType);
             }
         };
 
@@ -577,7 +569,26 @@ impl Analyzer {
         if self.env.has(&name.val()) {
             return Err(ErrKind::VarAlreadyDeclared);
         }
+
+        if let &Ident::Tagged(ref tag, _) = &name {
+            if let Some(AtomKind::Type(ty)) = self.env.get_ty(tag) {
+                self.env.expect(name.val(), *ty);
+            } else {
+                self.err(ErrKind::InvaildType, format!("{} is not an Atom", tag))?;
+            }
+        }
+
         let ty = val.ty.clone();
+        if !self.env.is_expected(&name.val(), &ty) {
+            self.err(
+                ErrKind::InvaildType,
+                format!(
+                    "unexpected type {ty}, for id {}, expected {}",
+                    name.val(),
+                    ""
+                ),
+            )?;
+        }
         self.env.add(&name.val(), ty.clone());
 
         let expr = Expr::VarDeclare {
@@ -598,8 +609,7 @@ impl Analyzer {
             if let AtomKind::Unknown(assume) = name.ty.clone() {
                 ty = AtomKind::Unknown(assume);
             } else {
-                self.err(ErrKind::InvaildType, format!("cannot set the value of an Obj property to a value of different type, got type {:?} expected {:?}, in expr {:?} = {:?}", val.ty, name.ty, name, val));
-                return Err(ErrKind::InvaildType);
+                return self.err(ErrKind::InvaildType, format!("cannot set the value of an Obj property to a value of different type, got type {:?} expected {:?}, in expr {:?} = {:?}", val.ty, name.ty, name, val));
             }
         }
 
@@ -622,11 +632,10 @@ impl Analyzer {
             };
             let (try_conv, unchanged) = self.type_conv(from.clone(), _tmp.clone())?;
             if &unchanged != &_tmp {
-                self.err(
+                return self.err(
                     ErrKind::InvaildType,
                     format!("cannot convert from {:?} into {:?}", from.ty, _tmp.ty),
                 );
-                return Err(ErrKind::InvaildType);
             }
             Ok(try_conv)
         }
@@ -663,8 +672,7 @@ impl Analyzer {
                 self.err(
                     ErrKind::InvaildType,
                     format!("cannot make {:?} and {:?} as the same type", lhs.ty, rhs.ty),
-                );
-                return Err(ErrKind::InvaildType);
+                )?;
             }
         }
 

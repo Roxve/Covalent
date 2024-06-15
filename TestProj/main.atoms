@@ -14,8 +14,8 @@ set do_s! {
 }
 
 
-set x = factorial: 5
-set y = factorial: 5.0
+set x@int = factorial: 5
+set y@float = factorial: 5.0
 set z = factorial: 6
 
 writeln: "5! ->"

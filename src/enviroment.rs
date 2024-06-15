@@ -6,6 +6,7 @@ use crate::types::AtomKind;
 #[derive(Clone, Debug)]
 pub struct Enviroment {
     pub vars: HashMap<String, AtomKind>,
+    pub expects: HashMap<String, AtomKind>,
     pub current: AtomKind,
     pub parent: Option<Box<Enviroment>>,
     pub blueprints: Vec<Blueprint>,
@@ -15,6 +16,7 @@ impl Enviroment {
     pub fn new(parent: Option<Box<Self>>) -> Self {
         Self {
             vars: HashMap::new(),
+            expects: HashMap::new(),
             current: AtomKind::Void,
             parent,
             blueprints: Vec::new(),
@@ -110,5 +112,23 @@ impl Enviroment {
     pub fn push_function(&mut self, name: String, args: Vec<AtomKind>, ty: AtomKind) {
         self.top()
             .add(&name, AtomKind::Func(Box::new(ty), args, name.clone()));
+    }
+
+    pub fn expect(&mut self, name: &String, ty: AtomKind) {
+        self.expects.insert(name.clone(), ty);
+    }
+
+    pub fn is_expected(&mut self, name: &String, ty: &AtomKind) -> bool {
+        if self.expects.get(name).is_some_and(|x| x == ty) {
+            return true;
+        } else if self.expects.get(name).is_some() {
+            return false;
+        }
+
+        if self.parent.is_some() {
+            return self.parent().unwrap().is_expected(name, ty);
+        }
+
+        true
     }
 }
