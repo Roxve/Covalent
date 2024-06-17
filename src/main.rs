@@ -17,15 +17,15 @@ use crate::compiler::{Backend, CSettings, CompilerConfig};
 use std::{env, fs, process::Command};
 #[test]
 fn test() {
-    let path = "TestProg/main.atoms";
+    let path = "TestProj/main.atoms";
     let prog = fs::read_to_string(path).unwrap();
 
     CompilerConfig::new(
         prog,
         Backend::C(CSettings::new(None, Vec::new())),
         true,
-        "/tmp/covalent/test.c".to_string(),
-        path.to_string(),
+        "__tmp_test".to_string(),
+        "TestProj".to_string(),
     )
     .compile();
 }

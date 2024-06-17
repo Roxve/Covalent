@@ -6,7 +6,7 @@ set factorial: x {
 	ret x * factorial: x - 1
 }
 
-set factorial: x@float {
+set factorial@float: x@float {
 	writeln: "doing float things!"
 	if x == 1.0 {
 		ret 1.0

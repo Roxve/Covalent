@@ -8,17 +8,33 @@ use crate::parser::ast::{Blueprint, Expr, Ident, Node};
 
 use super::*;
 
+macro_rules! err {
+    ($self: ident, $kind: path, $msg: literal) => {
+        ATErr {
+            kind: $kind.clone(),
+            msg: $msg.to_string(),
+            line: $self.line,
+            column: $self.column,
+        }
+        .out_error();
+
+        return Err($kind);
+    };
+
+    ($self: ident, $kind: path, $msg: expr) => {
+        ATErr {
+            kind: $kind.clone(),
+            msg: $msg,
+            line: $self.line,
+            column: $self.column,
+        }
+        .out_error();
+
+        return Err($kind);
+    };
+}
+
 impl Analyzer {
-    pub fn err(&mut self, kind: ErrKind, msg: String) -> Result<Node, ErrKind> {
-        let err = ATErr {
-            kind: kind.clone(),
-            msg,
-            line: self.line,
-            column: self.column,
-        };
-        err.out_error();
-        Err(kind)
-    }
     #[inline]
     fn import(
         &mut self,
@@ -40,6 +56,28 @@ impl Analyzer {
         })
     }
 
+    pub fn expect(&mut self, name: &Ident) -> Result<(), ErrKind> {
+        self.expect_as(name.val(), name)
+    }
+
+    // expects a name as an ident tag if it has a tag
+    pub fn expect_as(&mut self, name: &String, from: &Ident) -> Result<(), ErrKind> {
+        if let &Ident::Tagged(ref tag, _) = from {
+            if let Some(AtomKind::Type(ty)) = self.env.get_ty(tag) {
+                self.env.expect(name, *ty);
+                Ok(())
+            } else {
+                err!(
+                    self,
+                    ErrKind::InvaildType,
+                    format!("{} is not an Atom", tag)
+                );
+            }
+        } else {
+            Ok(())
+        }
+    }
+
     pub fn analyz_blueprint(
         &mut self,
         blueprint: Blueprint,
@@ -53,6 +91,7 @@ impl Analyzer {
         }
 
         self.env = self.env.child();
+        self.expect_as(&mangle, &blueprint.name)?;
         // allows for the function to call itself
         self.env
             .push_function(mangle.clone(), Vec::new(), AtomKind::Unknown(None));
@@ -65,6 +104,19 @@ impl Analyzer {
 
         let mut body = self.analyz_body(blueprint.body, false)?;
         let ty = get_fn_type(&body);
+
+        if !self.env.is_expected(&mangle, &ty) {
+            err!(
+                self,
+                ErrKind::InvaildType,
+                format!(
+                    "invaild return type for function {}, expected {} got {}",
+                    mangle,
+                    self.env.get_expected(&mangle),
+                    ty
+                )
+            );
+        }
 
         replace_body_ty(
             &mut body,
@@ -204,7 +256,7 @@ impl Analyzer {
                     }
 
                     if &item.ty != &item_ty {
-                        return self.err(ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
+                        err!(self, ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
                     }
                 }
                 let ty = AtomKind::List(Box::new(item_ty));
@@ -249,12 +301,13 @@ impl Analyzer {
             } => {
                 let condition = Box::new(self.analyz(*condition)?);
                 if &condition.ty != &AtomKind::Bool {
-                    return self.err(
+                    err!(
+                        self,
                         ErrKind::InvaildType,
                         format!(
                             "invaild condition for while loop expected Bool got {:?}",
                             condition.ty
-                        ),
+                        )
                     );
                 }
                 let body = self.analyz_body(body, false)?;
@@ -298,12 +351,13 @@ impl Analyzer {
             Expr::WhileExpr { condition, body } => {
                 let condition = Box::new(self.analyz(*condition)?);
                 if &condition.ty != &AtomKind::Bool {
-                    return self.err(
+                    err!(
+                        self,
                         ErrKind::InvaildType,
                         format!(
                             "invaild condition for while loop expected Bool got {:?}",
                             condition.ty
-                        ),
+                        )
                     );
                 }
                 let body = self.analyz_body(body, false)?;
@@ -349,7 +403,7 @@ impl Analyzer {
         };
 
         if !supports_op(&lhs.ty, &op) {
-            return self.err(ErrKind::OperationNotGranted, format!("one of possible types [{:?}] does not support operator {}, use the do keyword to do it anyways", lhs.ty, op));
+            err!(self,ErrKind::OperationNotGranted, format!("one of possible types [{:?}] does not support operator {}, use the do keyword to do it anyways", lhs.ty, op));
         }
         let left = Box::new(lhs);
         let right = Box::new(rhs);
@@ -470,7 +524,7 @@ impl Analyzer {
                 let mut args = self.analyz_items(args)?;
 
                 if &args_types.len() != &args.len() {
-                    return self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_types.len(), name));
+                    err!(self, ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_types.len(), name));
                 }
 
                 for (i, arg) in (&mut args).iter_mut().enumerate() {
@@ -480,12 +534,13 @@ impl Analyzer {
                         if attempt.is_ok() {
                             *arg = attempt.unwrap();
                         } else {
-                            return self.err(
+                            err!(
+                                self,
                                 ErrKind::UnexceptedArgs,
                                 format!(
                                     "unexpected argument type, at arg {}, expected {:?}, got {:?}",
                                     i, args_types[i], arg.ty
-                                ),
+                                )
                             );
                         }
                     }
@@ -497,9 +552,10 @@ impl Analyzer {
             }
 
             _ => {
-                return self.err(
+                err!(
+                    self,
                     ErrKind::UnexceptedTokenE,
-                    format!("expected symbol to call got {:?}", name.expr),
+                    format!("expected symbol to call got {:?}", name.expr)
                 );
             }
         }
@@ -509,15 +565,16 @@ impl Analyzer {
         let parent = self.analyz(parent)?;
         let index = self.analyz(index)?;
         if index.ty != AtomKind::Int {
-            return self.err(ErrKind::InvaildType, format!("index is not an int"));
+            err!(self, ErrKind::InvaildType, format!("index is not an int"));
         }
         let ty = match parent.ty.clone() {
             AtomKind::Str => AtomKind::Str,
             AtomKind::List(t) => *t,
             _ => {
-                return self.err(
+                err!(
+                    self,
                     ErrKind::InvaildType,
-                    format!("cannot index {:?}", parent.ty),
+                    format!("cannot index {:?}", parent.ty)
                 );
             }
         };
@@ -570,24 +627,19 @@ impl Analyzer {
             return Err(ErrKind::VarAlreadyDeclared);
         }
 
-        if let &Ident::Tagged(ref tag, _) = &name {
-            if let Some(AtomKind::Type(ty)) = self.env.get_ty(tag) {
-                self.env.expect(name.val(), *ty);
-            } else {
-                self.err(ErrKind::InvaildType, format!("{} is not an Atom", tag))?;
-            }
-        }
-
+        self.expect(&name)?;
         let ty = val.ty.clone();
+
         if !self.env.is_expected(&name.val(), &ty) {
-            self.err(
+            err!(
+                self,
                 ErrKind::InvaildType,
                 format!(
                     "unexpected type {ty}, for id {}, expected {}",
                     name.val(),
-                    ""
-                ),
-            )?;
+                    self.env.get_expected(name.val())
+                )
+            );
         }
         self.env.add(&name.val(), ty.clone());
 
@@ -609,7 +661,7 @@ impl Analyzer {
             if let AtomKind::Unknown(assume) = name.ty.clone() {
                 ty = AtomKind::Unknown(assume);
             } else {
-                return self.err(ErrKind::InvaildType, format!("cannot set the value of an Obj property to a value of different type, got type {:?} expected {:?}, in expr {:?} = {:?}", val.ty, name.ty, name, val));
+                err!(self, ErrKind::InvaildType, format!("cannot set the value of an Obj property to a value of different type, got type {:?} expected {:?}, in expr {:?} = {:?}", val.ty, name.ty, name, val));
             }
         }
 
@@ -632,9 +684,10 @@ impl Analyzer {
             };
             let (try_conv, unchanged) = self.type_conv(from.clone(), _tmp.clone())?;
             if &unchanged != &_tmp {
-                return self.err(
+                err!(
+                    self,
                     ErrKind::InvaildType,
-                    format!("cannot convert from {:?} into {:?}", from.ty, _tmp.ty),
+                    format!("cannot convert from {:?} into {:?}", from.ty, _tmp.ty)
                 );
             }
             Ok(try_conv)
@@ -669,10 +722,11 @@ impl Analyzer {
             } else if rhs.ty == AtomKind::Dynamic {
                 lhs = ty_as(&rhs.ty, lhs);
             } else {
-                self.err(
+                err!(
+                    self,
                     ErrKind::InvaildType,
-                    format!("cannot make {:?} and {:?} as the same type", lhs.ty, rhs.ty),
-                )?;
+                    format!("cannot make {:?} and {:?} as the same type", lhs.ty, rhs.ty)
+                );
             }
         }
 

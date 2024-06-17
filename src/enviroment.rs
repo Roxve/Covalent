@@ -118,6 +118,16 @@ impl Enviroment {
         self.expects.insert(name.clone(), ty);
     }
 
+    pub fn get_expected(&mut self, name: &String) -> &AtomKind {
+        let expect = self.expects.get(name);
+
+        if expect.is_none() {
+            return self.parent.as_mut().unwrap().get_expected(name);
+        }
+
+        expect.unwrap()
+    }
+
     pub fn is_expected(&mut self, name: &String, ty: &AtomKind) -> bool {
         if self.expects.get(name).is_some_and(|x| x == ty) {
             return true;

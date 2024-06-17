@@ -15,12 +15,13 @@ set do_s! {
 
 
 set x@int = factorial: 5
-set y@float = factorial: 5.0
+
 set z = factorial: 6
 
 writeln: "5! ->"
 writeln: x
 writeln: "5.0! ->"
+set y@float = factorial: 5.0
 writeln: y
 writeln: "6! ->"
 writeln: z
