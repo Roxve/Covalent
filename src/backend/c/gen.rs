@@ -1,4 +1,5 @@
 use core::panic;
+use std::fmt::format;
 
 use super::type_to_c;
 use super::Emit;
@@ -8,6 +9,7 @@ use super::Codegen;
 use super::Item;
 use crate::ir::get_op_type;
 use crate::ir::IROp;
+use crate::parser::ast::Ident;
 use crate::types::AtomKind;
 
 impl Codegen {
@@ -63,6 +65,14 @@ impl Codegen {
         emiter.end();
         self.module.func(emiter.finish());
     }
+
+    fn bond_extern(&mut self, ret: AtomKind, name: String, params: Vec<Ident>) -> Emit {
+        let ty = type_to_c(ret);
+        let params = types_to_cnamed(params.iter().map(|x| x.clone().tuple()).collect());
+        self.module.func(vec![format!("{ty} {name}({params});")]);
+        Emit::None
+    }
+
     pub fn bond(&mut self, op: IROp) -> Emit {
         match op {
             IROp::Def(ret, name, args, body) => {
@@ -73,6 +83,8 @@ impl Codegen {
                     body,
                 );
             }
+
+            IROp::Extern(ret, name, params) => return self.bond_extern(ret, name, params),
 
             IROp::Alloc(_, _) => (),
             IROp::Dealloc(ty, name) => {
@@ -92,12 +104,14 @@ impl Codegen {
                 }
                 self.push(Item::List(ty, items.len() as u16));
             }
+
             IROp::Store(ty, name) => {
                 let val = self.pop_str();
                 let tyc = type_to_c(ty.clone());
 
                 return Emit::Line(format!("{} {} = {}", tyc, name, val));
             }
+
             IROp::Load(ty, name) => {
                 let name = self.get_var(name);
                 self.push(Item::Var(ty, name));

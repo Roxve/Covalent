@@ -3,9 +3,8 @@ use crate::scope::Scope;
 use super::ast::*;
 use super::Parser;
 use crate::err::ErrKind;
-use crate::lexer::token::Token;
 
-pub trait ParserError {}
+use crate::lexer::token::Token;
 
 pub trait Parse {
     fn parse_prog(&mut self) -> Vec<Node>;
@@ -16,8 +15,11 @@ pub trait Parse {
     fn parse_member(&mut self) -> Node;
 
     fn parse_expr(&mut self) -> Node;
+
+    fn parse_extern(&mut self) -> Node;
     fn parse_declare(&mut self) -> Node;
     fn parse_declare_fn(&mut self, id: Ident) -> Node;
+
     fn parse_if_expr(&mut self) -> Node;
     fn parse_while_expr(&mut self) -> Node;
     fn parse_ret_expr(&mut self) -> Node;
@@ -240,6 +242,8 @@ impl Parse for Parser {
                     todo!()
                 }
             }
+            Token::ExternKw => self.parse_extern(),
+
             Token::SetKw => self.parse_declare(),
             Token::WhileKw => self.parse_while_expr(),
             Token::IfKw => self.parse_if_expr(),
@@ -257,8 +261,57 @@ impl Parse for Parser {
         }
     }
 
+    fn parse_extern(&mut self) -> Node {
+        self.next();
+
+        let name = self.parse_expr();
+
+        if let Expr::Ident(id) = name.expr {
+            if let Ident::Tagged(_, _) = id {
+                let name = id;
+
+                self.except(Token::Colon);
+
+                let params = self.parse_list();
+
+                let mut id_params = Vec::new();
+
+                for (i, node) in params.iter().enumerate() {
+                    if let Expr::Ident(ref id) = node.expr {
+                        if let Ident::Tagged(_, _) = id {
+                            id_params.push(id.clone());
+                            continue;
+                        }
+                    }
+
+                    self.err(
+                        ErrKind::UnexceptedTokenE,
+                        format!("expected a typed id as extern param {i}"),
+                    );
+                }
+                let params = id_params;
+
+                untyped(Expr::Extern { name, params })
+            } else {
+                self.err(
+                    ErrKind::UnexceptedTokenE,
+                    format!("expected a typed id as extern name"),
+                );
+
+                todo!()
+            }
+        } else {
+            self.err(
+                ErrKind::UnexceptedTokenE,
+                format!("expected an id in extern"),
+            );
+
+            todo!()
+        }
+    }
+
     fn parse_declare(&mut self) -> Node {
-        self.next(); // n->t
+        self.next();
 
         let left = self.parse_expr();
         self.current_scope = Scope::Value;

@@ -69,6 +69,11 @@ pub enum Expr {
         body: Vec<Node>,
     },
 
+    Extern {
+        name: Ident,
+        params: Vec<Ident>,
+    },
+
     IfExpr {
         condition: Box<Node>,
         body: Vec<Node>,
@@ -100,16 +105,6 @@ pub enum Expr {
 pub struct Node {
     pub expr: Expr,
     pub ty: AtomKind,
-}
-
-impl Node {
-    pub fn is_typed(&self) -> bool {
-        if let &AtomKind::Unknown(None) = &self.ty {
-            false
-        } else {
-            true
-        }
-    }
 }
 
 pub fn untyped(expr: Expr) -> Node {

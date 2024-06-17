@@ -3,79 +3,270 @@ use std::fs;
 use crate::parser::parse::Parse;
 use crate::types::{mangle_types, type_mangle, AtomKind};
 
+use crate::err;
 use crate::err::{ATErr, ErrKind};
+
 use crate::parser::ast::{Blueprint, Expr, Ident, Node};
 
 use super::*;
 
-macro_rules! err {
-    ($self: ident, $kind: path, $msg: literal) => {
-        ATErr {
-            kind: $kind.clone(),
-            msg: $msg.to_string(),
-            line: $self.line,
-            column: $self.column,
-        }
-        .out_error();
-
-        return Err($kind);
-    };
-
-    ($self: ident, $kind: path, $msg: expr) => {
-        ATErr {
-            kind: $kind.clone(),
-            msg: $msg,
-            line: $self.line,
-            column: $self.column,
-        }
-        .out_error();
-
-        return Err($kind);
-    };
-}
-
 impl Analyzer {
     #[inline]
-    fn import(
-        &mut self,
-        body: &mut Vec<Node>,
-        ty: AtomKind,
-        module: &str,
-        name: &str,
-        args: Vec<AtomKind>,
-    ) {
-        self.env
-            .push_function(name.to_string(), args.clone(), ty.clone());
-        body.push(Node {
-            expr: Expr::Import {
-                module: module.to_string(),
-                name: name.to_string(),
-                args,
-            },
-            ty,
-        })
-    }
-
-    pub fn expect(&mut self, name: &Ident) -> Result<(), ErrKind> {
-        self.expect_as(name.val(), name)
-    }
-
-    // expects a name as an ident tag if it has a tag
-    pub fn expect_as(&mut self, name: &String, from: &Ident) -> Result<(), ErrKind> {
-        if let &Ident::Tagged(ref tag, _) = from {
-            if let Some(AtomKind::Type(ty)) = self.env.get_ty(tag) {
-                self.env.expect(name, *ty);
-                Ok(())
-            } else {
-                err!(
-                    self,
-                    ErrKind::InvaildType,
-                    format!("{} is not an Atom", tag)
-                );
-            }
-        } else {
-            Ok(())
+    pub fn analyz_body(&mut self, body: Vec<Node>, top: bool) -> Result<Vec<Node>, ErrKind> {
+        let mut analyzed_body = vec![];
+        if !top {
+            self.env = self.env.child();
         }
+
+        for node in body {
+            if let &Expr::Use(ref path) = &node.expr {
+                let abs = format!("{}/{}", self.workdir.clone(), path);
+                let read = fs::read_to_string(abs)
+                    .expect(format!("failed to open path {} to use", path).as_str());
+
+                use crate::parser::Parser;
+                let mut parser = Parser::new(read);
+
+                let ast = parser.parse_prog();
+
+                self.blueprints(parser.functions)?;
+                let mut ast = self.analyz_body(ast, true)?;
+
+                analyzed_body.append(&mut ast);
+                continue;
+            }
+            analyzed_body.push(self.analyz(node)?);
+        }
+
+        if !top {
+            self.env = self.env.parent().unwrap();
+        }
+        Ok(analyzed_body)
+    }
+
+    #[inline]
+    pub fn analyz_items(&mut self, items: Vec<Node>) -> Result<Vec<Node>, ErrKind> {
+        let mut analyzed_items = vec![];
+        for node in items {
+            analyzed_items.push(self.analyz(node)?);
+        }
+        Ok(analyzed_items)
+    }
+
+    pub fn analyz_prog(
+        exprs: Vec<Node>,
+        functions: Vec<Blueprint>,
+        workdir: String,
+    ) -> Result<Vec<Node>, ErrKind> {
+        let mut analyzer = Analyzer::new(workdir);
+        let mut analyzed_prog = Vec::new();
+
+        analyzer.import(
+            &mut analyzed_prog,
+            AtomKind::Void,
+            "std",
+            "writeln",
+            vec![AtomKind::Dynamic],
+        );
+
+        macro_rules! btype {
+            ($name: expr, $ty: path) => {
+                analyzer
+                    .env
+                    .add(&($name).to_string(), AtomKind::Type(Box::new($ty)));
+            };
+        }
+        btype!("int", AtomKind::Int);
+        btype!("float", AtomKind::Float);
+        btype!("str", AtomKind::Str);
+
+        // setting our env blueprints to our uncompiled functions (blueprints are then compiled pased on call arguments)
+        analyzer.blueprints(functions)?;
+        analyzed_prog.append(&mut analyzer.analyz_body(exprs, true)?);
+
+        analyzed_prog = [
+            analyzer.imports.clone(),
+            analyzer.functions.clone(),
+            analyzed_prog,
+        ]
+        .concat();
+        // analyzed_prog = analyzer.correct_prog(analyzed_prog)?;
+        Ok(analyzed_prog)
+    }
+
+    pub fn analyz(&mut self, node: Node) -> Result<Node, ErrKind> {
+        match node.expr.clone() {
+            Expr::As(_) => Ok(node), // this type of expressions happens in correction
+
+            Expr::Literal(literal) => {
+                let ty = literal.get_ty();
+                Ok(Node {
+                    expr: Expr::Literal(literal),
+                    ty,
+                })
+            }
+
+            Expr::ListExpr(items) => {
+                let items = self.analyz_items(items)?;
+
+                let item_ty = if items.len() > 0 {
+                    (&items.first().unwrap()).ty.clone()
+                } else {
+                    AtomKind::Void // empty list unknown type figure out type on push
+                };
+
+                for (i, item) in (&items).iter().enumerate() {
+                    if let &AtomKind::Unknown(_) = &item_ty {
+                        break;
+                    }
+
+                    if &item.ty != &item_ty {
+                        err!(self, ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
+                    }
+                }
+                let ty = AtomKind::List(Box::new(item_ty));
+                let expr = Expr::ListExpr(items);
+                Ok(Node { expr, ty })
+            }
+
+            Expr::BinaryExpr { op, left, right } => self.analyz_binary_expr(*left, *right, op),
+            Expr::Ident(id) => self.analyz_id(id),
+            Expr::VarDeclare { name, val } => self.analyz_var_declare(name, *val),
+            Expr::VarAssign { name, val } => self.analyz_var_assign(*name, *val),
+            Expr::Discard(expr) => {
+                let ty = AtomKind::Void;
+                let expr = self.analyz(*expr)?;
+                let expr = Expr::Discard(Box::new(expr));
+
+                Ok(Node { expr, ty })
+            }
+
+            Expr::PosInfo(x, line, column) => {
+                self.line = line;
+                self.column = column;
+                Ok(Node {
+                    expr: Expr::PosInfo(x, line, column),
+                    ty: AtomKind::Void,
+                })
+            }
+
+            Expr::RetExpr(expr) => {
+                let expr = self.analyz(*expr)?;
+                let ty = expr.ty.clone();
+
+                let expr = Expr::RetExpr(Box::new(expr));
+                Ok(Node { expr, ty })
+            }
+
+            Expr::FnCall { name, args } => self.analyz_call(*name, args),
+            Expr::Extern { name, params } => self.analyz_extern(name, params),
+
+            Expr::IfExpr {
+                condition,
+                body,
+                alt,
+            } => {
+                let condition = Box::new(self.analyz(*condition)?);
+                if &condition.ty != &AtomKind::Bool {
+                    err!(
+                        self,
+                        ErrKind::InvaildType,
+                        format!(
+                            "invaild condition for while loop expected Bool got {:?}",
+                            condition.ty
+                        )
+                    );
+                }
+                let body = self.analyz_body(body, false)?;
+
+                let analyzed_alt = if alt.is_none() {
+                    None
+                } else {
+                    Some(Box::new(self.analyz(*alt.unwrap())?))
+                };
+
+                let last = body.last();
+
+                let ty = if last.is_none() {
+                    AtomKind::Void
+                } else {
+                    last.unwrap().ty.clone()
+                };
+
+                let expr = Expr::IfExpr {
+                    condition,
+                    body,
+                    alt: analyzed_alt,
+                };
+
+                Ok(Node { expr, ty })
+            }
+
+            Expr::Block(block) => {
+                let block = self.analyz_body(block, false)?;
+
+                let last = block.last();
+                let ty = if last.is_none() {
+                    AtomKind::Void
+                } else {
+                    last.unwrap().ty.clone()
+                };
+                let expr = Expr::Block(block);
+
+                Ok(Node { expr, ty })
+            }
+
+            Expr::WhileExpr { condition, body } => {
+                let condition = Box::new(self.analyz(*condition)?);
+                if &condition.ty != &AtomKind::Bool {
+                    err!(
+                        self,
+                        ErrKind::InvaildType,
+                        format!(
+                            "invaild condition for while loop expected Bool got {:?}",
+                            condition.ty
+                        )
+                    );
+                }
+                let body = self.analyz_body(body, false)?;
+
+                let expr = Expr::WhileExpr { condition, body };
+                let ty = AtomKind::Void;
+
+                Ok(Node { expr, ty })
+            }
+
+            Expr::MemberExpr { parent, child } => self.analyz_member(*parent, child),
+            Expr::IndexExpr { parent, index } => self.analyz_index(*parent, *index),
+            _ => todo!("node {:#?}", node),
+        }
+    }
+
+    pub fn analyz_extern(
+        &mut self,
+        name: Ident,
+        untyped_params: Vec<Ident>,
+    ) -> Result<Node, ErrKind> {
+        let name = self.typed_id(name)?;
+
+        let mut params: Vec<Ident> = Vec::new();
+        for param in untyped_params {
+            params.push(self.typed_id(param)?);
+        }
+
+        let params_types = params.iter().map(|x| x.ty().clone()).collect();
+
+        let ty = AtomKind::Func(
+            Box::new(name.ty().clone()),
+            params_types,
+            name.val().clone(),
+        );
+
+        self.env.add(name.val(), ty.clone());
+
+        let expr = Expr::Extern { name, params };
+
+        Ok(Node { expr, ty })
     }
 
     pub fn analyz_blueprint(
@@ -145,233 +336,6 @@ impl Analyzer {
         });
 
         Ok(mangle)
-    }
-
-    pub fn analyz_prog(
-        exprs: Vec<Node>,
-        functions: Vec<Blueprint>,
-        workdir: String,
-    ) -> Result<Vec<Node>, ErrKind> {
-        let mut analyzer = Analyzer::new(workdir);
-        let mut analyzed_prog = Vec::new();
-
-        analyzer.import(
-            &mut analyzed_prog,
-            AtomKind::Void,
-            "std",
-            "writeln",
-            vec![AtomKind::Dynamic],
-        );
-
-        macro_rules! btype {
-            ($name: expr, $ty: path) => {
-                analyzer
-                    .env
-                    .add(&($name).to_string(), AtomKind::Type(Box::new($ty)));
-            };
-        }
-        btype!("int", AtomKind::Int);
-        btype!("float", AtomKind::Float);
-
-        // setting our env blueprints to our uncompiled functions (blueprints are then compiled pased on call arguments)
-        analyzer.blueprints(functions)?;
-        analyzed_prog.append(&mut analyzer.analyz_body(exprs, true)?);
-
-        analyzed_prog = [
-            analyzer.imports.clone(),
-            analyzer.functions.clone(),
-            analyzed_prog,
-        ]
-        .concat();
-        // analyzed_prog = analyzer.correct_prog(analyzed_prog)?;
-        Ok(analyzed_prog)
-    }
-
-    #[inline]
-    pub fn analyz_body(&mut self, body: Vec<Node>, top: bool) -> Result<Vec<Node>, ErrKind> {
-        let mut analyzed_body = vec![];
-        if !top {
-            self.env = self.env.child();
-        }
-
-        for node in body {
-            if let &Expr::Use(ref path) = &node.expr {
-                let abs = format!("{}/{}", self.workdir.clone(), path);
-                let read = fs::read_to_string(abs)
-                    .expect(format!("failed to open path {} to use", path).as_str());
-
-                use crate::parser::Parser;
-                let mut parser = Parser::new(read);
-
-                let ast = parser.parse_prog();
-
-                self.blueprints(parser.functions)?;
-                let mut ast = self.analyz_body(ast, true)?;
-
-                analyzed_body.append(&mut ast);
-                continue;
-            }
-            analyzed_body.push(self.analyz(node)?);
-        }
-
-        if !top {
-            self.env = self.env.parent().unwrap();
-        }
-        Ok(analyzed_body)
-    }
-
-    #[inline]
-    pub fn analyz_items(&mut self, items: Vec<Node>) -> Result<Vec<Node>, ErrKind> {
-        let mut analyzed_items = vec![];
-        for node in items {
-            analyzed_items.push(self.analyz(node)?);
-        }
-        Ok(analyzed_items)
-    }
-
-    pub fn analyz(&mut self, node: Node) -> Result<Node, ErrKind> {
-        match node.expr.clone() {
-            Expr::As(_) => Ok(node), // this type of expressions happens in correction
-
-            Expr::Literal(literal) => {
-                let ty = literal.get_ty();
-                Ok(Node {
-                    expr: Expr::Literal(literal),
-                    ty,
-                })
-            }
-
-            Expr::ListExpr(items) => {
-                let items = self.analyz_items(items)?;
-
-                let item_ty = if items.len() > 0 {
-                    (&items.first().unwrap()).ty.clone()
-                } else {
-                    AtomKind::Void // empty list unknown type figure out type on push
-                };
-
-                for (i, item) in (&items).iter().enumerate() {
-                    if let &AtomKind::Unknown(_) = &item_ty {
-                        break;
-                    }
-
-                    if &item.ty != &item_ty {
-                        err!(self, ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
-                    }
-                }
-                let ty = AtomKind::List(Box::new(item_ty));
-                let expr = Expr::ListExpr(items);
-                Ok(Node { expr, ty })
-            }
-
-            Expr::BinaryExpr { op, left, right } => self.analyz_binary_expr(*left, *right, op),
-            Expr::Ident(id) => self.analyz_id(id),
-            Expr::VarDeclare { name, val } => self.analyz_var_declare(name, *val),
-            Expr::VarAssign { name, val } => self.analyz_var_assign(*name, *val),
-            Expr::Discard(expr) => {
-                let ty = AtomKind::Void;
-                let expr = self.analyz(*expr)?;
-                let expr = Expr::Discard(Box::new(expr));
-
-                Ok(Node { expr, ty })
-            }
-            Expr::PosInfo(x, line, column) => {
-                self.line = line;
-                self.column = column;
-                Ok(Node {
-                    expr: Expr::PosInfo(x, line, column),
-                    ty: AtomKind::Void,
-                })
-            }
-
-            Expr::RetExpr(expr) => {
-                let expr = self.analyz(*expr)?;
-                let ty = expr.ty.clone();
-
-                let expr = Expr::RetExpr(Box::new(expr));
-                Ok(Node { expr, ty })
-            }
-
-            Expr::FnCall { name, args } => self.analyz_call(*name, args),
-
-            Expr::IfExpr {
-                condition,
-                body,
-                alt,
-            } => {
-                let condition = Box::new(self.analyz(*condition)?);
-                if &condition.ty != &AtomKind::Bool {
-                    err!(
-                        self,
-                        ErrKind::InvaildType,
-                        format!(
-                            "invaild condition for while loop expected Bool got {:?}",
-                            condition.ty
-                        )
-                    );
-                }
-                let body = self.analyz_body(body, false)?;
-
-                let analyzed_alt = if alt.is_none() {
-                    None
-                } else {
-                    Some(Box::new(self.analyz(*alt.unwrap())?))
-                };
-
-                let last = body.last();
-
-                let ty = if last.is_none() {
-                    AtomKind::Void
-                } else {
-                    last.unwrap().ty.clone()
-                };
-
-                let expr = Expr::IfExpr {
-                    condition,
-                    body,
-                    alt: analyzed_alt,
-                };
-
-                Ok(Node { expr, ty })
-            }
-            Expr::Block(block) => {
-                let block = self.analyz_body(block, false)?;
-
-                let last = block.last();
-                let ty = if last.is_none() {
-                    AtomKind::Void
-                } else {
-                    last.unwrap().ty.clone()
-                };
-                let expr = Expr::Block(block);
-
-                Ok(Node { expr, ty })
-            }
-
-            Expr::WhileExpr { condition, body } => {
-                let condition = Box::new(self.analyz(*condition)?);
-                if &condition.ty != &AtomKind::Bool {
-                    err!(
-                        self,
-                        ErrKind::InvaildType,
-                        format!(
-                            "invaild condition for while loop expected Bool got {:?}",
-                            condition.ty
-                        )
-                    );
-                }
-                let body = self.analyz_body(body, false)?;
-
-                let expr = Expr::WhileExpr { condition, body };
-                let ty = AtomKind::Void;
-
-                Ok(Node { expr, ty })
-            }
-
-            Expr::MemberExpr { parent, child } => self.analyz_member(*parent, child),
-            Expr::IndexExpr { parent, index } => self.analyz_index(*parent, *index),
-            _ => todo!("node {:#?}", node),
-        }
     }
 
     pub fn analyz_binary_expr(

@@ -10,6 +10,8 @@ pub trait IRGen {
     fn gen_prog(&mut self, exprs: Vec<Node>) -> IR;
     fn gen_func(&mut self, name: String, args: Vec<Ident>, ret: AtomKind, body: Vec<Node>)
         -> IRRes;
+    fn gen_extern(&mut self, name: String, params: Vec<Ident>, ret: AtomKind) -> IRRes;
+
     fn gen_expr(&mut self, expr: Node) -> IRRes;
 
     fn gen_var_declare(&mut self, name: String, expr: Node) -> IRRes;
@@ -29,6 +31,7 @@ impl IRGen for Codegen {
         }
         gen
     }
+
     fn gen_func(
         &mut self,
         name: String,
@@ -60,12 +63,16 @@ impl IRGen for Codegen {
                 args,
                 body,
             } => self.gen_func(name, args, ret, body),
+            Expr::Extern { name, params } => {
+                self.gen_extern(name.val().clone(), params, name.ty().clone())
+            }
 
             Expr::Literal(lit) => Ok(vec![IROp::Const(lit)]),
 
             Expr::BinaryExpr { op, left, right } => {
                 self.gen_binary_expr(expr.ty, op, *left, *right)
             }
+
             Expr::VarDeclare { name, val } => self.gen_var_declare(name.val().clone(), *val),
             Expr::VarAssign { name, val } => self.gen_var_assign(*name, *val),
             Expr::Ident(name) => Ok(vec![IROp::Load(expr.ty, name.val().clone())]),
@@ -202,6 +209,10 @@ impl IRGen for Codegen {
             }
             _ => todo!("{:#?}", expr),
         }
+    }
+
+    fn gen_extern(&mut self, name: String, params: Vec<Ident>, ret: AtomKind) -> IRRes {
+        Ok(vec![IROp::Extern(ret, name, params)])
     }
 
     fn gen_var_declare(&mut self, name: String, expr: Node) -> IRRes {

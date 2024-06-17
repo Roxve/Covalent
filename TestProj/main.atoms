@@ -1,3 +1,11 @@
+# extern test
+extern cprompt@str: msg@str
+
+set name = cprompt: "name: "
+set age = cprompt: "age: "
+
+writeln: "Hello, " + name + " you are " + age + "!" 
+
 #* LONG COMMENT
 	THIS IS A LONG COMMENT *#
 # FUNCTION TEST

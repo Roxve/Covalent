@@ -9,19 +9,24 @@ pub mod tools;
 #[derive(Debug, Clone, PartialEq)]
 pub enum IROp {
     Import(AtomKind, String, String, Vec<AtomKind>), // ty mod fun arg count
+    Extern(AtomKind, String, Vec<Ident>),
     Def(AtomKind, String, Vec<Ident>, Vec<IROp>),
+
     Call(AtomKind, u16),
     Ret(AtomKind),
+
     Add(AtomKind),
     Sub(AtomKind),
     Mul(AtomKind),
     Div(AtomKind),
     Mod(AtomKind),
+
     Comp, // acts like GE to peform LE switch left and right
     EComp,
     Eq,
     And,
     Or,
+
     Const(Literal),
     List(AtomKind, Vec<Vec<IROp>>), // each item is a bunch of operations
     Conv(AtomKind, AtomKind),
@@ -44,19 +49,24 @@ use self::IROp::*;
 pub fn get_op_type(op: &IROp) -> AtomKind {
     match op {
         Import(t, _, _, _) => t,
+        Extern(t, _, _) => t,
         Def(t, _, _, _) => t,
+
         Call(t, _) => t,
         Ret(t) => t,
+
         Add(t) => t,
         Sub(t) => t,
         Mul(t) => t,
         Div(t) => t,
         Mod(t) => t,
+
         And => &AtomKind::Bool,
         Or => &AtomKind::Bool,
         Comp => &AtomKind::Bool,
         EComp => &AtomKind::Bool,
         Eq => &AtomKind::Bool,
+
         List(ref ty, _) => return AtomKind::List(Box::new(ty.clone())),
         Const(lit) => return lit.get_ty(),
         Conv(t, _) => t,

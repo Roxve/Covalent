@@ -4,73 +4,72 @@
 #include <stdbool.h>
 #include <string.h>
 
-
 void *GC_malloc(unsigned int);
 void *GC_realloc(void *, unsigned int);
 void GC_free(void *);
 void GC_init();
 
 #define DEFOP_N(name, op)                                                      \
-  Obj __##name##__(Obj a, Obj b) {                                          \
+  Obj __##name##__(Obj a, Obj b) {                                             \
     __conv__(&a, &b);                                                          \
-    TYPE kind = a.kind;                                                       \
+    TYPE kind = a.kind;                                                        \
     switch (kind) {                                                            \
     case INT_TYPE:                                                             \
-      return __int__(a.val.i op b.val.i);                                    \
+      return __int__(a.val.i op b.val.i);                                      \
     case FLOAT_TYPE:                                                           \
-      return __float__(a.val.f op b.val.f);                                  \
+      return __float__(a.val.f op b.val.f);                                    \
     default:                                                                   \
       return __NaN__();                                                        \
     }
-#define DEFOP_NF(name, op)                                                      \
-  Obj __##name##__(Obj a, Obj b) {                                          \
+#define DEFOP_NF(name, op)                                                     \
+  Obj __##name##__(Obj a, Obj b) {                                             \
     __conv__(&a, &b);                                                          \
-    TYPE kind = a.kind;                                                       \
+    TYPE kind = a.kind;                                                        \
     switch (kind) {                                                            \
     case INT_TYPE:                                                             \
-      return __int__(a.val.i op b.val.i);                                    \
-    default:                                                                  \
+      return __int__(a.val.i op b.val.i);                                      \
+    default:                                                                   \
       return __NaN__();                                                        \
     }
-    
-#define DEFOP_LOGICAL(name, op)                                                      \
-  Obj __##name##__(Obj a, Obj b) {                                          \
+
+#define DEFOP_LOGICAL(name, op)                                                \
+  Obj __##name##__(Obj a, Obj b) {                                             \
     __conv__(&a, &b);                                                          \
-    TYPE kind = a.kind;                                                       \
+    TYPE kind = a.kind;                                                        \
     switch (kind) {                                                            \
-    case BOOL_TYPE:                                                             \
-      return __int__(a.val.b op b.val.b);                                    \
-    default:                                                                  \
-      return __NaN__();                                                        \
-    }
-    
-#define DEFOP_BOOL(name, op)                                                   \
-  _Bool __##name##__(Obj a, Obj b) {                                         \
-    __conv__(&a, &b);                                                          \
-    TYPE kind = a.kind;                                                       \
-    switch (kind) {                                                            \
-    case INT_TYPE:                                                             \
-      return a.val.i op b.val.i;                                             \
-    case FLOAT_TYPE:                                                           \
-      return a.val.f op b.val.f;                                             \
     case BOOL_TYPE:                                                            \
-      return a.val.b op b.val.b;                                             \
-    case STR_TYPE:                                                             \
-      return __str##name##__(a.val.s, b.val.s);                              \
+      return __int__(a.val.b op b.val.b);                                      \
     default:                                                                   \
-      return 0;                                                        \
+      return __NaN__();                                                        \
+    }
+
+#define DEFOP_BOOL(name, op)                                                   \
+  _Bool __##name##__(Obj a, Obj b) {                                           \
+    __conv__(&a, &b);                                                          \
+    TYPE kind = a.kind;                                                        \
+    switch (kind) {                                                            \
+    case INT_TYPE:                                                             \
+      return a.val.i op b.val.i;                                               \
+    case FLOAT_TYPE:                                                           \
+      return a.val.f op b.val.f;                                               \
+    case BOOL_TYPE:                                                            \
+      return a.val.b op b.val.b;                                               \
+    case STR_TYPE:                                                             \
+      return __str##name##__(a.val.s, b.val.s);                                \
+    default:                                                                   \
+      return 0;                                                                \
     }
 #define DEFOP_STR(name, op)                                                    \
-  Obj __##name##__(Obj a, Obj b) {                                          \
+  Obj __##name##__(Obj a, Obj b) {                                             \
     __conv__(&a, &b);                                                          \
-    TYPE kind = a.kind;                                                       \
+    TYPE kind = a.kind;                                                        \
     switch (kind) {                                                            \
     case INT_TYPE:                                                             \
-      return __int__(a.val.i op b.val.i);                                    \
+      return __int__(a.val.i op b.val.i);                                      \
     case FLOAT_TYPE:                                                           \
-      return __float__(a.val.f op b.val.f);                                  \
+      return __float__(a.val.f op b.val.f);                                    \
     case STR_TYPE:                                                             \
-      return __str__(__str##name##__(a.val.s, b.val.s));                     \
+      return __str__(__str##name##__(a.val.s, b.val.s));                       \
     default:                                                                   \
       return __NaN__();                                                        \
     }
@@ -128,7 +127,6 @@ void writeln(Obj arg) {
   }
   }
 }
-
 
 Str *__strnew__(char *s) {
   int len = strlen(s);
@@ -232,62 +230,70 @@ Str *__strclone__(Str *obj) {
 
 void __init__() { GC_init(); }
 
-List* __listnew__(size_t elem_size, size_t size, ...) {
-    void* arr = GC_malloc(elem_size * size);
-    va_list args;
-    va_start(args, size);
+List *__listnew__(size_t elem_size, size_t size, ...) {
+  void *arr = GC_malloc(elem_size * size);
+  va_list args;
+  va_start(args, size);
 
-    char* next_ele = (char*) arr;
-    for(int i = 0; i < size*elem_size/4; i++) {
-      ((int*) arr)[i] = va_arg(args, int);
-    }
-    
-    List* list = (List*)GC_malloc(sizeof(List));
-    list->array = arr;
-    list->elem_size = elem_size;
-    list->size = size;
-    return list;
+  char *next_ele = (char *)arr;
+  for (int i = 0; i < size * elem_size / 4; i++) {
+    ((int *)arr)[i] = va_arg(args, int);
+  }
+
+  List *list = (List *)GC_malloc(sizeof(List));
+  list->array = arr;
+  list->elem_size = elem_size;
+  list->size = size;
+  return list;
 }
 
-// name and arguments to match type extending functions, generics for now is just Dynamic type
-// set push(T): List(T) self, T item -> List(T)
-List* Listdotpush(List *self, Obj item) {
-  self->array = GC_realloc(self->array, self->size*self->elem_size+self->elem_size);
-  void *insert = (char *) self->array + self->size * self->elem_size;
+// name and arguments to match type extending functions, generics for now is
+// just Dynamic type set push(T): List(T) self, T item -> List(T)
+List *Listdotpush(List *self, Obj item) {
+  self->array =
+      GC_realloc(self->array, self->size * self->elem_size + self->elem_size);
+  void *insert = (char *)self->array + self->size * self->elem_size;
   memcpy(insert, &item.val, self->elem_size);
 
   return self;
 }
 
 // set pop(T): List(T) self -> List(T)
-List* Listdotpop(List *self) {
-  self->array = GC_realloc(self->array, self->size*self->elem_size-self->elem_size);
+List *Listdotpop(List *self) {
+  self->array =
+      GC_realloc(self->array, self->size * self->elem_size - self->elem_size);
   return self;
 }
 
-void __free__(void *item) {
-    GC_free(item);
-}
+void __free__(void *item) { GC_free(item); }
 
-Ion* IonizedIntdotadd(Ion* a, Ion* b) {
-  IonizedInt* self = (IonizedInt*)a; 
+Ion *IonizedIntdotadd(Ion *a, Ion *b) {
+  IonizedInt *self = (IonizedInt *)a;
 
-  if(b->kind == INT_TYPE) {
-    return (Ion*) IonizedIntdotNew(self->val + ((IonizedInt*) b)->val);
+  if (b->kind == INT_TYPE) {
+    return (Ion *)IonizedIntdotNew(self->val + ((IonizedInt *)b)->val);
   } else if (b->kind == FLOAT_TYPE) {
-    // return IonizedFloatdotNew 
+    // return IonizedFloatdotNew
     return NULL;
   } else {
-    err("idk", -1); 
+    err("idk", -1);
     return NULL;
   }
-} 
+}
 
-IonTable IntTable = (IonTable) {.add = &IonizedIntdotadd };
-IonizedInt* IonizedIntdotNew(int val) {
-  IonizedInt* Int = GC_malloc(sizeof(IonizedInt));
+IonTable IntTable = (IonTable){.add = &IonizedIntdotadd};
+IonizedInt *IonizedIntdotNew(int val) {
+  IonizedInt *Int = GC_malloc(sizeof(IonizedInt));
   Int->kind = INT_TYPE;
   Int->table = &IntTable;
-  Int->val = val; 
+  Int->val = val;
   return Int;
+}
+
+// testing externs
+Str *cprompt(Str *msg) {
+  printf("%.*s", msg->len, msg->val);
+  char *cstr;
+  scanf("%s", cstr);
+  return __strnew__(cstr);
 }

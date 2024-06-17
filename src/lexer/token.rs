@@ -28,5 +28,6 @@ pub enum Token {
     SetKw,
     RetKw,
     UseKw,
+    ExternKw,
     EOF,
 }

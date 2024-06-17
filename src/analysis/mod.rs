@@ -3,7 +3,10 @@ pub mod analysis;
 use std::vec;
 
 use crate::enviroment::Enviroment;
-use crate::err::ErrKind;
+
+use crate::err;
+use crate::err::{ATErr, ErrKind};
+
 use crate::parser::ast::{Blueprint, Expr, Ident, Node};
 use crate::types::{type_mangle, AtomKind};
 
@@ -209,6 +212,65 @@ impl Analyzer {
             line: 0,
             column: 0,
             workdir,
+        }
+    }
+
+    #[inline]
+    fn import(
+        &mut self,
+        body: &mut Vec<Node>,
+        ty: AtomKind,
+        module: &str,
+        name: &str,
+        args: Vec<AtomKind>,
+    ) {
+        self.env
+            .push_function(name.to_string(), args.clone(), ty.clone());
+        body.push(Node {
+            expr: Expr::Import {
+                module: module.to_string(),
+                name: name.to_string(),
+                args,
+            },
+            ty,
+        })
+    }
+
+    pub fn typed_id(&mut self, id: Ident) -> Result<Ident, ErrKind> {
+        if let Ident::Tagged(tag, name) = id {
+            if let Some(AtomKind::Type(ty)) = self.env.get_ty(&tag) {
+                Ok(Ident::Typed(*ty, name))
+            } else {
+                err!(
+                    self,
+                    ErrKind::InvaildType,
+                    format!("{} is not an Atom", tag)
+                );
+            }
+        } else {
+            panic!()
+        }
+    }
+
+    pub fn expect(&mut self, name: &Ident) -> Result<(), ErrKind> {
+        self.expect_as(name.val(), name)
+    }
+
+    // expects a name as an ident tag if it has a tag
+    pub fn expect_as(&mut self, name: &String, from: &Ident) -> Result<(), ErrKind> {
+        if let &Ident::Tagged(ref tag, _) = from {
+            if let Some(AtomKind::Type(ty)) = self.env.get_ty(tag) {
+                self.env.expect(name, *ty);
+                Ok(())
+            } else {
+                err!(
+                    self,
+                    ErrKind::InvaildType,
+                    format!("{} is not an Atom", tag)
+                );
+            }
+        } else {
+            Ok(())
         }
     }
 

@@ -199,6 +199,7 @@ impl Lexer {
                         // keywords
                         "set" => Token::SetKw,
                         "use" => Token::UseKw,
+                        "extern" => Token::ExternKw,
                         "if" => Token::IfKw,
                         "else" => Token::ElseKw,
                         "while" => Token::WhileKw,

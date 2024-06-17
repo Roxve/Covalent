@@ -36,3 +36,30 @@ impl ATErr {
         println!("{}", self.get_error());
     }
 }
+
+#[macro_export]
+macro_rules! err {
+    ($self: ident, $kind: path, $msg: literal) => {
+        ATErr {
+            kind: $kind.clone(),
+            msg: $msg.to_string(),
+            line: $self.line,
+            column: $self.column,
+        }
+        .out_error();
+
+        return Err($kind);
+    };
+
+    ($self: ident, $kind: path, $msg: expr) => {
+        ATErr {
+            kind: $kind.clone(),
+            msg: $msg,
+            line: $self.line,
+            column: $self.column,
+        }
+        .out_error();
+
+        return Err($kind);
+    };
+}
