@@ -15,8 +15,8 @@ pub struct Analyzer {
     pub env: Enviroment,
     pub imports: Vec<Node>,   // Import nodes
     pub functions: Vec<Node>, // Func nodes
-    line: u32,
-    column: u32,
+    line: u16,
+    column: u16,
 }
 
 const COMPARE_OP: &[&str] = &["==", "<", ">", "<=", ">="];

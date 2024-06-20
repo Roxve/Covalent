@@ -21,6 +21,7 @@ pub trait Parse {
     fn parse_level(&mut self, level: u8) -> Result<Node, ()>;
 
     fn parse_index(&mut self) -> Result<Node, ()>;
+    fn parse_spec(&mut self) -> Result<Node, ()>;
     fn parse_call_fn(&mut self) -> Result<Node, ()>;
 
     fn parse_member(&mut self) -> Result<Node, ()>;
@@ -116,7 +117,7 @@ impl Parse for Parser {
     }
 
     fn parse_call_fn(&mut self) -> Result<Node, ()> {
-        let call = self.parse_member()?;
+        let call = self.parse_spec()?;
         if self.current() == Token::Colon {
             self.next();
             let args = self.parse_list()?;
@@ -135,6 +136,23 @@ impl Parse for Parser {
         }
 
         Ok(call)
+    }
+
+    fn parse_spec(&mut self) -> Result<Node, ()> {
+        let mut left = self.parse_member()?;
+
+        if self.current() == Token::LeftParen {
+            self.next();
+            let spec = Box::new(self.parse_member()?);
+
+            left = untyped(Expr::SpecExpr {
+                parent: Box::new(left),
+                spec,
+            });
+            self.except(Token::RightParen);
+        }
+
+        Ok(left)
     }
 
     fn parse_member(&mut self) -> Result<Node, ()> {
@@ -196,17 +214,8 @@ impl Parse for Parser {
             Token::Ident(id) => {
                 self.next();
                 if self.current() == Token::Dash {
-                    if let Token::Ident(tag) = self.next() {
-                        self.next();
-                        untyped!(Expr::Ident(Ident::Tagged(tag, id)))
-                    } else {
-                        self.err(
-                            ErrKind::UnexceptedTokenE,
-                            format!("unexpected token after '@' expected type to tag {}", id),
-                        );
-
-                        Err(())
-                    }
+                    self.next();
+                    untyped!(Expr::Ident(Ident::Tagged(Box::new(self.parse_spec()?), id)))
                 } else {
                     untyped!(Expr::Ident(Ident::UnTagged(id)))
                 }
