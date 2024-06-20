@@ -323,8 +323,14 @@ impl Codegen {
                 AtomKind::Dynamic => item,
                 _ => todo!("add conv dynamic from {:?}", from),
             },
+
             &AtomKind::Float => match from {
-                AtomKind::Int => format!("(float){}", item),
+                AtomKind::Int => format!("(float){item}"),
+                _ => panic!(),
+            },
+
+            &AtomKind::Str => match from {
+                AtomKind::Int => format!("itos({item})"),
                 _ => panic!(),
             },
             _ => todo!("add conv into {:?} from {:?}", into, from),

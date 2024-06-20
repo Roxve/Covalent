@@ -70,7 +70,7 @@ impl Analyzer {
         );
 
         macro_rules! btype {
-            ($name: expr, $ty: path) => {
+            ($name: expr, $ty: expr) => {
                 analyzer
                     .env
                     .add(&($name).to_string(), AtomKind::Type(Box::new($ty)));
@@ -79,6 +79,13 @@ impl Analyzer {
         btype!("int", AtomKind::Int);
         btype!("float", AtomKind::Float);
         btype!("str", AtomKind::Str);
+        btype!("bool", AtomKind::Bool);
+        btype!("dynamic", AtomKind::Dynamic);
+        btype!(
+            "List",
+            AtomKind::List(Box::new(AtomKind::Type(Box::new(AtomKind::Unknown(None)))))
+        );
+        btype!("void", AtomKind::Void);
 
         // setting our env blueprints to our uncompiled functions (blueprints are then compiled pased on call arguments)
         analyzer.blueprints(functions)?;

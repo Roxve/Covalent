@@ -23,11 +23,11 @@ impl Enviroment {
         }
     }
 
-    pub fn child(&self) -> Enviroment {
+    pub fn child(&self) -> Self {
         Enviroment::new(Some(Box::new(self.clone())))
     }
 
-    pub fn parent(&self) -> Option<Enviroment> {
+    pub fn parent(&self) -> Option<Self> {
         if self.parent.is_none() {
             None
         } else {
@@ -93,15 +93,13 @@ impl Enviroment {
                 return Some(blueprint.clone());
             }
         }
+
         if self.parent.is_some() {
-            for blueprint in &self.parent().unwrap().blueprints {
-                if blueprint.name.val() == name {
-                    return Some(blueprint.clone());
-                }
-            }
+            return self.parent().unwrap().get_blueprint(name);
         }
         return None;
     }
+
     pub fn top(&mut self) -> &mut Enviroment {
         if self.parent.is_none() {
             self
@@ -109,6 +107,7 @@ impl Enviroment {
             self.parent.as_mut().unwrap().top()
         }
     } // returns the top level enviroment
+
     pub fn push_function(&mut self, name: String, args: Vec<AtomKind>, ty: AtomKind) {
         self.top()
             .add(&name, AtomKind::Func(Box::new(ty), args, name.clone()));

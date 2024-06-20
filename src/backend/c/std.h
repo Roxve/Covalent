@@ -32,32 +32,31 @@ typedef struct {
   Value val;
 } Obj;
 
-
-typedef struct IonTable {  
-  struct Ion* (*add) (struct Ion* self, struct Ion* b);
+typedef struct IonTable {
+  struct Ion *(*add)(struct Ion *self, struct Ion *b);
 } IonTable;
 
-// an Ion is an Atom everything is an Atom expect base types an Ion is a base type as an Atom
+// an Ion is an Atom everything is an Atom expect base types an Ion is a base
+// type as an Atom
 typedef struct Ion {
   TYPE kind;
-  IonTable* table;
+  IonTable *table;
 } Ion;
 
 typedef struct {
   TYPE kind;
-  IonTable* table;
+  IonTable *table;
   int val;
 } IonizedInt;
 
-IonizedInt* IonizedIntdotNew(int val);
+IonizedInt *IonizedIntdotNew(int val);
 
 void writeln(Obj arg);
 
-#define __int__(int) ((Obj) {INT_TYPE, (Value) {.i = int}})
-#define __float__(flo) ((Obj) {FLOAT_TYPE, (Value) {.f = flo}})
-#define __str__(str) ((Obj) {STR_TYPE, (Value) {.s = str}})
-#define __bool__(bool) ((Obj) {BOOL_TYPE, (Value) {.b = bool}})
-
+#define __int__(int) ((Obj){INT_TYPE, (Value){.i = int}})
+#define __float__(flo) ((Obj){FLOAT_TYPE, (Value){.f = flo}})
+#define __str__(str) ((Obj){STR_TYPE, (Value){.s = str}})
+#define __bool__(bool) ((Obj){BOOL_TYPE, (Value){.b = bool}})
 
 Str *__strnew__(char *val);
 
@@ -79,17 +78,18 @@ Str *__stradd__(Str *a, Str *b);
 Str *__strclone__(Str *obj);
 void __init__();
 
-#define __listget__(list, type, index) \
-    (((type *)(list)->array)[index])
+#define __listget__(list, type, index) (((type *)(list)->array)[index])
 
 typedef struct List {
-    void* array;
-    size_t size;
-    size_t elem_size;
+  void *array;
+  size_t size;
+  size_t elem_size;
 } List;
 
 List *Listdotpush(List *self, Obj item);
 List *__listnew__(size_t elem_size, size_t size, ...);
-List* Listdotpop(List *self);
+List *Listdotpop(List *self);
 
 void __free__(void *item);
+
+Str *itos(int i);

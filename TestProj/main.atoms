@@ -1,8 +1,11 @@
 # extern test
 extern cprompt@str: msg@str
+extern atoi@int: a@str
 
 set name = cprompt: "name: "
-set age = cprompt: "age: "
+set age = atoi: cprompt: "age: "
+
+writeln: age + 5
 
 writeln: "Hello, " + name + " you are " + age + "!" 
 
@@ -10,6 +13,7 @@ writeln: "Hello, " + name + " you are " + age + "!"
 	THIS IS A LONG COMMENT *#
 # FUNCTION TEST
 # use macro
+
 use "math.atoms" # deploys "main.atoms" AST here
 
 set do_s! {
@@ -21,6 +25,7 @@ set do_s! {
  	ret list
 }
 
+set main@void! {
 
 set x@int = factorial: 5
 
@@ -51,3 +56,6 @@ writeln: "factorial of "
 writeln: s[4]
 writeln: "is "
 writeln: factorial: s[4]
+}
+
+main!

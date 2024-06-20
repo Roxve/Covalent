@@ -187,6 +187,10 @@ pub fn get_body_types(body: &Vec<Node>) -> Vec<AtomKind> {
 pub fn get_fn_type(body: &Vec<Node>) -> AtomKind {
     let possible = get_body_types(body);
 
+    if possible.len() == 0 {
+        return AtomKind::Void;
+    }
+
     if possible.len() > 1 {
         // int | float -> float
         // otherwise -> dynamic
