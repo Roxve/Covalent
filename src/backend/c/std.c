@@ -298,6 +298,4 @@ Str *cprompt(Str *msg) {
   return __strnew__(cstr);
 }
 
-char *itoa(int);
-
-Str *itos(int i) { return __strnew__(itoa(i)); }
+Str *itos(int i) { return __strnew__(""); }

@@ -13,6 +13,7 @@ pub enum AtomKind {
     Void,
     Unknown(Option<Box<Self>>),
     List(Box<Self>),
+    Backend(Box<Self>),
     Func(Box<Self>, Vec<Self>, String),
     Blueprint(String, Vec<String>),
     Obj(HashMap<String, Self>),
@@ -86,6 +87,8 @@ impl Display for AtomKind {
                 &Some(ref t) => write!(f, "Unknown(some({}))", t.to_string()),
                 &None => write!(f, "Unknown(none)"),
             },
+
+            &AtomKind::Backend(ref t) => write!(f, "B({})", t.to_string()),
 
             &AtomKind::List(ref ty) => write!(f, "List({})", ty.to_string()),
             &AtomKind::Type(ref ty) => write!(f, "Type({})", ty.to_string()),

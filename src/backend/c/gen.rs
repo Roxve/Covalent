@@ -1,5 +1,4 @@
 use core::panic;
-use std::fmt::format;
 
 use super::type_to_c;
 use super::Emit;
