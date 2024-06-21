@@ -128,7 +128,9 @@ impl Enviroment {
     }
 
     pub fn is_expected(&mut self, name: &String, ty: &AtomKind) -> bool {
-        if self.expects.get(name).is_some_and(|x| x == ty) {
+        if self.expects.get(name).is_some_and(|x| x == ty)
+            || self.expects.get(name).is_some_and(|x| x == &AtomKind::Any)
+        {
             return true;
         } else if self.expects.get(name).is_some() {
             return false;

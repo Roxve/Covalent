@@ -266,11 +266,11 @@ impl Analyzer {
         name: Ident,
         untyped_params: Vec<Ident>,
     ) -> Result<Node, ErrKind> {
-        let name = self.typed_id(name)?;
+        let name = self.analyz_unknown_id(name)?;
 
         let mut params: Vec<Ident> = Vec::new();
         for param in untyped_params {
-            params.push(self.typed_id(param)?);
+            params.push(self.analyz_unknown_id(param)?);
         }
 
         let params_types = params.iter().map(|x| x.ty().clone()).collect();
@@ -591,7 +591,38 @@ impl Analyzer {
         })
     }
 
+    pub fn analyz_unknown_id(&mut self, id: Ident) -> Result<Ident, ErrKind> {
+        match &id {
+            &Ident::Tagged(ref tag, ref id) => {
+                let tag = self.analyz(*tag.clone())?;
+                let expr = tag.expr;
+                let tag = tag.ty;
+                if let AtomKind::Type(ty) = tag {
+                    return Ok(Ident::Typed(*ty, id.clone()));
+                } else {
+                    err!(
+                        self,
+                        ErrKind::InvaildType,
+                        format!("{:?} is not an Atom", expr)
+                    );
+                }
+            }
+            &Ident::Typed(_, _) | &Ident::UnTagged(_) => Ok(id),
+        }
+    }
+
     pub fn analyz_id(&mut self, id: Ident) -> Result<Node, ErrKind> {
+        if let &Ident::Tagged(_, _) = &id {
+            err!(
+                self,
+                ErrKind::InvaildType,
+                format!(
+                    "invaild id {:?} you cannot use @ outside of declaration",
+                    &id
+                )
+            );
+        }
+
         if !self.env.has(&id.val()) {
             dbg!(id);
             return Err(ErrKind::UndeclaredVar);

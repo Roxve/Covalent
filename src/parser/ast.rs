@@ -147,7 +147,7 @@ impl Ident {
     pub fn tuple(self) -> (AtomKind, String) {
         match self {
             Ident::Typed(ty, val) => (ty, val),
-            Ident::UnTagged(val) => (AtomKind::Dynamic, val),
+            Ident::UnTagged(val) => (AtomKind::Any, val),
             _ => panic!(),
         }
     }
@@ -155,7 +155,7 @@ impl Ident {
     pub fn ty(&self) -> &AtomKind {
         match self {
             Ident::Typed(ref ty, _) => ty,
-            Ident::UnTagged(_) => &AtomKind::Dynamic,
+            Ident::UnTagged(_) => &AtomKind::Any,
             _ => panic!(),
         }
     }
