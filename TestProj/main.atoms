@@ -1,7 +1,7 @@
 # extern test
 extern cprompt@str: msg@str
-extern atoi@int: a@B(str)
-extern strtocstr@B(str): s@str
+extern atoi@int: a@Back(str)
+extern strtocstr@Back(str): s@str
 
 set Int@int: s@str {
 	set cstr = strtocstr: s 

@@ -30,7 +30,16 @@ impl AtomKind {
                     None
                 }
             }
+
             _ => None,
+        }
+    }
+
+    pub fn generics(&self) -> i32 {
+        match self {
+            &Self::List(_) | &Self::Backend(_) => 1,
+            &Self::Type(ref t) => (&**t).generics(),
+            _ => 0,
         }
     }
 }

@@ -99,7 +99,7 @@ pub enum Expr {
     },
     SpecExpr {
         parent: Box<Node>,
-        spec: Box<Node>,
+        spec: Vec<Node>,
     },
 
     Discard(Box<Node>),
