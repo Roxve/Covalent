@@ -1,6 +1,8 @@
 # extern test
 extern cprompt@str: msg@str
+
 extern atoi@int: a@Back(str)
+
 extern strtocstr@Back(str): s@str
 
 set Int@int: s@str {
@@ -9,8 +11,9 @@ set Int@int: s@str {
 }
 
 set name = cprompt: "name: "
-set age = (cprompt: "age: ")
+set age = Int: (cprompt: "age: ")
 
+writeln: age
 writeln: age + 5
 
 writeln: "Hello, " + name + " you are " + age + "!" 

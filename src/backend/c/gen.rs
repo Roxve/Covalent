@@ -68,7 +68,7 @@ impl Codegen {
     fn bond_extern(&mut self, ret: AtomKind, name: String, params: Vec<Ident>) -> Emit {
         let ty = type_to_c(ret);
         let params = types_to_cnamed(params.iter().map(|x| x.clone().tuple()).collect());
-        self.module.func(vec![format!("{ty} {name}({params});")]);
+        self.module.extern_add(format!("{ty} {name}({params});"));
         Emit::None
     }
 

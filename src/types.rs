@@ -97,7 +97,7 @@ impl Display for AtomKind {
                 &None => write!(f, "Unknown(none)"),
             },
 
-            &AtomKind::Backend(ref t) => write!(f, "B({})", t.to_string()),
+            &AtomKind::Backend(ref t) => write!(f, "Back({})", t.to_string()),
 
             &AtomKind::List(ref ty) => write!(f, "List({})", ty.to_string()),
             &AtomKind::Type(ref ty) => write!(f, "Type({})", ty.to_string()),
