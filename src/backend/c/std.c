@@ -306,3 +306,5 @@ char *strtocstr(Str *str) {
   cstr[str->len] = '\0';
   return cstr;
 }
+
+const char *mk_const(char *a) { return a; }

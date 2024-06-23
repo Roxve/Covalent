@@ -4,16 +4,21 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq)]
 pub enum AtomKind {
     Type(Box<Self>),
+    Backend(Box<Self>),
+    Const(Box<Self>),
+    Unknown(Option<Box<Self>>),
+
     Int,
     Float,
     Str,
     Bool,
+
     Dynamic,
     Any,
     Void,
-    Unknown(Option<Box<Self>>),
+
     List(Box<Self>),
-    Backend(Box<Self>),
+
     Func(Box<Self>, Vec<Self>, String),
     Blueprint(String, Vec<String>),
     Obj(HashMap<String, Self>),
@@ -37,7 +42,7 @@ impl AtomKind {
 
     pub fn generics(&self) -> i32 {
         match self {
-            &Self::List(_) | &Self::Backend(_) => 1,
+            &Self::List(_) | &Self::Backend(_) | &Self::Const(_) => 1,
             &Self::Type(ref t) => (&**t).generics(),
             _ => 0,
         }
@@ -88,6 +93,7 @@ impl Display for AtomKind {
             &AtomKind::Float => write!(f, "float"),
             &AtomKind::Bool => write!(f, "bool"),
             &AtomKind::Str => write!(f, "str"),
+
             &AtomKind::Any => write!(f, "any"),
             &AtomKind::Dynamic => write!(f, "dynamic"),
             &AtomKind::Void => write!(f, "void"),
@@ -98,6 +104,7 @@ impl Display for AtomKind {
             },
 
             &AtomKind::Backend(ref t) => write!(f, "Back({})", t.to_string()),
+            &AtomKind::Const(ref t) => write!(f, "Const({})", t.to_string()),
 
             &AtomKind::List(ref ty) => write!(f, "List({})", ty.to_string()),
             &AtomKind::Type(ref ty) => write!(f, "Type({})", ty.to_string()),

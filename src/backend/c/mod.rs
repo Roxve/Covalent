@@ -46,9 +46,12 @@ pub fn type_to_c(ty: AtomKind) -> String {
         AtomKind::Float => "float",
         AtomKind::Dynamic => "Obj",
         AtomKind::Str => "Str*",
+
         AtomKind::List(_) => "List*",
         AtomKind::Bool => "_Bool",
+
         AtomKind::Backend(x) if &type_to_c(*x.clone()) == "Str*" => "char*",
+        AtomKind::Const(x) => return format!("const {}", type_to_c(*x)),
         AtomKind::Type(x) => return type_to_c(*x),
 
         AtomKind::Void => "void",

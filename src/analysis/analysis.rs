@@ -97,7 +97,9 @@ impl Analyzer {
         btype!("void", AtomKind::Void);
 
         ntype!("List", AtomKind::List);
+
         ntype!("Back", AtomKind::Backend);
+        ntype!("Const", AtomKind::Const);
 
         // setting our env blueprints to our uncompiled functions (blueprints are then compiled pased on call arguments)
         analyzer.blueprints(functions)?;
@@ -236,7 +238,8 @@ impl Analyzer {
                 fn typ(ty: AtomKind, spec: &Vec<Node>) -> AtomKind {
                     match ty {
                         AtomKind::Backend(_) => AtomKind::Backend(Box::new(spec[0].ty.clone())),
-                        AtomKind::List(_) => AtomKind::Backend(Box::new(spec[0].ty.clone())),
+                        AtomKind::List(_) => AtomKind::List(Box::new(spec[0].ty.clone())),
+                        AtomKind::Const(_) => AtomKind::Const(Box::new(spec[0].ty.clone())),
                         AtomKind::Type(t) => AtomKind::Type(Box::new(typ(*t, spec))),
                         _ => todo!(),
                     }
@@ -789,6 +792,12 @@ impl Analyzer {
                 rhs = ty_as(&lhs.ty, rhs);
             } else if rhs.ty == AtomKind::Dynamic {
                 lhs = ty_as(&rhs.ty, lhs);
+            } else if lhs.ty == AtomKind::Const(Box::new(AtomKind::Type(Box::new(rhs.ty.clone()))))
+            {
+                lhs = ty_as(&rhs.ty, lhs);
+            } else if rhs.ty == AtomKind::Const(Box::new(AtomKind::Type(Box::new(lhs.ty.clone()))))
+            {
+                rhs = ty_as(&lhs.ty, rhs);
             } else {
                 err!(
                     self,

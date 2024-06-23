@@ -24,7 +24,7 @@ pub trait Parse {
     fn parse_spec(&mut self) -> Result<Node, ()>;
     fn parse_call_fn(&mut self) -> Result<Node, ()>;
 
-    fn parse_member_list(&mut self) -> Result<Vec<Node>, ()>;
+    fn parse_spec_list(&mut self) -> Result<Vec<Node>, ()>;
     fn parse_member(&mut self) -> Result<Node, ()>;
 
     fn parse_expr(&mut self) -> Result<Node, ()>;
@@ -144,7 +144,7 @@ impl Parse for Parser {
 
         if self.current() == Token::LeftParen {
             self.next();
-            let spec = self.parse_member_list()?;
+            let spec = self.parse_spec_list()?;
 
             left = untyped(Expr::SpecExpr {
                 parent: Box::new(left),
@@ -156,13 +156,13 @@ impl Parse for Parser {
         Ok(left)
     }
 
-    fn parse_member_list(&mut self) -> Result<Vec<Node>, ()> {
+    fn parse_spec_list(&mut self) -> Result<Vec<Node>, ()> {
         let mut items: Vec<Node> = Vec::new();
 
-        items.push(self.parse_member()?);
+        items.push(self.parse_spec()?);
         while self.current() == Token::Comma {
             self.next();
-            items.push(self.parse_member()?);
+            items.push(self.parse_spec()?);
         }
 
         Ok(items)

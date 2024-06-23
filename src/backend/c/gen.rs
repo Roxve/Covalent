@@ -332,7 +332,13 @@ impl Codegen {
                 AtomKind::Int => format!("itos({item})"),
                 _ => panic!(),
             },
-            _ => todo!("add conv into {:?} from {:?}", into, from),
+
+            _ => match &from {
+                &AtomKind::Const(ref x) if &**x == &AtomKind::Type(Box::new(into.clone())) => {
+                    format!("{item}")
+                }
+                _ => todo!("add conv into {:?} from {:?}", into, from),
+            },
         };
 
         self.push(Item::Expr(into, conv));
