@@ -16,8 +16,8 @@ pub enum ErrKind {
 pub struct ATErr {
     pub kind: ErrKind,
     pub msg: String,
-    pub line: u32,
-    pub column: u32,
+    pub line: u16,
+    pub column: u16,
 }
 
 impl ATErr {

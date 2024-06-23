@@ -10,8 +10,8 @@ use ast::Node;
 #[derive(Debug, Clone)]
 pub struct Parser {
     lexer: Lexer,
-    line: u32,
-    column: u32,
+    line: u16,
+    column: u16,
     current_tok: Option<Token>,
     pub functions: Vec<Blueprint>,
     current_scope: Scope,

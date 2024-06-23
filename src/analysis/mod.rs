@@ -4,8 +4,7 @@ use std::vec;
 
 use crate::enviroment::Enviroment;
 
-use crate::err;
-use crate::err::{ATErr, ErrKind};
+use crate::err::ErrKind;
 
 use crate::parser::ast::{Blueprint, Expr, Ident, Node};
 use crate::types::{type_mangle, AtomKind};
@@ -15,8 +14,8 @@ pub struct Analyzer {
     pub env: Enviroment,
     pub imports: Vec<Node>,   // Import nodes
     pub functions: Vec<Node>, // Func nodes
-    line: u32,
-    column: u32,
+    line: u16,
+    column: u16,
 }
 
 const COMPARE_OP: &[&str] = &["==", "<", ">", "<=", ">="];
@@ -240,21 +239,21 @@ impl Analyzer {
         })
     }
 
-    pub fn typed_id(&mut self, id: Ident) -> Result<Ident, ErrKind> {
-        if let Ident::Tagged(tag, name) = id {
-            if let Some(AtomKind::Type(ty)) = self.env.get_ty(&tag) {
-                Ok(Ident::Typed(*ty, name))
-            } else {
-                err!(
-                    self,
-                    ErrKind::InvaildType,
-                    format!("{} is not an Atom", tag)
-                );
-            }
-        } else {
-            panic!()
-        }
-    }
+    // pub fn typed_id(&mut self, id: Ident) -> Result<Ident, ErrKind> {
+    //     if let Ident::Tagged(tag, name) = id {
+    //         if let Some(AtomKind::Type(ty)) = self.env.get_ty(&tag) {
+    //             Ok(Ident::Typed(*ty, name))
+    //         } else {
+    //             err!(
+    //                 self,
+    //                 ErrKind::InvaildType,
+    //                 format!("{} is not an Atom", tag)
+    //             );
+    //         }
+    //     } else {
+    //         panic!()
+    //     }
+    // }
 
     pub fn expect(&mut self, name: &Ident) -> Result<(), ErrKind> {
         self.expect_as(name.val(), name)
@@ -262,20 +261,9 @@ impl Analyzer {
 
     // expects a name as an ident tag if it has a tag
     pub fn expect_as(&mut self, name: &String, from: &Ident) -> Result<(), ErrKind> {
-        if let &Ident::Tagged(ref tag, _) = from {
-            if let Some(AtomKind::Type(ty)) = self.env.get_ty(tag) {
-                self.env.expect(name, *ty);
-                Ok(())
-            } else {
-                err!(
-                    self,
-                    ErrKind::InvaildType,
-                    format!("{} is not an Atom", tag)
-                );
-            }
-        } else {
-            Ok(())
-        }
+        let id = self.analyz_unknown_id(from.clone())?;
+        self.env.expect(name, id.ty().clone());
+        Ok(())
     }
 
     pub fn blueprints(&mut self, blueprints: Vec<Blueprint>) -> Result<(), ErrKind> {
@@ -284,27 +272,11 @@ impl Analyzer {
         for blueprint in &mut *blueprints {
             let mut params = Vec::new();
             let mut types = Vec::new();
+
             for arg in blueprint.args.clone() {
-                match arg {
-                    Ident::Tagged(tag, id) => {
-                        let tag = self.env.get_ty(&tag);
-
-                        if let Some(AtomKind::Type(t)) = tag {
-                            types.push((*t).clone());
-
-                            params.push(Ident::Typed(*t, id));
-                        } else {
-                            return Err(ErrKind::InvaildType);
-                        }
-                    }
-
-                    Ident::UnTagged(_) => {
-                        types.push(AtomKind::Any);
-
-                        params.push(arg)
-                    }
-                    _ => params.push(arg),
-                }
+                let id = self.analyz_unknown_id(arg)?;
+                params.push(id.clone());
+                types.push(id.ty().clone());
             }
 
             blueprint.args = params;

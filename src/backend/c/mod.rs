@@ -42,15 +42,22 @@ pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
 
 pub fn type_to_c(ty: AtomKind) -> String {
     match ty {
-        AtomKind::Int => "int".to_string(),
-        AtomKind::Float => "float".to_string(),
-        AtomKind::Dynamic => "Obj".to_string(),
-        AtomKind::Str => "Str*".to_string(),
-        AtomKind::List(_) => "List*".to_string(),
-        AtomKind::Bool => "_Bool".to_string(),
-        AtomKind::Void => "void".to_string(),
+        AtomKind::Int => "int",
+        AtomKind::Float => "float",
+        AtomKind::Dynamic => "Obj",
+        AtomKind::Str => "Str*",
+
+        AtomKind::List(_) => "List*",
+        AtomKind::Bool => "_Bool",
+
+        AtomKind::Backend(x) if &type_to_c(*x.clone()) == "Str*" => "char*",
+        AtomKind::Const(x) => return format!("const {}", type_to_c(*x)),
+        AtomKind::Type(x) => return type_to_c(*x),
+
+        AtomKind::Void => "void",
         _ => todo!("{:?}", ty),
     }
+    .to_string()
 }
 
 pub fn types_to_cnamed(tys: Vec<(AtomKind, String)>) -> String {
@@ -155,6 +162,7 @@ impl Emiter {
 #[derive(Debug, Clone)]
 pub struct Module {
     includes: Vec<String>,
+    externs: Vec<String>,
     functions: Vec<Vec<String>>,
     pub col: RefCell<u32>,
 }
@@ -174,6 +182,7 @@ impl Module {
     pub fn new() -> Self {
         Self {
             includes: Vec::new(),
+            externs: Vec::new(),
             functions: Vec::new(),
             col: RefCell::new(0),
         }
@@ -182,6 +191,12 @@ impl Module {
         let include_line = format!("#include \"{}.h\"", include);
         if !self.includes.contains(&include_line) {
             self.includes.push(include_line);
+        }
+    }
+
+    pub fn extern_add(&mut self, extern_: String) {
+        if !self.externs.contains(&extern_) {
+            self.externs.push(extern_);
         }
     }
 
@@ -194,6 +209,9 @@ impl Module {
         self.functions.clear();
         let mut lines = Vec::new();
         lines.append(&mut self.includes);
+
+        lines.append(&mut self.externs);
+
         lines.append(&mut func_lines);
         let code = lines.join("\n");
 

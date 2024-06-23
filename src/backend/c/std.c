@@ -299,3 +299,12 @@ Str *cprompt(Str *msg) {
 }
 
 Str *itos(int i) { return __strnew__(""); }
+
+char *strtocstr(Str *str) {
+  char *cstr = GC_malloc(str->len + 1);
+  strcpy(cstr, str->val);
+  cstr[str->len] = '\0';
+  return cstr;
+}
+
+const char *mk_const(char *a) { return a; }

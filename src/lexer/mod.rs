@@ -6,8 +6,8 @@ pub mod token;
 use self::token::Token;
 #[derive(Debug, Clone)]
 pub struct Lexer {
-    line: u32,
-    column: u32,
+    line: u16,
+    column: u16,
     code: String,
     pos: usize,
     pub errors: Vec<ATErr>,

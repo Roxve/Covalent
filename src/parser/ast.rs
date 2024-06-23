@@ -36,16 +36,19 @@ pub enum Expr {
     Use(String),
     Literal(Literal),
     ListExpr(Vec<Node>),
+
     BinaryExpr {
         op: String,
         left: Box<Node>,
         right: Box<Node>,
     },
+
     Ident(Ident),
     VarDeclare {
         name: Ident,
         val: Box<Node>,
     },
+
     VarAssign {
         name: Box<Node>,
         val: Box<Node>,
@@ -94,9 +97,14 @@ pub enum Expr {
         parent: Box<Node>,
         index: Box<Node>,
     },
+    SpecExpr {
+        parent: Box<Node>,
+        spec: Vec<Node>,
+    },
+
     Discard(Box<Node>),
     Block(Vec<Node>),
-    PosInfo(String, u32, u32), // debugging
+    PosInfo(String, u16, u16), // debugging
     RetExpr(Box<Node>),
     As(Box<Node>),
 }
@@ -116,7 +124,7 @@ pub fn untyped(expr: Expr) -> Node {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ident {
-    Tagged(String, String),
+    Tagged(Box<Node>, String),
     Typed(AtomKind, String),
     UnTagged(String),
 }
@@ -139,7 +147,7 @@ impl Ident {
     pub fn tuple(self) -> (AtomKind, String) {
         match self {
             Ident::Typed(ty, val) => (ty, val),
-            Ident::UnTagged(val) => (AtomKind::Dynamic, val),
+            Ident::UnTagged(val) => (AtomKind::Any, val),
             _ => panic!(),
         }
     }
@@ -147,7 +155,7 @@ impl Ident {
     pub fn ty(&self) -> &AtomKind {
         match self {
             Ident::Typed(ref ty, _) => ty,
-            Ident::UnTagged(_) => &AtomKind::Dynamic,
+            Ident::UnTagged(_) => &AtomKind::Any,
             _ => panic!(),
         }
     }
@@ -158,4 +166,7 @@ pub struct Blueprint {
     pub name: Ident,
     pub args: Vec<Ident>,
     pub body: Vec<Node>,
+    // pub line: u16,
+    // pub column: u16,
+    // pub width: u16,
 }
