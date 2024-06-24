@@ -5,7 +5,6 @@ use std::collections::HashMap;
 pub enum BasicType {
     Int,
     Float,
-    Str,
     Void,
 }
 
@@ -15,7 +14,6 @@ impl Display for BasicType {
             Self::Float => write!(f, "float"),
             Self::Int => write!(f, "int"),
             Self::Void => write!(f, "void"),
-            Self::Str => write!(f, "str"),
         }
     }
 }
@@ -80,9 +78,9 @@ pub enum AtomType {
     Atom(Atom),
     Function(FunctionType),
     Blueprint(BlueprintType),
-    Dynamic,
-    Unknown(Option<Box<Self>>),
-    Any,
+    Dynamic,                    // may be scrapped, says that type is only known at runtime
+    Unknown(Option<Box<Self>>), // Unknown(None) means that expr type is unknown later on it should be replaced with Unknown(Some(AtomType)) where some is an assumption and even later it is unwarped or converted to the Some type (may be replaced to be simpler)
+    Any, // mainly used for mangling and Symbol.expected, means that symbol can be of Any type
 }
 
 impl Display for AtomType {
@@ -161,48 +159,3 @@ pub fn mangle_types(mangle: String) -> Vec<String> {
     let types = mangle.get(mangle.find('$').unwrap() + 1..).unwrap();
     types.split('_').map(|s| s.to_string()).collect()
 }
-
-// impl Display for AtomType {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             &AtomKind::Int => write!(f, "int"),
-//             &AtomKind::Float => write!(f, "float"),
-//             &AtomKind::Bool => write!(f, "bool"),
-//             &AtomKind::Str => write!(f, "str"),
-
-//             &AtomKind::Any => write!(f, "any"),
-//             &AtomKind::Dynamic => write!(f, "dynamic"),
-//             &AtomKind::Void => write!(f, "void"),
-
-//             &AtomKind::Unknown(ref assume) => match assume {
-//                 &Some(ref t) => write!(f, "Unknown(some({}))", t.to_string()),
-//                 &None => write!(f, "Unknown(none)"),
-//             },
-
-//             &AtomKind::Backend(ref t) => write!(f, "Back({})", t.to_string()),
-//             &AtomKind::Const(ref t) => write!(f, "Const({})", t.to_string()),
-
-//             &AtomKind::List(ref ty) => write!(f, "List({})", ty.to_string()),
-//             &AtomKind::Type(ref ty) => write!(f, "Type({})", ty.to_string()),
-//             &AtomKind::Func(ref ret, ref args, ref name) => write!(
-//                 f,
-//                 "{}@{}{}",
-//                 name,
-//                 ret,
-//                 if args.len() > 0 {
-//                     ": ".to_owned()
-//                         + &args
-//                             .iter()
-//                             .map(|arg| arg.to_string())
-//                             .collect::<Vec<String>>()
-//                             .join(", ")
-//                 } else {
-//                     "!".to_string()
-//                 }
-//             ),
-
-//             &AtomKind::Blueprint(ref ref_name, _) => write!(f, "Function(\"{}\")", ref_name),
-//             &AtomKind::Obj(_) => todo!(),
-//         }
-//     }
-// }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::parser::ast::{Blueprint, Literal};
-use crate::types::{AtomType, FunctionType};
+use crate::types::{Atom, AtomType, BasicType, FunctionType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Symbol {
@@ -23,6 +23,71 @@ pub struct Enviroment {
 }
 
 impl Enviroment {
+    // init the top enviroment, every other enviroment shares this as a parent it contains the built-in types
+    pub fn init() -> Self {
+        let mut symbols = HashMap::new();
+
+        macro_rules! insert {
+            ($name: expr, $type: expr) => {
+                symbols.insert(
+                    $name.to_owned(),
+                    Symbol {
+                        name: $name.to_owned(),
+                        ty: $type,
+                        refers_to_atom: true,
+                        value: None,
+                        expected: AtomType::Any,
+                    },
+                );
+            };
+        }
+
+        macro_rules! ty {
+            ($type: expr) => {
+                let name = $type.clone().to_string();
+                insert!(&name, $type);
+            };
+        }
+
+        macro_rules! complex {
+            ($name:expr, { $($field_name:expr => $field_type:expr),* }, { $($generic_name:expr),* }) => {
+                symbols.insert(
+                    $name.to_owned(),
+                    Symbol {
+                        name: $name.to_owned(),
+                        ty: AtomType::Atom(Atom {
+                            name: $name.to_owned(),
+                            fields: HashMap::from([$(($field_name.to_owned(), $field_type)),*]),
+                            generics: HashMap::from([$(($generic_name.to_owned(), AtomType::Unknown(None))),*]),
+                        }),
+                        refers_to_atom: true,
+                        value: None,
+                        expected: AtomType::Any,
+                    },
+                );
+            };
+        }
+
+        // default built-in types
+        ty!(AtomType::Basic(BasicType::Int));
+        ty!(AtomType::Basic(BasicType::Float));
+        ty!(AtomType::Basic(BasicType::Void));
+        ty!(AtomType::Dynamic);
+
+        // complex built-in types
+        complex!("str", {"size" => AtomType::Basic(BasicType::Int)}, {});
+
+        complex!("List", { "size" => AtomType::Basic(BasicType::Int) }, {"T"});
+        complex!("Back", {}, { "T" });
+
+        Self {
+            symbols,
+            expects: HashMap::new(), // TODO: remove?
+            parent: None,
+            blueprints: Vec::new(),
+        }
+    }
+
     pub fn new(parent: Option<Box<Self>>) -> Self {
         Self {
             symbols: HashMap::new(),
