@@ -10,6 +10,8 @@ pub struct Symbol {
 
     pub refers_to_atom: bool,
     pub value: Option<Literal>,
+
+    pub expected: AtomType,
 }
 
 #[derive(Clone, Debug)]
@@ -130,6 +132,7 @@ impl Enviroment {
             ty: AtomType::Function(func),
             refers_to_atom: false,
             value: None,
+            expected: AtomType::Any,
         });
     }
 
@@ -148,18 +151,6 @@ impl Enviroment {
     }
 
     pub fn is_expected(&mut self, name: &String, ty: &AtomType) -> bool {
-        if self.expects.get(name).is_some_and(|x| x == ty)
-            || self.expects.get(name).is_some_and(|x| x == &AtomType::Any)
-        {
-            return true;
-        } else if self.expects.get(name).is_some() {
-            return false;
-        }
-
-        if self.parent.is_some() {
-            return self.parent.as_mut().unwrap().is_expected(name, ty);
-        }
-
-        true
+        &self.get(name).unwrap().expected == ty
     }
 }
