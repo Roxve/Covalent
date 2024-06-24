@@ -83,7 +83,6 @@ pub enum AtomType {
     Dynamic,
     Unknown(Option<Box<Self>>),
     Any,
-    Type(Box<AtomType>), // used for ids and things that reference another AtomType
 }
 
 impl Display for AtomType {
@@ -97,7 +96,6 @@ impl Display for AtomType {
             Self::Function(fun) => write!(f, "{}", fun),
             Self::Unknown(None) => write!(f, "Unknown"),
             Self::Unknown(Some(t)) => write!(f, "Unknown({})", t),
-            Self::Type(t) => write!(f, "TypeID({})", t), // Handle new variant
         }
     }
 }
@@ -114,7 +112,6 @@ impl AtomType {
     pub fn generics(&self) -> i32 {
         match self {
             Self::Atom(a) => a.generics.len() as i32,
-            Self::Type(t) => (&**t).generics(),
             _ => 0,
         }
     }

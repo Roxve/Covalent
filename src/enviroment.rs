@@ -1,13 +1,21 @@
 use std::collections::HashMap;
 
-use crate::parser::ast::Blueprint;
-use crate::types::AtomKind;
+use crate::parser::ast::{Blueprint, Literal};
+use crate::types::{AtomType, FunctionType};
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Symbol {
+    pub name: String,
+    pub ty: AtomType,
+
+    pub refers_to_atom: bool,
+    pub value: Option<Literal>,
+}
 
 #[derive(Clone, Debug)]
 pub struct Enviroment {
-    pub vars: HashMap<String, AtomKind>,
-    pub expects: HashMap<String, AtomKind>,
-    pub current: AtomKind,
+    pub symbols: HashMap<String, Symbol>,
+    pub expects: HashMap<String, AtomType>,
     pub parent: Option<Box<Enviroment>>,
     pub blueprints: Vec<Blueprint>,
 }
@@ -15,75 +23,83 @@ pub struct Enviroment {
 impl Enviroment {
     pub fn new(parent: Option<Box<Self>>) -> Self {
         Self {
-            vars: HashMap::new(),
+            symbols: HashMap::new(),
             expects: HashMap::new(),
-            current: AtomKind::Void,
             parent,
             blueprints: Vec::new(),
         }
     }
 
-    pub fn child(&self) -> Self {
-        Enviroment::new(Some(Box::new(self.clone())))
+    pub fn child(&mut self) {
+        *self = Enviroment::new(Some(Box::new(self.clone())));
     }
 
-    pub fn parent(&self) -> Option<Self> {
-        if self.parent.is_none() {
-            None
+    pub fn parent(&mut self) {
+        *self = *self.parent.as_ref().unwrap().clone();
+    }
+
+    pub fn get_ty(&self, name: &String) -> Option<AtomType> {
+        let sym = self.get(name);
+
+        if sym.is_some() {
+            Some(sym.unwrap().ty.clone())
         } else {
-            Some(*(self.parent.clone().unwrap()))
+            None
         }
     }
 
-    pub fn get_ty(&self, name: &String) -> Option<AtomKind> {
-        if self.vars.contains_key(name) {
-            return Some(self.vars[name].clone());
+    pub fn get(&self, name: &String) -> Option<&Symbol> {
+        if self.symbols.contains_key(name) {
+            return Some(&self.symbols[name]);
         }
 
         if self.parent.is_some() {
-            return self.parent().unwrap().get_ty(name);
+            self.parent.as_ref().unwrap().get(name)
         } else {
-            return None;
+            None
         }
     }
 
     pub fn has(&self, name: &String) -> bool {
-        if self.vars.contains_key(name) {
+        if self.symbols.contains_key(name) {
             true
         } else if self.parent.is_some() {
-            self.parent().unwrap().has(name)
+            self.parent.as_ref().unwrap().has(name)
         } else {
             false
         }
     }
 
+    //TODO: REMOVE
     // member expr parent is passed to a function as first arg if it takes it as an arg for ex.
     // set push: List(T) self, T item -> List(T)
-    pub fn ty_parent_fn(&self, ty: &AtomKind, name: &String) -> Option<AtomKind> {
-        let parent = self.vars.get(name);
+    pub fn ty_parent_fn(&self, ty: &AtomType, name: &String) -> Option<AtomType> {
+        let parent = self.symbols.get(name);
+
         if parent.is_some() {
-            if let AtomKind::Func(_, args, _) = parent.unwrap() {
-                if &args[0] == ty {
-                    return Some(parent.unwrap().to_owned());
+            if let &AtomType::Function(ref f) = &parent.unwrap().ty {
+                if &f.params[0] == ty {
+                    return Some(parent.unwrap().to_owned().ty);
                 }
             }
         }
         None
     }
 
-    pub fn modify(&mut self, name: &String, ty: AtomKind) {
-        if self.vars.contains_key(name) {
-            self.vars.get_mut(name).map(|val| *val = ty);
+    pub fn modify_ty(&mut self, name: &String, ty: AtomType) {
+        if self.symbols.contains_key(name) {
+            self.symbols.get_mut(name).map(|val| val.ty = ty);
         } else if self.parent.is_some() {
-            self.parent().unwrap().modify(name, ty);
+            self.parent.as_mut().unwrap().modify_ty(name, ty);
         }
     }
 
-    pub fn add(&mut self, name: &String, ty: AtomKind) {
-        if self.vars.contains_key(name) {
-            self.modify(name, ty)
+    pub fn add(&mut self, sym: Symbol) {
+        let name = sym.name.clone();
+        if self.symbols.contains_key(&name) {
+            self.modify_ty(&name, sym.ty)
         } else {
-            self.vars.insert(name.clone(), ty);
+            self.symbols.insert(name, sym);
         }
     }
 
@@ -95,7 +111,7 @@ impl Enviroment {
         }
 
         if self.parent.is_some() {
-            return self.parent().unwrap().get_blueprint(name);
+            return self.parent.as_ref().unwrap().get_blueprint(name);
         }
         return None;
     }
@@ -108,16 +124,20 @@ impl Enviroment {
         }
     } // returns the top level enviroment
 
-    pub fn push_function(&mut self, name: String, args: Vec<AtomKind>, ty: AtomKind) {
-        self.top()
-            .add(&name, AtomKind::Func(Box::new(ty), args, name.clone()));
+    pub fn push_function(&mut self, name: String, func: FunctionType) {
+        self.top().add(Symbol {
+            name,
+            ty: AtomType::Function(func),
+            refers_to_atom: false,
+            value: None,
+        });
     }
 
-    pub fn expect(&mut self, name: &String, ty: AtomKind) {
+    pub fn expect(&mut self, name: &String, ty: AtomType) {
         self.expects.insert(name.clone(), ty);
     }
 
-    pub fn get_expected(&mut self, name: &String) -> &AtomKind {
+    pub fn get_expected(&mut self, name: &String) -> &AtomType {
         let expect = self.expects.get(name);
 
         if expect.is_none() {
@@ -127,9 +147,9 @@ impl Enviroment {
         expect.unwrap()
     }
 
-    pub fn is_expected(&mut self, name: &String, ty: &AtomKind) -> bool {
+    pub fn is_expected(&mut self, name: &String, ty: &AtomType) -> bool {
         if self.expects.get(name).is_some_and(|x| x == ty)
-            || self.expects.get(name).is_some_and(|x| x == &AtomKind::Any)
+            || self.expects.get(name).is_some_and(|x| x == &AtomType::Any)
         {
             return true;
         } else if self.expects.get(name).is_some() {
@@ -137,7 +157,7 @@ impl Enviroment {
         }
 
         if self.parent.is_some() {
-            return self.parent().unwrap().is_expected(name, ty);
+            return self.parent.as_mut().unwrap().is_expected(name, ty);
         }
 
         true
