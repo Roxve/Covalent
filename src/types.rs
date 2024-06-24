@@ -1,10 +1,15 @@
 use core::fmt::Display;
+use indexmap::IndexMap;
 use std::collections::HashMap;
+
+use lazy_static::lazy_static;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BasicType {
     Int,
     Float,
+
+    Bool,
     Void,
 }
 
@@ -14,6 +19,7 @@ impl Display for BasicType {
             Self::Float => write!(f, "float"),
             Self::Int => write!(f, "int"),
             Self::Void => write!(f, "void"),
+            Self::Bool => write!(f, "bool"),
         }
     }
 }
@@ -47,7 +53,42 @@ impl Display for BlueprintType {
 pub struct Atom {
     pub name: String,
     pub fields: HashMap<String, AtomType>,
-    pub generics: HashMap<String, AtomType>,
+    pub generics: IndexMap<String, AtomType>,
+}
+
+impl Atom {
+    pub fn new(name: String, fields: HashMap<String, AtomType>, generics: IndexMap<String, AtomType>) -> Atom {
+        Atom { name, fields, generics }
+    }
+
+    // populates generics with given specs
+    pub fn spec(&self, specs: &[AtomType]) -> Self {
+        let mut this = self.clone();
+        for (idx, spec) in specs.iter().enumerate() {
+            *this.generics.get_index_mut(idx).unwrap().1 = spec.clone();
+        }
+        this
+    }
+}
+
+
+
+// makes an atom easily
+macro_rules! complex {
+    ($name:expr, { $($field_name:expr => $field_type:expr),* }, { $($generic_name:expr),* }) => {
+        Atom::new(
+            $name.to_owned(),
+            HashMap::from([$(($field_name.to_owned(), $field_type)),*]),
+            IndexMap::from([$(($generic_name.to_owned(), AtomType::Unknown(None))),*]),
+        )
+    };
+}
+
+lazy_static! {
+    pub static ref List: Atom = complex!("List", {"size" => AtomType::Basic(BasicType::Int)}, {"T"});
+    pub static ref Str: Atom = complex!("str", {"size" => AtomType::Basic(BasicType::Int)}, {"T"});
+
+    pub static ref Back: Atom = complex!("Back", {},{"T"});
 }
 
 impl Display for Atom {

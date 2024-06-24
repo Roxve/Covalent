@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::parser::ast::{Blueprint, Literal};
-use crate::types::{Atom, AtomType, BasicType, FunctionType};
+use crate::types::{self, AtomType, BasicType, FunctionType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Symbol {
@@ -50,21 +50,8 @@ impl Enviroment {
         }
 
         macro_rules! complex {
-            ($name:expr, { $($field_name:expr => $field_type:expr),* }, { $($generic_name:expr),* }) => {
-                symbols.insert(
-                    $name.to_owned(),
-                    Symbol {
-                        name: $name.to_owned(),
-                        ty: AtomType::Atom(Atom {
-                            name: $name.to_owned(),
-                            fields: HashMap::from([$(($field_name.to_owned(), $field_type)),*]),
-                            generics: HashMap::from([$(($generic_name.to_owned(), AtomType::Unknown(None))),*]),
-                        }),
-                        refers_to_atom: true,
-                        value: None,
-                        expected: AtomType::Any,
-                    },
-                );
+            ($name: literal, $atom: expr) => {
+                insert!($name, AtomType::Atom($atom.clone()));
             };
         }
 
@@ -73,12 +60,12 @@ impl Enviroment {
         ty!(AtomType::Basic(BasicType::Float));
         ty!(AtomType::Basic(BasicType::Void));
         ty!(AtomType::Dynamic);
-
+        ty!(AtomType::Basic(BasicType::Bool));
+        
         // complex built-in types
-        complex!("str", {"size" => AtomType::Basic(BasicType::Int)}, {});
-
-        complex!("List", { "size" => AtomType::Basic(BasicType::Int) }, {"T"});
-        complex!("Back", {}, { "T" });
+        complex!("List", types::List);
+        complex!("Back", types::Back);
+        complex!("Str", types::Str);
 
         Self {
             symbols,
