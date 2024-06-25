@@ -1,15 +1,12 @@
 use core::panic;
 
-use super::type_to_c;
-use super::Emit;
 
-use super::types_to_cnamed;
-use super::Codegen;
-use super::Item;
-use crate::ir::get_op_type;
-use crate::ir::IROp;
-use crate::parser::ast::Ident;
-use crate::types::AtomKind;
+use super::{type_to_c, types_to_cnamed, Codegen, Emit, Item};
+use crate::{
+    ir::{get_op_type, IROp},
+    parser::ast::Ident,
+    types::AtomType,
+};
 
 impl Codegen {
     #[inline]
@@ -48,8 +45,8 @@ impl Codegen {
     fn bond_fn(
         &mut self,
         name: String,
-        args: Vec<(AtomKind, String)>,
-        ret: AtomKind,
+        args: Vec<(AtomType, String)>,
+        ret: AtomType,
         body: Vec<IROp>,
     ) {
         let ty = type_to_c(ret);
@@ -65,7 +62,7 @@ impl Codegen {
         self.module.func(emiter.finish());
     }
 
-    fn bond_extern(&mut self, ret: AtomKind, name: String, params: Vec<Ident>) -> Emit {
+    fn bond_extern(&mut self, ret: AtomType, name: String, params: Vec<Ident>) -> Emit {
         let ty = type_to_c(ret);
         let params = types_to_cnamed(params.iter().map(|x| x.clone().tuple()).collect());
         self.module.extern_add(format!("{ty} {name}({params});"));
@@ -88,7 +85,7 @@ impl Codegen {
             IROp::Alloc(_, _) => (),
             IROp::Dealloc(ty, name) => {
                 // free heap allocated types
-                if ty == AtomKind::Str {
+                if ty == AtomType::Str {
                     let line = self.call_one("free", name);
                     return Emit::Line(line);
                 }
@@ -136,7 +133,7 @@ impl Codegen {
                 let name = self.pop_str();
                 let args = self.pop_amount(arg_count).join(", ");
                 let call = format!("{}({})", name, args);
-                if &ty == &AtomKind::Void {
+                if &ty == &AtomType::Void {
                     // our compiler only insert a line when the stack is empty, void functions doesnt push anything to the stack
                     return Emit::Line(call);
                 } else {
@@ -155,7 +152,7 @@ impl Codegen {
                     return Emit::Line(self.pop_str());
                 }
             }
-
+            
             IROp::Set(ty) => {
                 let val = self.pop_str();
 

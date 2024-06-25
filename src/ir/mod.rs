@@ -67,7 +67,7 @@ pub fn get_op_type(op: &IROp) -> AtomType {
         EComp => &AtomType::Basic(BasicType::Bool),
         Eq => &AtomType::Basic(BasicType::Bool),
 
-        List(ref ty, _) => return AtomType::Atom(types::List.spec(&[ty.clone()])),
+        List(ty, _) => return AtomType::Atom(types::List.spec(&[ty.clone()])),
         Const(lit) => return lit.get_ty(),
         Conv(t, _) => t,
         Store(t, _) => t,
