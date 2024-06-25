@@ -50,8 +50,8 @@ impl Enviroment {
         }
 
         macro_rules! complex {
-            ($name: literal, $atom: expr) => {
-                insert!($name, AtomType::Atom($atom.clone()));
+            ($atom: expr) => {
+                insert!(&$atom.name, AtomType::Atom($atom.clone()));
             };
         }
 
@@ -63,9 +63,11 @@ impl Enviroment {
         ty!(AtomType::Basic(BasicType::Bool));
         
         // complex built-in types
-        complex!("List", types::List);
-        complex!("Back", types::Back);
-        complex!("Str", types::Str);
+        complex!(types::List);
+        complex!(types::Back);
+        complex!(types::Str);
+        complex!(types::Const);
+        
 
         Self {
             symbols,

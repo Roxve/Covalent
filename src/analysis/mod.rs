@@ -210,7 +210,7 @@ pub fn get_fn_type(body: &Vec<Node>) -> AtomType {
 impl Analyzer {
     pub fn new(workdir: String) -> Self {
         Self {
-            env: Enviroment::new(None),
+            env: Enviroment::init(),
             functions: Vec::new(),
             imports: Vec::new(),
             line: 0,

@@ -40,12 +40,12 @@ impl Display for FunctionType {
 #[derive(Debug, Clone, PartialEq)]
 pub struct BlueprintType {
     pub name: String,
-    pub overlords: Vec<String>,
+    pub overloads: Vec<String>,
 }
 
 impl Display for BlueprintType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Blueprint({}, {})", self.name, self.overlords.join(", "))
+        write!(f, "Blueprint({}, {})", self.name, self.overloads.join(", "))
     }
 }
 
@@ -57,8 +57,16 @@ pub struct Atom {
 }
 
 impl Atom {
-    pub fn new(name: String, fields: HashMap<String, AtomType>, generics: IndexMap<String, AtomType>) -> Atom {
-        Atom { name, fields, generics }
+    pub fn new(
+        name: String,
+        fields: HashMap<String, AtomType>,
+        generics: IndexMap<String, AtomType>,
+    ) -> Atom {
+        Atom {
+            name,
+            fields,
+            generics,
+        }
     }
 
     // populates generics with given specs
@@ -70,8 +78,6 @@ impl Atom {
         this
     }
 }
-
-
 
 // makes an atom easily
 macro_rules! complex {
@@ -85,10 +91,11 @@ macro_rules! complex {
 }
 
 lazy_static! {
-    pub static ref List: Atom = complex!("List", {"size" => AtomType::Basic(BasicType::Int)}, {"T"});
+    pub static ref List: Atom =
+        complex!("List", {"size" => AtomType::Basic(BasicType::Int)}, {"T"});
     pub static ref Str: Atom = complex!("str", {"size" => AtomType::Basic(BasicType::Int)}, {"T"});
-
-    pub static ref Back: Atom = complex!("Back", {},{"T"});
+    pub static ref Back: Atom = complex!("Back", {}, { "T" });
+    pub static ref Const: Atom = complex!("Const", {"T" => AtomType::Unknown(None)}, {"T"});
 }
 
 impl Display for Atom {

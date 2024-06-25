@@ -1,7 +1,7 @@
 use std::fs;
 
 use crate::parser::parse::Parse;
-use crate::types::{mangle_types, type_mangle, AtomKind};
+use crate::types::{mangle_types, type_mangle, AtomType};
 
 use crate::err;
 use crate::err::{ATErr, ErrKind};
@@ -15,7 +15,7 @@ impl Analyzer {
     pub fn analyz_body(&mut self, body: Vec<Node>, top: bool) -> Result<Vec<Node>, ErrKind> {
         let mut analyzed_body = vec![];
         if !top {
-            self.env = self.env.child();
+            self.env.child();
         }
 
         for node in body {
@@ -39,7 +39,7 @@ impl Analyzer {
         }
 
         if !top {
-            self.env = self.env.parent().unwrap();
+            self.env.parent();
         }
         Ok(analyzed_body)
     }
@@ -63,43 +63,11 @@ impl Analyzer {
 
         analyzer.import(
             &mut analyzed_prog,
-            AtomKind::Void,
+            AtomType::Basic(BasicType::Void),
             "std",
             "writeln",
-            vec![AtomKind::Dynamic],
+            vec![AtomType::Dynamic],
         );
-
-        macro_rules! btype {
-            ($name: expr, $ty: expr) => {
-                analyzer
-                    .env
-                    .add(&($name).to_string(), AtomKind::Type(Box::new($ty)));
-            };
-        }
-
-        macro_rules! ntype {
-            ($name: expr, $ty: path) => {
-                analyzer.env.add(
-                    &($name).to_string(),
-                    AtomKind::Type(Box::new($ty(Box::new(AtomKind::Type(Box::new(
-                        AtomKind::Unknown(None),
-                    )))))),
-                );
-            };
-        }
-
-        btype!("int", AtomKind::Int);
-        btype!("float", AtomKind::Float);
-        btype!("str", AtomKind::Str);
-
-        btype!("bool", AtomKind::Bool);
-        btype!("dynamic", AtomKind::Dynamic);
-        btype!("void", AtomKind::Void);
-
-        ntype!("List", AtomKind::List);
-
-        ntype!("Back", AtomKind::Backend);
-        ntype!("Const", AtomKind::Const);
 
         // setting our env blueprints to our uncompiled functions (blueprints are then compiled pased on call arguments)
         analyzer.blueprints(functions)?;
@@ -111,14 +79,11 @@ impl Analyzer {
             analyzed_prog,
         ]
         .concat();
-        // analyzed_prog = analyzer.correct_prog(analyzed_prog)?;
         Ok(analyzed_prog)
     }
 
     pub fn analyz(&mut self, node: Node) -> Result<Node, ErrKind> {
         match node.expr.clone() {
-            Expr::As(_) => Ok(node), // this type of expressions happens in correction
-
             Expr::Literal(literal) => {
                 let ty = literal.get_ty();
                 Ok(Node {
@@ -133,7 +98,7 @@ impl Analyzer {
                 let item_ty = if items.len() > 0 {
                     (&items.first().unwrap()).ty.clone()
                 } else {
-                    AtomKind::Void // empty list unknown type figure out type on push
+                    AtomType::Unknown(None) // empty list unknown type figure out type on push
                 };
 
                 for (i, item) in (&items).iter().enumerate() {
@@ -145,7 +110,7 @@ impl Analyzer {
                         err!(self, ErrKind::InvaildType, format!("list items have to be of the same type, item {} is of an invaild type", i-1));
                     }
                 }
-                let ty = AtomKind::List(Box::new(item_ty));
+                let ty = AtomType::Atom(types::List.spec(&[item_ty]));
                 let expr = Expr::ListExpr(items);
                 Ok(Node { expr, ty })
             }
@@ -233,19 +198,13 @@ impl Analyzer {
                     );
                 }
 
-                // for now we have these types as built-in later we should port them to "Atoms"
-                // however at the time of writing this i am not sure how atoms should be structed yet there is alot of work to be done first
-                fn typ(ty: AtomKind, spec: &Vec<Node>) -> AtomKind {
-                    match ty {
-                        AtomKind::Backend(_) => AtomKind::Backend(Box::new(spec[0].ty.clone())),
-                        AtomKind::List(_) => AtomKind::List(Box::new(spec[0].ty.clone())),
-                        AtomKind::Const(_) => AtomKind::Const(Box::new(spec[0].ty.clone())),
-                        AtomKind::Type(t) => AtomKind::Type(Box::new(typ(*t, spec))),
-                        _ => todo!(),
-                    }
-                }
+                let spec_types: Vec<AtomType> = spec.iter().map(|x| x.ty.clone()).collect();
 
-                let ty = typ(parent.ty.clone(), &spec);
+                let ty = if let &AtomType::Atom(atom) = &parent.ty {
+                    AtomType::Atom(atom.spec(&spec_types))
+                } else {
+                    panic!("type {} is not an atom", parent.ty);
+                };
 
                 Ok(Node {
                     expr: Expr::SpecExpr { parent, spec },
@@ -270,13 +229,20 @@ impl Analyzer {
 
         let params_types = params.iter().map(|x| x.ty().clone()).collect();
 
-        let ty = AtomKind::Func(
-            Box::new(name.ty().clone()),
-            params_types,
-            name.val().clone(),
-        );
+        let ty = FunctionType {
+            return_type: Box::new(name.ty().clone()),
+            params: params_types,
+        };
 
-        self.env.add(name.val(), ty.clone());
+        let ty = AtomType::Function(ty);
+
+        self.env.add(Symbol {
+            name: name.val().clone(),
+            ty: ty.clone(),
+            refers_to_atom: false,
+            value: None,
+            expected: None,
+        });
 
         let expr = Expr::Extern { name, params };
 
@@ -286,11 +252,11 @@ impl Analyzer {
     pub fn analyz_blueprint(
         &mut self,
         blueprint: Blueprint,
-        types: Vec<AtomKind>,
+        types: Vec<AtomType>,
     ) -> Result<String, ErrKind> {
         let mangle = type_mangle(blueprint.name.val().clone(), types.clone());
         if self.env.has(&mangle) {
-            if let AtomKind::Func(_, _, _) = self.env.get_ty(&mangle).unwrap() {
+            if let AtomType::Function(_) = self.env.get_ty(&mangle).unwrap() {
                 return Ok(mangle);
             }
         }
@@ -361,18 +327,18 @@ impl Analyzer {
         let mut lhs = self.analyz(left)?;
         let mut rhs = self.analyz(right)?;
 
-        if &rhs.ty == &AtomKind::Unknown(None) && &lhs.ty == &AtomKind::Unknown(None) {
-        } else if let &AtomKind::Unknown(None) = &rhs.ty {
-            rhs.ty = AtomKind::Unknown(Some(Box::new(lhs.ty.clone()))); // unknownize the expression if any of the sides is unknown so we can figure it out later
-        } else if let &AtomKind::Unknown(None) = &lhs.ty {
-            lhs.ty = AtomKind::Unknown(Some(Box::new(rhs.ty.clone())));
+        if &rhs.ty == &AtomType::Unknown(None) && &lhs.ty == &AtomType::Unknown(None) {
+        } else if let &AtomType::Unknown(None) = &rhs.ty {
+            rhs.ty = AtomType::Unknown(Some(Box::new(lhs.ty.clone()))); // assume the unknown side as the other side
+        } else if let &AtomType::Unknown(None) = &lhs.ty {
+            lhs.ty = AtomType::Unknown(Some(Box::new(rhs.ty.clone())));
         }
 
         (lhs, rhs) = self.type_conv(lhs, rhs)?;
         let ty = match op.as_str() {
-            "==" | ">" | "<" | ">=" | "<=" => AtomKind::Bool,
+            "==" | ">" | "<" | ">=" | "<=" => AtomType::Basic(BasicType::Bool),
             _ => {
-                if let &AtomKind::Unknown(Some(ref ty)) = &lhs.ty {
+                if let &AtomType::Unknown(Some(ref ty)) = &lhs.ty {
                     (**ty).clone()
                 } else {
                     lhs.ty.clone()
@@ -392,13 +358,13 @@ impl Analyzer {
 
     pub fn analyz_call(&mut self, name: Node, args: Vec<Node>) -> Result<Node, ErrKind> {
         let name = Box::new(self.analyz(name)?);
+
+        let args = self.analyz_items(args)?;
+
+        let args_types: Vec<AtomType> = args.iter().map(|arg| arg.ty.clone()).collect();
         match name.ty.clone() {
-            AtomKind::Blueprint(ref_name, names) => {
-                let args = self.analyz_items(args)?;
-
-                let args_types: Vec<AtomKind> = args.iter().map(|arg| arg.ty.clone()).collect();
-
-                let mangle = type_mangle(ref_name, args_types.clone());
+            AtomType::Blueprint(blueprint_t) => {
+                let mangle = type_mangle(blueprint_t.name.clone(), args_types.clone());
                 // TODO! if its a member call pass parent as first arg and call the child instead
                 // if &argc != &(args.len() as u32) {
                 //     self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), argc, name));
@@ -409,7 +375,7 @@ impl Analyzer {
                     let id_ty = self.env.get_ty(&mangle).unwrap();
 
                     match id_ty {
-                        AtomKind::Func(ref ret, _, _) => {
+                        AtomType::Function(ref func) => {
                             return Ok(Node {
                                 expr: Expr::FnCall {
                                     name: Box::new(Node {
@@ -418,11 +384,11 @@ impl Analyzer {
                                     }),
                                     args,
                                 },
-                                ty: *ret.clone(),
+                                ty: *func.return_type.clone(),
                             })
                         }
 
-                        AtomKind::Blueprint(_, _) => (), // continue building blueprint
+                        AtomType::Blueprint(_) => (), // continue building blueprint
                         _ => panic!(),
                     };
                 }
@@ -430,16 +396,20 @@ impl Analyzer {
                 let mut blueprint = None;
                 let mut possible = Vec::new();
 
-                for name in names {
-                    if name == mangle {
-                        blueprint = Some(self.env.get_blueprint(&name).unwrap());
+                for overload in blueprint_t.overloads {
+                    // if we got an exact overload no need to check for the best possible one to use
+                    if overload == mangle {
+                        blueprint = Some(self.env.get_blueprint(&overload).unwrap());
+
+                        drop(possible); // uneeded memory
                         break;
                     }
 
+                    // make a list of possible overload that mangle could be from
                     let mangle = mangle_types(mangle.clone());
 
                     let mut found = true;
-                    for (i, ty) in mangle_types(name.clone()).iter().enumerate() {
+                    for (i, ty) in mangle_types(overload.clone()).iter().enumerate() {
                         let m_ty = &mangle[i];
 
                         if !(ty == m_ty || ty == &String::from("any")) {
@@ -449,7 +419,7 @@ impl Analyzer {
                     }
 
                     if found {
-                        possible.push(name);
+                        possible.push(overload);
                     }
                 }
 
@@ -481,8 +451,8 @@ impl Analyzer {
                 let fun = self.analyz_blueprint(blueprint, args_types)?;
                 let ty = self.env.get_ty(&fun).unwrap(); // calling the built function
 
-                let ret = if let AtomKind::Func(ret, _, _) = ty.clone() {
-                    *ret
+                let ret = if let AtomType::Function(func) = ty.clone() {
+                    *func.return_type
                 } else {
                     panic!()
                 };
@@ -498,16 +468,14 @@ impl Analyzer {
                 Ok(Node { expr, ty: ret })
             }
 
-            AtomKind::Func(ret, args_types, _) => {
-                let mut args = self.analyz_items(args)?;
-
-                if &args_types.len() != &args.len() {
+            AtomType::Function(func) => {
+                if func.params.len() != args.len() {
                     err!(self, ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_types.len(), name));
                 }
 
                 for (i, arg) in (&mut args).iter_mut().enumerate() {
-                    if &arg.ty != &args_types[i] {
-                        let attempt = self.type_cast(arg.clone(), args_types[i].clone());
+                    if &arg.ty != &func.params[i] {
+                        let attempt = self.type_cast(arg.clone(), func.params[i].clone());
 
                         if attempt.is_ok() {
                             *arg = attempt.unwrap();
@@ -517,7 +485,7 @@ impl Analyzer {
                                 ErrKind::UnexceptedArgs,
                                 format!(
                                     "unexpected argument type, at arg {}, expected {:?}, got {:?}",
-                                    i, args_types[i], arg.ty
+                                    i, func.params[i], arg.ty
                                 )
                             );
                         }
@@ -526,7 +494,10 @@ impl Analyzer {
 
                 let expr = Expr::FnCall { name, args };
 
-                Ok(Node { expr, ty: *ret })
+                Ok(Node {
+                    expr,
+                    ty: *func.return_type,
+                })
             }
 
             _ => {
@@ -542,9 +513,11 @@ impl Analyzer {
     pub fn analyz_index(&mut self, parent: Node, index: Node) -> Result<Node, ErrKind> {
         let parent = self.analyz(parent)?;
         let index = self.analyz(index)?;
-        if index.ty != AtomKind::Int {
+
+        if index.ty != AtomType::Basic(BasicType::Int) {
             err!(self, ErrKind::InvaildType, format!("index is not an int"));
         }
+
         let ty = match parent.ty.clone() {
             AtomKind::Str => AtomKind::Str,
             AtomKind::List(t) => *t,
