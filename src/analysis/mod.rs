@@ -2,12 +2,12 @@ pub mod analysis;
 
 use std::vec;
 
-use crate::enviroment::Enviroment;
+use crate::enviroment::{Enviroment, Symbol};
 
 use crate::err::ErrKind;
 
 use crate::parser::ast::{Blueprint, Expr, Ident, Node};
-use crate::types::{type_mangle, AtomKind};
+use crate::types::{self, type_mangle, AtomType, BasicType, BlueprintType, FunctionType};
 
 pub struct Analyzer {
     workdir: String,
@@ -23,12 +23,12 @@ const LOGIC_OP: &[&str] = &["&&", "||"];
 
 const MATH_OP: &[&str] = &["+", "-", "*", "/", "%"];
 
-impl AtomKind {
+impl AtomType {
     pub fn get_op(&self) -> Vec<&str> {
         match self {
-            &Self::Bool => [LOGIC_OP, &["=="]].concat(),
-            &Self::Float | &Self::Int => [MATH_OP, COMPARE_OP].concat(),
-            &Self::Str | &Self::List(_) => [COMPARE_OP, &["+"]].concat(),
+            &Self::Basic(BasicType::Bool) => [LOGIC_OP, &["=="]].concat(),
+            &Self::Basic(BasicType::Float) | &Self::Basic(BasicType::Int) => [MATH_OP, COMPARE_OP].concat(),
+            &Self::Atom(ref atom) if atom == &*types::Str || &atom.name == &*types::List.name => [COMPARE_OP, &["+"]].concat(),
             &Self::Dynamic | &Self::Unknown(_) => [LOGIC_OP, COMPARE_OP, MATH_OP].concat(),
             _ => Vec::new(),
         }
@@ -36,7 +36,7 @@ impl AtomKind {
 }
 
 #[inline]
-pub fn ty_as(ty: &AtomKind, expr: Node) -> Node {
+pub fn ty_as(ty: &AtomType, expr: Node) -> Node {
     Node {
         expr: Expr::As(Box::new(expr)),
         ty: ty.clone(),
@@ -44,21 +44,22 @@ pub fn ty_as(ty: &AtomKind, expr: Node) -> Node {
 }
 
 #[inline]
-pub fn supports_op(ty: &AtomKind, op: &String) -> bool {
+pub fn supports_op(ty: &AtomType, op: &String) -> bool {
     let ops = ty.get_op();
     ops.contains(&op.as_str())
 }
 #[inline]
-pub fn replace_body_ty(body: &mut Vec<Node>, old: &AtomKind, new: &AtomKind) {
+pub fn replace_body_ty(body: &mut Vec<Node>, old: &AtomType, new: &AtomType) {
     for node in &mut *body {
         replace_ty(node, old, new)
     }
 }
 
-pub fn replace_ty(node: &mut Node, old: &AtomKind, new: &AtomKind) {
-    if let &AtomKind::Unknown(None) = &node.ty {
-        if let &AtomKind::Func(ret, _, _) = &new {
-            node.ty = *ret.clone();
+pub fn replace_ty(node: &mut Node, old: &AtomType, new: &AtomType) {
+    if let &AtomType::Unknown(None) = &node.ty {
+        // If the new type is a function type, update the node's type to the function's return type, because we set any ref to our func to unknown
+        if let &AtomType::Function(func) = &new {
+            node.ty = *func.return_type.clone();
         }
     } else if &node.ty == old {
         node.ty = new.to_owned()
@@ -70,10 +71,10 @@ pub fn replace_ty(node: &mut Node, old: &AtomKind, new: &AtomKind) {
             replace_ty(&mut *ret, old, new);
 
             // convert the return to the return type if its not already (if we are replacing with a function type)
-            if let &AtomKind::Func(ref ret_ty, _, _) = new {
-                if &**ret_ty != &ret.ty {
-                    **ret = ty_as(&ret_ty, (**ret).clone());
-                    node.ty = (**ret_ty).clone()
+            if let &AtomType::Function(ref func) = new {
+                if &*func.return_type != &ret.ty {
+                    **ret = ty_as(&func.return_type, (**ret).clone());
+                    node.ty = (*func.return_type).clone()
                 }
             }
         }
@@ -116,15 +117,15 @@ pub fn replace_ty(node: &mut Node, old: &AtomKind, new: &AtomKind) {
             replace_ty(&mut *name, old, new);
             replace_body_ty(&mut *args, old, new);
 
-            if let &AtomKind::Func(ref ret, _, _) = new {
+            if let &AtomType::Function(ref func) = new {
                 // if the call results is Unknown and expected of a type
-                if let &AtomKind::Unknown(Some(ref ty)) = &node.ty {
-                    if ret == ty {
-                        node.ty = (**ret).clone();
+                if let &AtomType::Unknown(Some(ref ty)) = &node.ty {
+                    if &func.return_type == ty {
+                        node.ty = (*func.return_type).clone();
                     } else {
                         // if it doesnt return what is expected then convert it to that
                         let ty = ty.to_owned();
-                        node.ty = (**ret).clone();
+                        node.ty = (*func.return_type).clone();
                         *node = ty_as(&ty, node.to_owned());
                     }
                 }
@@ -138,7 +139,7 @@ pub fn replace_ty(node: &mut Node, old: &AtomKind, new: &AtomKind) {
     }
 }
 
-fn get_ret_ty(node: &Node) -> Vec<AtomKind> {
+fn get_ret_ty(node: &Node) -> Vec<AtomType> {
     match node.expr.clone() {
         Expr::RetExpr(node) => {
             // if let &AtomKind::Unknown(_) = &node.ty {
@@ -151,7 +152,7 @@ fn get_ret_ty(node: &Node) -> Vec<AtomKind> {
             //     return vec![AtomKind::Dynamic];
             // }
 
-            if let &AtomKind::Unknown(Some(ref ty)) = &node.ty {
+            if let &AtomType::Unknown(Some(ref ty)) = &node.ty {
                 return vec![(**ty).clone()];
             }
             return vec![node.ty.clone()];
@@ -171,7 +172,7 @@ fn get_ret_ty(node: &Node) -> Vec<AtomKind> {
     }
 }
 
-pub fn get_body_types(body: &Vec<Node>) -> Vec<AtomKind> {
+pub fn get_body_types(body: &Vec<Node>) -> Vec<AtomType> {
     let mut types = Vec::new();
     for node in body {
         for ty in get_ret_ty(node) {
@@ -183,11 +184,11 @@ pub fn get_body_types(body: &Vec<Node>) -> Vec<AtomKind> {
     types
 }
 
-pub fn get_fn_type(body: &Vec<Node>) -> AtomKind {
+pub fn get_fn_type(body: &Vec<Node>) -> AtomType {
     let possible = get_body_types(body);
 
     if possible.len() == 0 {
-        return AtomKind::Void;
+        return AtomType::Basic(BasicType::Void);
     }
 
     if possible.len() > 1 {
@@ -195,13 +196,13 @@ pub fn get_fn_type(body: &Vec<Node>) -> AtomKind {
         // otherwise -> dynamic
 
         if possible.len() == 2
-            && possible.contains(&AtomKind::Int)
-            && possible.contains(&AtomKind::Float)
+            && possible.contains(&AtomType::Basic(BasicType::Int))
+            && possible.contains(&AtomType::Basic(BasicType::Float))
         {
-            return AtomKind::Float;
+            return AtomType::Basic(BasicType::Float);
         }
 
-        return AtomKind::Dynamic;
+        return AtomType::Unknown(None);
     }
 
     possible[0].clone()
@@ -222,18 +223,18 @@ impl Analyzer {
     fn import(
         &mut self,
         body: &mut Vec<Node>,
-        ty: AtomKind,
+        ty: AtomType,
         module: &str,
         name: &str,
-        args: Vec<AtomKind>,
+        params: Vec<AtomType>,
     ) {
         self.env
-            .push_function(name.to_string(), args.clone(), ty.clone());
+            .push_function(name.to_string(), FunctionType { params: params.clone(), return_type: Box::new(ty.clone()) });
         body.push(Node {
             expr: Expr::Import {
                 module: module.to_string(),
                 name: name.to_string(),
-                args,
+                params,
             },
             ty,
         })
@@ -286,21 +287,26 @@ impl Analyzer {
 
             let blueprint_ty = {
                 let get = self.env.get_ty(&ref_name);
+                
                 let name = blueprint.name.val().clone();
 
                 if get.is_none() {
-                    AtomKind::Blueprint(ref_name.clone(), vec![name])
+                    // If the type is not found, create a new Blueprint type with the name
+                    AtomType::Blueprint(BlueprintType { name: name.clone(), overlords: vec![name] })
                 } else {
-                    if let AtomKind::Blueprint(_, mut names) = get.unwrap().clone() {
-                        names.push(name);
-                        AtomKind::Blueprint(ref_name.clone(), names)
-                    } else {
-                        panic!()
+                    // If the type is found and is a Blueprint, add the overload to the list of overloads
+                    match get.unwrap().clone() {
+                        AtomType::Blueprint(mut blueprint) => {
+                            blueprint.overlords.push(name);
+                            AtomType::Blueprint(blueprint)
+                        }
+            
+                        _ => panic!(),
                     }
                 }
             };
 
-            self.env.add(&ref_name, blueprint_ty);
+            self.env.add(Symbol { name: ref_name, ty: blueprint_ty, refers_to_atom: false, value: None, expected: None });
         }
 
         self.env.blueprints.append(blueprints);

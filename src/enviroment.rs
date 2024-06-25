@@ -11,7 +11,7 @@ pub struct Symbol {
     pub refers_to_atom: bool,
     pub value: Option<Literal>,
 
-    pub expected: AtomType,
+    pub expected: Option<AtomType>,
 }
 
 #[derive(Clone, Debug)]
@@ -23,7 +23,7 @@ pub struct Enviroment {
 }
 
 impl Enviroment {
-    // init the top enviroment, every other enviroment shares this as a parent it contains the built-in types
+    // Initialize the top-level environment. This environment serves as the parent for all other environments and contains the built-in types.
     pub fn init() -> Self {
         let mut symbols = HashMap::new();
 
@@ -36,7 +36,7 @@ impl Enviroment {
                         ty: $type,
                         refers_to_atom: true,
                         value: None,
-                        expected: AtomType::Any,
+                        expected: None,
                     },
                 );
             };
@@ -179,12 +179,12 @@ impl Enviroment {
     } // returns the top level enviroment
 
     pub fn push_function(&mut self, name: String, func: FunctionType) {
-        self.top().add(Symbol {
+        self.add(Symbol {
             name,
             ty: AtomType::Function(func),
             refers_to_atom: false,
             value: None,
-            expected: AtomType::Any,
+            expected: None,
         });
     }
 
@@ -203,6 +203,6 @@ impl Enviroment {
     }
 
     pub fn is_expected(&mut self, name: &String, ty: &AtomType) -> bool {
-        &self.get(name).unwrap().expected == ty
+        &self.get(name).unwrap().expected == &Some(ty.clone())
     }
 }

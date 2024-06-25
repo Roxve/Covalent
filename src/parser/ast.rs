@@ -62,7 +62,7 @@ pub enum Expr {
     Import {
         module: String,
         name: String,
-        args: Vec<AtomType>,
+        params: Vec<AtomType>,
     },
 
     Func {

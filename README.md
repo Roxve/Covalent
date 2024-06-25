@@ -2,6 +2,10 @@
 
 
 # Covalent
+<p align="center">
+<img src="img/1.png" alt="logo" width="200"/>
+</p>
+
 WIP DOP Compiled Language, with a cool type system that supports completly optional typing (no need to type even the function arguments) and a dynamic system(avoided as much as possible, may be discarded)
 
 ```

@@ -59,8 +59,8 @@ impl IRGen for Codegen {
 
     fn gen_expr(&mut self, expr: Node) -> IRRes {
         match expr.expr {
-            Expr::Import { module, name, args } => {
-                Ok(vec![IROp::Import(expr.ty, module, name, args)])
+            Expr::Import { module, name, params } => {
+                Ok(vec![IROp::Import(expr.ty, module, name, params)])
             }
 
             Expr::Func {
