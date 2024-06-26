@@ -2,7 +2,7 @@ pub mod gen;
 use crate::compiler::CompilerConfig;
 use crate::ir::IROp;
 use crate::parser::ast::Literal;
-use crate::types::{self, AtomType, BasicType};
+use crate::types::{self, AtomKind, AtomType, BasicType};
 
 use std::cell::RefCell;
 
@@ -40,26 +40,25 @@ pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
 }
 
 pub fn type_to_c(ty: AtomType) -> String {
-    match ty {
-        AtomType::Basic(BasicType::Int) => "int",
-        AtomType::Basic(BasicType::Float) => "float",
-        AtomType::Basic(BasicType::Bool) => "_Bool",
-        AtomType::Basic(BasicType::Void) => "void",
+    match ty.kind {
+        AtomKind::Basic(BasicType::Int) => "int",
+        AtomKind::Basic(BasicType::Float) => "float",
+        AtomKind::Basic(BasicType::Bool) => "_Bool",
+        AtomKind::Basic(BasicType::Void) => "void",
 
-        AtomType::Dynamic => "Obj",
+        AtomKind::Dynamic => "Obj",
 
-        AtomType::Atom(ref atom) if atom == &*types::Str => "Str*",
-        AtomType::Atom(ref atom) if &atom.name == &*types::List.name => "List*",
-        AtomType::Atom(ref atom) if &atom.name == &*types::Back.name => {
+        AtomKind::Atom(ref atom) if atom == &*types::Str => "Str*",
+        AtomKind::Atom(ref atom) if &atom.name == &*types::List.name => "List*",
+        AtomKind::Atom(ref atom) if &atom.name == &*types::Back.name => {
             #[allow(non_snake_case)]
             let T = &atom.generics[0];
 
-            match &T {
-                AtomType::Atom(ref atom) if atom == &*types::Str => "char*",
+            match &T.kind {
+                AtomKind::Atom(ref atom) if atom == &*types::Str => "char*",
                 _ => todo!("backend type error"),
             }
-        },
-        
+        }
 
         _ => todo!("{:?}", ty),
     }
@@ -94,7 +93,10 @@ impl Item {
         match self.clone() {
             Self::Expr(ty, _) => ty,
             Self::Var(ty, _) => ty,
-            Self::List(ty, _) => AtomType::Atom(types::List.spec(&[ty])),
+            Self::List(ty, _) => AtomType {
+                kind: AtomKind::Atom(types::List.spec(&[ty])),
+                details: None,
+            },
             Self::Const(literal) => (&literal).get_ty(),
         }
     }
