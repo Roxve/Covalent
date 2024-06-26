@@ -1,7 +1,7 @@
 use crate::parser::ast::{Ident, Literal};
 
 use crate::enviroment::Enviroment;
-use crate::types::{self,AtomType, BasicType};
+use crate::types::{self, AtomKind, AtomType, BasicType};
 
 pub mod gen;
 pub mod tools;
@@ -15,7 +15,7 @@ pub enum IROp {
     Call(AtomType, u16),
     Ret(AtomType),
 
-    Add(AtomType),  
+    Add(AtomType),
     Sub(AtomType),
     Mul(AtomType),
     Div(AtomType),
@@ -47,6 +47,15 @@ use crate::err::ATErr;
 use self::IROp::*;
 // TODO: better op impl
 pub fn get_op_type(op: &IROp) -> AtomType {
+    let void: AtomType = AtomType {
+        kind: AtomKind::Basic(BasicType::Void),
+        details: None,
+    };
+
+    let bool: AtomType = AtomType {
+        kind: AtomKind::Basic(BasicType::Bool),
+        details: None,
+    };
     match op {
         Import(t, _, _, _) => t,
         Extern(t, _, _) => t,
@@ -61,13 +70,20 @@ pub fn get_op_type(op: &IROp) -> AtomType {
         Div(t) => t,
         Mod(t) => t,
 
-        And => &AtomType::Basic(BasicType::Bool),
-        Or => &AtomType::Basic(BasicType::Bool),
-        Comp => &AtomType::Basic(BasicType::Bool),
-        EComp => &AtomType::Basic(BasicType::Bool),
-        Eq => &AtomType::Basic(BasicType::Bool),
+        And => &bool,
+        Or => &bool,
 
-        List(ty, _) => return AtomType::Atom(types::List.spec(&[ty.clone()])),
+        Comp => &bool,
+        EComp => &bool,
+        Eq => &bool,
+
+        List(ty, _) => {
+            return AtomType {
+                kind: AtomKind::Atom(types::List.spec(&[ty.clone()])),
+                details: None,
+            }
+        }
+
         Const(lit) => return lit.get_ty(),
         Conv(t, _) => t,
         Store(t, _) => t,
@@ -79,8 +95,8 @@ pub fn get_op_type(op: &IROp) -> AtomType {
         Alloc(t, _) => t,
         Dealloc(t, _) => t,
         If(t, _, _) => t,
-        While(_) => &AtomType::Basic(BasicType::Void),
-        Pop => &AtomType::Basic(BasicType::Void),
+        While(_) => &void,
+        Pop => &void,
     }
     .clone()
 }

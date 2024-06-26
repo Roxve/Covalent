@@ -84,18 +84,18 @@ macro_rules! complex {
     ($name:expr, { $($field_name:expr => $field_type:expr),* }, { $($generic_name:expr),* }) => {
         Atom::new(
             $name.to_owned(),
-            HashMap::from([$(($field_name.to_owned(), $field_type)),*]),
-            IndexMap::from([$(($generic_name.to_owned(), AtomType::Unknown(None))),*]),
+            HashMap::from([$(($field_name.to_owned(), AtomType { kind: $field_type, details: None})),*]),
+            IndexMap::from([$(($generic_name.to_owned(), AtomType { kind: AtomKind::Unknown, details: None})),*]),
         )
     };
 }
 
 lazy_static! {
     pub static ref List: Atom =
-        complex!("List", {"size" => AtomType::Basic(BasicType::Int)}, {"T"});
-    pub static ref Str: Atom = complex!("str", {"size" => AtomType::Basic(BasicType::Int)}, {"T"});
+        complex!("List", {"size" => AtomKind::Basic(BasicType::Int)}, {"T"});
+    pub static ref Str: Atom = complex!("str", {"size" => AtomKind::Basic(BasicType::Int)}, {"T"});
     pub static ref Back: Atom = complex!("Back", {}, { "T" });
-    pub static ref Const: Atom = complex!("Const", {"T" => AtomType::Unknown(None)}, {"T"});
+    pub static ref Const: Atom = complex!("Const", {"T" => AtomKind::Unknown}, {"T"});
 }
 
 impl Display for Atom {
@@ -105,7 +105,7 @@ impl Display for Atom {
                 .generics
                 .iter()
                 .map(|(gen_name, gen)| {
-                    if let AtomType::Unknown(None) = gen {
+                    if let AtomKind::Unknown = gen.kind {
                         gen_name.clone()
                     } else {
                         gen.to_string()
@@ -121,44 +121,69 @@ impl Display for Atom {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum AtomType {
+pub enum AtomKind {
     Basic(BasicType),
     Atom(Atom),
     Function(FunctionType),
     Blueprint(BlueprintType),
-    Dynamic,                    // may be scrapped, says that type is only known at runtime
-    Unknown(Option<Box<Self>>), // Unknown(None) means that expr type is unknown later on it should be replaced with Unknown(Some(AtomType)) where some is an assumption and even later it is unwarped or converted to the Some type (may be replaced to be simpler)
-    Any, // mainly used for mangling and Symbol.expected, means that symbol can be of Any type
+    Dynamic, // may be scrapped, says that type is only known at runtime
+    Unknown, // Unknown and no details means that expr type is unknown later on it should be replaced with Unknown(AtomType) where AtomType is an assumption and even later it is unwarped or converted to the Some type (may be replaced to be simpler)
+    Any,     // mainly used for mangling and Symbol.expected, means that symbol can be of Any type
 }
 
-impl Display for AtomType {
+#[derive(Debug, Clone, PartialEq)]
+pub enum AtomDetails {
+    Type,
+    Unknown(Box<AtomType>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AtomType {
+    pub kind: AtomKind,
+    pub details: Option<AtomDetails>,
+}
+
+impl Display for AtomKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Any => write!(f, "any"),
-            Self::Dynamic => write!(f, "Dynamic"),
-            Self::Basic(b) => write!(f, "{}", b),
-            Self::Atom(a) => write!(f, "{}", a),
-            Self::Blueprint(b) => write!(f, "{}", b),
-            Self::Function(fun) => write!(f, "{}", fun),
-            Self::Unknown(None) => write!(f, "Unknown"),
-            Self::Unknown(Some(t)) => write!(f, "Unknown({})", t),
+            AtomKind::Any => write!(f, "any"),
+            AtomKind::Dynamic => write!(f, "Dynamic"),
+            AtomKind::Basic(b) => write!(f, "{}", b),
+            AtomKind::Atom(a) => write!(f, "{}", a),
+            AtomKind::Blueprint(b) => write!(f, "{}", b),
+            AtomKind::Function(fun) => write!(f, "{}", fun),
+            AtomKind::Unknown => write!(f, "Unknown"),
         }
     }
 }
 
+impl Display for AtomType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.kind)
+    }
+}
+
 impl AtomType {
+    pub fn is_type(&self) -> bool {
+        self.details == Some(AtomDetails::Type)
+    }
+
     pub fn get(&self, name: &String) -> Option<&Self> {
-        match self {
-            Self::Atom(a) => a.fields.get(name),
+        match &self.kind {
+            AtomKind::Atom(a) => a.fields.get(name),
 
             _ => None,
         }
     }
 
     pub fn generics(&self) -> i32 {
-        match self {
-            Self::Atom(a) => a.generics.len() as i32,
-            _ => 0,
+        if self.is_type() {
+            match &self.kind {
+                AtomKind::Atom(a) => a.generics.len() as i32,
+                _ => 0,
+            }
+        } else {
+            0
         }
     }
 }

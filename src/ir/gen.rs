@@ -2,14 +2,20 @@ use super::{Codegen, IROp};
 
 use crate::enviroment::Symbol;
 use crate::parser::ast::{Expr, Ident, Node};
-use crate::types::{AtomType, BasicType};
+use crate::types::{AtomKind, AtomType, BasicType};
 
 type IR = Vec<IROp>;
 type IRRes = Result<IR, u8>;
 
 pub trait IRGen {
     fn gen_prog(&mut self, exprs: Vec<Node>) -> IR;
-    fn gen_func(&mut self, name: String, params: Vec<Ident>, ret: AtomType, body: Vec<Node>) -> IRRes;
+    fn gen_func(
+        &mut self,
+        name: String,
+        params: Vec<Ident>,
+        ret: AtomType,
+        body: Vec<Node>,
+    ) -> IRRes;
     fn gen_extern(&mut self, name: String, params: Vec<Ident>, ret: AtomType) -> IRRes;
 
     fn gen_expr(&mut self, expr: Node) -> IRRes;
@@ -43,9 +49,8 @@ impl IRGen for Codegen {
             self.env.add(Symbol {
                 name: param.val().clone(),
                 ty: param.ty().clone(),
-                refers_to_atom: false,
                 value: None,
-                expected: param.ty().clone(),
+                expected: Some(param.ty().clone()),
             });
         }
         let mut exprs = vec![];
@@ -59,9 +64,11 @@ impl IRGen for Codegen {
 
     fn gen_expr(&mut self, expr: Node) -> IRRes {
         match expr.expr {
-            Expr::Import { module, name, params } => {
-                Ok(vec![IROp::Import(expr.ty, module, name, params)])
-            }
+            Expr::Import {
+                module,
+                name,
+                params,
+            } => Ok(vec![IROp::Import(expr.ty, module, name, params)]),
 
             Expr::Func {
                 ret,
@@ -142,7 +149,7 @@ impl IRGen for Codegen {
             Expr::PosInfo(_, _, _) => Ok(vec![]),
             Expr::Discard(dis) => {
                 let mut compiled = self.gen_expr(*dis.clone())?;
-                if dis.ty != AtomType::Basic(BasicType::Void) {
+                if dis.ty.kind != AtomKind::Basic(BasicType::Void) {
                     compiled.append(&mut vec![IROp::Pop]);
                 }
                 Ok(compiled)
@@ -231,9 +238,8 @@ impl IRGen for Codegen {
         self.env.add(Symbol {
             name: name.clone(),
             ty: ty.clone(),
-            refers_to_atom: false,
             value: None,
-            expected: ty.clone(),
+            expected: None,
         });
 
         res.append(&mut g);

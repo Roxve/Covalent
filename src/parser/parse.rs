@@ -6,12 +6,15 @@ use crate::err::ErrKind;
 
 use crate::lexer::token::Token;
 
-use crate::types::AtomType;
+use crate::types::{AtomKind, AtomType};
 macro_rules! untyped {
     ($expr: expr) => {
         Ok(Node {
             expr: $expr,
-            ty: AtomType::Unknown(None),
+            ty: AtomType {
+                kind: AtomKind::Unknown,
+                details: None,
+            },
         })
     };
 }

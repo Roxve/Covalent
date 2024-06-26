@@ -1,6 +1,6 @@
 use core::panic;
 
-use crate::types::{AtomType, BasicType, self};
+use crate::types::{self, AtomKind, AtomType, BasicType};
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Int(i32),
@@ -11,11 +11,14 @@ pub enum Literal {
 
 impl Literal {
     pub fn get_ty(&self) -> AtomType {
-        match self {
-            &Self::Int(_) => AtomType::Basic(BasicType::Int),
-            &Self::Float(_) => AtomType::Basic(BasicType::Float),
-            &Self::Str(_) => AtomType::Atom(types::Str.clone()),
-            &Self::Bool(_) => AtomType::Basic(BasicType::Bool),
+        AtomType {
+            kind: match self {
+                &Self::Int(_) => AtomKind::Basic(BasicType::Int),
+                &Self::Float(_) => AtomKind::Basic(BasicType::Float),
+                &Self::Str(_) => AtomKind::Atom(types::Str.clone()),
+                &Self::Bool(_) => AtomKind::Basic(BasicType::Bool),
+            },
+            details: None,
         }
     }
 }
@@ -118,7 +121,10 @@ pub struct Node {
 pub fn untyped(expr: Expr) -> Node {
     Node {
         expr,
-        ty: AtomType::Unknown(None),
+        ty: AtomType {
+            kind: AtomKind::Unknown,
+            details: None,
+        },
     }
 }
 
@@ -147,7 +153,13 @@ impl Ident {
     pub fn tuple(self) -> (AtomType, String) {
         match self {
             Ident::Typed(ty, val) => (ty, val),
-            Ident::UnTagged(val) => (AtomType::Any, val),
+            Ident::UnTagged(val) => (
+                AtomType {
+                    kind: AtomKind::Any,
+                    details: None,
+                },
+                val,
+            ),
             _ => panic!(),
         }
     }
@@ -155,7 +167,10 @@ impl Ident {
     pub fn ty(&self) -> &AtomType {
         match self {
             Ident::Typed(ref ty, _) => ty,
-            Ident::UnTagged(_) => &AtomType::Any,
+            Ident::UnTagged(_) => &AtomType {
+                kind: AtomKind::Any,
+                details: None,
+            },
             _ => panic!(),
         }
     }

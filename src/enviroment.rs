@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 
 use crate::parser::ast::{Blueprint, Literal};
-use crate::types::{self, AtomType, BasicType, FunctionType};
+use crate::types::{self, AtomDetails, AtomKind, AtomType, BasicType, FunctionType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Symbol {
     pub name: String,
     pub ty: AtomType,
 
-    pub refers_to_atom: bool,
     pub value: Option<Literal>,
 
     pub expected: Option<AtomType>,
@@ -34,7 +33,6 @@ impl Enviroment {
                     Symbol {
                         name: $name.to_owned(),
                         ty: $type,
-                        refers_to_atom: true,
                         value: None,
                         expected: None,
                     },
@@ -45,29 +43,40 @@ impl Enviroment {
         macro_rules! ty {
             ($type: expr) => {
                 let name = $type.clone().to_string();
-                insert!(&name, $type);
+                insert!(
+                    &name,
+                    AtomType {
+                        kind: $type.clone(),
+                        details: Some(AtomDetails::Type)
+                    }
+                );
             };
         }
 
         macro_rules! complex {
             ($atom: expr) => {
-                insert!(&$atom.name, AtomType::Atom($atom.clone()));
+                insert!(
+                    &$atom.name,
+                    AtomType {
+                        kind: AtomKind::Atom($atom.clone()),
+                        details: Some(AtomDetails::Type)
+                    }
+                );
             };
         }
 
         // default built-in types
-        ty!(AtomType::Basic(BasicType::Int));
-        ty!(AtomType::Basic(BasicType::Float));
-        ty!(AtomType::Basic(BasicType::Void));
-        ty!(AtomType::Dynamic);
-        ty!(AtomType::Basic(BasicType::Bool));
-        
+        ty!(AtomKind::Basic(BasicType::Int));
+        ty!(AtomKind::Basic(BasicType::Float));
+        ty!(AtomKind::Basic(BasicType::Void));
+        ty!(AtomKind::Dynamic);
+        ty!(AtomKind::Basic(BasicType::Bool));
+
         // complex built-in types
         complex!(types::List);
         complex!(types::Back);
         complex!(types::Str);
         complex!(types::Const);
-        
 
         Self {
             symbols,
@@ -133,7 +142,7 @@ impl Enviroment {
         let parent = self.symbols.get(name);
 
         if parent.is_some() {
-            if let &AtomType::Function(ref f) = &parent.unwrap().ty {
+            if let &AtomKind::Function(ref f) = &parent.unwrap().ty.kind {
                 if &f.params[0] == ty {
                     return Some(parent.unwrap().to_owned().ty);
                 }
@@ -183,8 +192,11 @@ impl Enviroment {
     pub fn push_function(&mut self, name: String, func: FunctionType) {
         self.add(Symbol {
             name,
-            ty: AtomType::Function(func),
-            refers_to_atom: false,
+            ty: AtomType {
+                kind: AtomKind::Function(func),
+                details: None,
+            },
+
             value: None,
             expected: None,
         });
