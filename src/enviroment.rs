@@ -159,10 +159,18 @@ impl Enviroment {
         }
     }
 
+    pub fn modify(&mut self, name: &String, sym: Symbol) {
+        if self.symbols.contains_key(name) {
+            self.symbols.get_mut(name).map(|val| *val = sym);
+        } else if self.parent.is_some() {
+            self.parent.as_mut().unwrap().modify(name, sym);
+        }
+    }
+
     pub fn add(&mut self, sym: Symbol) {
         let name = sym.name.clone();
         if self.symbols.contains_key(&name) {
-            self.modify_ty(&name, sym.ty)
+            self.modify(&name, sym)
         } else {
             self.symbols.insert(name, sym);
         }
@@ -203,7 +211,9 @@ impl Enviroment {
     }
 
     pub fn expect(&mut self, name: &String, ty: AtomType) {
-        self.expects.insert(name.clone(), ty);
+        self.symbols
+            .get_mut(name)
+            .map(|sym| sym.expected = Some(ty));
     }
 
     pub fn get_expected(&mut self, name: &String) -> &AtomType {
@@ -217,6 +227,19 @@ impl Enviroment {
     }
 
     pub fn is_expected(&mut self, name: &String, ty: &AtomType) -> bool {
-        &self.get(name).unwrap().expected == &Some(ty.clone())
+        let sym = self.get(name);
+        if sym.is_none() {
+            if self.parent.is_some() {
+                return self.parent.as_mut().unwrap().is_expected(name, ty);
+            }
+
+            panic!("symbol not found");
+        }
+
+        if sym.unwrap().expected.is_none() {
+            return true;
+        }
+
+        &sym.unwrap().expected == &Some(ty.clone())
     }
 }

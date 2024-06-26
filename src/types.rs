@@ -93,7 +93,7 @@ macro_rules! complex {
 lazy_static! {
     pub static ref List: Atom =
         complex!("List", {"size" => AtomKind::Basic(BasicType::Int)}, {"T"});
-    pub static ref Str: Atom = complex!("str", {"size" => AtomKind::Basic(BasicType::Int)}, {"T"});
+    pub static ref Str: Atom = complex!("str", {"size" => AtomKind::Basic(BasicType::Int)}, {});
     pub static ref Back: Atom = complex!("Back", {}, { "T" });
     pub static ref Const: Atom = complex!("Const", {"T" => AtomKind::Unknown}, {"T"});
 }

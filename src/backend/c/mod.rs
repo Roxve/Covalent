@@ -59,6 +59,11 @@ pub fn type_to_c(ty: AtomType) -> String {
                 _ => todo!("backend type error"),
             }
         }
+        AtomKind::Atom(ref atom) if &atom.name == &*types::Const.name => {
+            #[allow(non_snake_case)]
+            let T = &atom.generics[0];
+            return format!("const {}", type_to_c(T.clone()));
+        }
 
         _ => todo!("{:?}", ty),
     }
