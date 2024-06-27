@@ -429,144 +429,14 @@ impl Analyzer {
     pub fn analyz_call(&mut self, name: Node, args: Vec<Node>) -> Result<Node, ErrKind> {
         let name = Box::new(self.analyz(name)?);
 
-        let mut args = self.analyz_items(args)?;
+        let args = self.analyz_items(args)?;
 
         let args_types: Vec<AtomType> = args.iter().map(|arg| arg.ty.clone()).collect();
         match name.ty.clone().kind {
             AtomKind::Blueprint(blueprint_t) => {
-                let mangle = type_mangle(blueprint_t.name.clone(), args_types.clone());
-                // TODO! if its a member call pass parent as first arg and call the child instead
-                // if &argc != &(args.len() as u32) {
-                //     self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), argc, name));
-                //     return Err(ErrKind::UndeclaredVar);
-                // }
-
-                if self.env.has(&mangle) {
-                    let id_ty = self.env.get_ty(&mangle).unwrap();
-
-                    match id_ty.kind {
-                        AtomKind::Function(ref func) => {
-                            return Ok(Node {
-                                expr: Expr::FnCall {
-                                    name: Box::new(Node {
-                                        expr: Expr::Ident(Ident::UnTagged(mangle)),
-                                        ty: id_ty.clone(),
-                                    }),
-                                    args,
-                                },
-                                ty: *func.return_type.clone(),
-                            })
-                        }
-
-                        AtomKind::Blueprint(_) => (), // continue building blueprint
-                        _ => panic!(),
-                    };
-                }
-
-                let mut blueprint = None;
-                let mut possible = Vec::new();
-
-                for overload in blueprint_t.overloads {
-                    // if we got an exact overload no need to check for the best possible one to use
-                    if overload == mangle {
-                        blueprint = Some(self.env.get_blueprint(&overload).unwrap());
-
-                        possible.clear(); // uneeded memory
-                        break;
-                    }
-
-                    // make a list of possible overload that mangle could be from
-                    let mangle = mangle_types(mangle.clone());
-
-                    let mut found = true;
-                    for (i, ty) in mangle_types(overload.clone()).iter().enumerate() {
-                        let m_ty = &mangle[i];
-
-                        if !(ty == m_ty || ty == &String::from("any")) {
-                            found = false;
-                            break;
-                        }
-                    }
-
-                    if found {
-                        possible.push(overload);
-                    }
-                }
-
-                if blueprint.is_none() {
-                    // choose the name with least possible any
-                    let mut least_count = args_types.len(); // least possible count where all types are any;
-
-                    let mut choosen = String::new();
-                    for name in possible {
-                        let types = mangle_types(name.clone());
-                        let mut count = 0;
-
-                        types.iter().for_each(|ty| {
-                            if ty == &String::from("any") {
-                                count += 1
-                            }
-                        });
-
-                        if count <= least_count {
-                            least_count = count;
-                            choosen = name;
-                        }
-                    }
-                    blueprint = Some(self.env.get_blueprint(&choosen).unwrap());
-                }
-                // building a function from blueprint
-                let blueprint = blueprint.unwrap();
-
-                let fun = self.analyz_blueprint(blueprint, args_types)?;
-                let ty = self.env.get_ty(&fun).unwrap(); // calling the built function
-
-                let ret = if let AtomKind::Function(func) = ty.clone().kind {
-                    *func.return_type
-                } else {
-                    panic!()
-                };
-
-                let expr = Expr::FnCall {
-                    name: Box::new(Node {
-                        ty: ty.clone(),
-                        expr: Expr::Ident(Ident::UnTagged(fun)),
-                    }),
-                    args,
-                };
-
-                Ok(Node { expr, ty: ret })
+                self.handle_blueprint_call(blueprint_t, args, args_types)
             }
-
-            AtomKind::Function(func) => {
-                if func.params.len() != args.len() {
-                    err!(self, ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_types.len(), name));
-                }
-
-                for (i, arg) in (&mut args).iter_mut().enumerate() {
-                    if &arg.ty != &func.params[i] {
-                        if can_implicitly_convert(&arg.ty.kind, &func.params[i].kind) {
-                            *arg = self.type_cast(arg.clone(), func.params[i].clone()).unwrap();
-                        } else {
-                            err!(
-                                self,
-                                ErrKind::UnexceptedArgs,
-                                format!(
-                                    "unexpected argument type, at arg {}, expected {}, got {}",
-                                    i, func.params[i], arg.ty
-                                )
-                            );
-                        }
-                    }
-                }
-
-                let expr = Expr::FnCall { name, args };
-
-                Ok(Node {
-                    expr,
-                    ty: *func.return_type,
-                })
-            }
+            AtomKind::Function(func) => self.handle_function_call(name, func, args, args_types),
 
             _ => {
                 err!(
@@ -576,6 +446,162 @@ impl Analyzer {
                 );
             }
         }
+    }
+
+    fn handle_blueprint_call(
+        &mut self,
+        blueprint_t: BlueprintType,
+        args: Vec<Node>,
+        args_types: Vec<AtomType>,
+    ) -> Result<Node, ErrKind> {
+        let mangle = type_mangle(blueprint_t.name.clone(), args_types.clone());
+        // TODO! if its a member call pass parent as first arg and call the child instead
+        // if &argc != &(args.len() as u32) {
+        //     self.err(ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), argc, name));
+        //     return Err(ErrKind::UndeclaredVar);
+        // }
+
+        if self.env.has(&mangle) {
+            let id_ty = self.env.get_ty(&mangle).unwrap();
+
+            match id_ty.kind {
+                AtomKind::Function(ref func) => {
+                    return Ok(Node {
+                        expr: Expr::FnCall {
+                            name: Box::new(Node {
+                                expr: Expr::Ident(Ident::UnTagged(mangle)),
+                                ty: id_ty.clone(),
+                            }),
+                            args,
+                        },
+                        ty: *func.return_type.clone(),
+                    })
+                }
+
+                AtomKind::Blueprint(_) => (), // continue building blueprint
+                _ => panic!(),
+            };
+        }
+
+        // building a function from blueprint
+        let blueprint = self.choose_overload(mangle, blueprint_t, args_types.clone())?;
+
+        let fun = self.analyz_blueprint(blueprint, args_types)?;
+        let ty = self.env.get_ty(&fun).unwrap(); // calling the built function
+
+        let ret = if let AtomKind::Function(func) = ty.clone().kind {
+            *func.return_type
+        } else {
+            panic!()
+        };
+
+        let expr = Expr::FnCall {
+            name: Box::new(Node {
+                ty: ty.clone(),
+                expr: Expr::Ident(Ident::UnTagged(fun)),
+            }),
+            args,
+        };
+
+        Ok(Node { expr, ty: ret })
+    }
+
+    pub fn choose_overload(
+        &mut self,
+        mangle: String,
+        blueprint_t: BlueprintType,
+        args_types: Vec<AtomType>,
+    ) -> Result<Blueprint, ErrKind> {
+        let mut blueprint = None;
+        let mut possible = Vec::new();
+
+        for overload in blueprint_t.overloads {
+            // if we got an exact overload no need to check for the best possible one to use
+            if overload == mangle {
+                blueprint = Some(self.env.get_blueprint(&overload).unwrap());
+
+                possible.clear(); // uneeded memory
+                break;
+            }
+
+            // make a list of possible overload that mangle could be from
+            let mangle = mangle_types(mangle.clone());
+
+            let mut found = true;
+            for (i, ty) in mangle_types(overload.clone()).iter().enumerate() {
+                let m_ty = &mangle[i];
+
+                if !(ty == m_ty || ty == &String::from("any")) {
+                    found = false;
+                    break;
+                }
+            }
+
+            if found {
+                possible.push(overload);
+            }
+        }
+
+        if blueprint.is_none() {
+            // choose the name with least possible any
+            let mut least_count = args_types.len(); // least possible count where all types are any;
+
+            let mut choosen = String::new();
+            for name in possible {
+                let types = mangle_types(name.clone());
+                let mut count = 0;
+
+                types.iter().for_each(|ty| {
+                    if ty == "any" {
+                        count += 1
+                    }
+                });
+
+                if count <= least_count {
+                    least_count = count;
+                    choosen = name;
+                }
+            }
+            blueprint = Some(self.env.get_blueprint(&choosen).unwrap());
+        }
+
+        Ok(blueprint.unwrap())
+    }
+
+    pub fn handle_function_call(
+        &mut self,
+        name: Box<Node>,
+        func: FunctionType,
+        mut args: Vec<Node>,
+        args_types: Vec<AtomType>,
+    ) -> Result<Node, ErrKind> {
+        if func.params.len() != args.len() {
+            err!(self, ErrKind::UndeclaredVar, format!("not enough arguments got {} arguments, expected {} arguments for function {:?}", args.len(), args_types.len(), name));
+        }
+
+        for (i, arg) in (&mut args).iter_mut().enumerate() {
+            if &arg.ty != &func.params[i] {
+                if can_implicitly_convert(&arg.ty.kind, &func.params[i].kind) {
+                    *arg = self.type_cast(arg.clone(), func.params[i].clone()).unwrap();
+                } else {
+                    err!(
+                        self,
+                        ErrKind::UnexceptedArgs,
+                        format!(
+                            "unexpected argument type, at arg {}, expected {}, got {}",
+                            i, func.params[i], arg.ty
+                        )
+                    );
+                }
+            }
+        }
+
+        let expr = Expr::FnCall { name, args };
+
+        Ok(Node {
+            expr,
+            ty: *func.return_type,
+        })
     }
 
     pub fn analyz_index(&mut self, parent: Node, index: Node) -> Result<Node, ErrKind> {

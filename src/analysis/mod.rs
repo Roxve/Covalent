@@ -151,16 +151,6 @@ pub fn replace_ty(node: &mut Node, old: &AtomType, new: &AtomType) {
 fn get_ret_ty(node: &Node) -> Vec<AtomType> {
     match node.expr.clone() {
         Expr::RetExpr(node) => {
-            // if let &AtomKind::Unknown(_) = &node.ty {
-            //     return vec![prev];
-            // } else if let &AtomKind::Func(ref ret, ref args, _) = &node.ty {
-            //     if let &AtomKind::Unknown(_) = &**ret {
-            //         return vec![prev];
-            //     }
-            // } else if &prev != &node.ty && &prev != &AtomKind::Void {
-            //     return vec![AtomKind::Dynamic];
-            // }
-
             if let &Some(AtomDetails::Unknown(ref ty)) = &node.ty.details {
                 return vec![(**ty).clone()];
             }
