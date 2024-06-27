@@ -1,5 +1,7 @@
 use std::fs;
 
+use analysis::implicit::can_implicitly_convert;
+
 use crate::parser::parse::Parse;
 use crate::types::{mangle_types, type_mangle, AtomType};
 
@@ -398,7 +400,7 @@ impl Analyzer {
             };
         }
 
-        (lhs, rhs) = self.type_conv(lhs, rhs)?;
+        (lhs, rhs) = self.unify_types(lhs, rhs)?;
         let ty = match op.as_str() {
             "==" | ">" | "<" | ">=" | "<=" => AtomType {
                 kind: AtomKind::Basic(BasicType::Bool),
@@ -543,16 +545,14 @@ impl Analyzer {
 
                 for (i, arg) in (&mut args).iter_mut().enumerate() {
                     if &arg.ty != &func.params[i] {
-                        let attempt = self.type_cast(arg.clone(), func.params[i].clone());
-
-                        if attempt.is_ok() {
-                            *arg = attempt.unwrap();
+                        if can_implicitly_convert(&arg.ty.kind, &func.params[i].kind) {
+                            *arg = self.type_cast(arg.clone(), func.params[i].clone()).unwrap();
                         } else {
                             err!(
                                 self,
                                 ErrKind::UnexceptedArgs,
                                 format!(
-                                    "unexpected argument type, at arg {}, expected {:?}, got {:?}",
+                                    "unexpected argument type, at arg {}, expected {}, got {}",
                                     i, func.params[i], arg.ty
                                 )
                             );
@@ -819,68 +819,44 @@ impl Analyzer {
         Ok(Node { expr, ty })
     }
 
-    // who tf wrote this code
-    pub fn type_cast(&mut self, from: Node, into: AtomType) -> Result<Node, ErrKind> {
-        if into.kind == AtomKind::Dynamic || into.kind == AtomKind::Atom(types::Str.clone()) {
-            Ok(ty_as(&into, from))
-        } else {
-            let _tmp = Expr::Ident(Ident::UnTagged("temp".to_string()));
-            let _tmp = Node {
-                expr: _tmp,
-                ty: into,
-            };
-            let (try_conv, unchanged) = self.type_conv(from.clone(), _tmp.clone())?;
-            if &unchanged != &_tmp {
-                err!(
-                    self,
-                    ErrKind::InvaildType,
-                    format!("cannot convert from {:?} into {:?}", from.ty, _tmp.ty)
-                );
-            }
-            Ok(try_conv)
+    pub fn unify_types(&mut self, left: Node, right: Node) -> Result<(Node, Node), ErrKind> {
+        // skip unifying if one of the types is unknown and is assumed to the other
+        if left.ty.details == Some(AtomDetails::Unknown(Box::new(right.ty.clone())))
+            || right.ty.details == Some(AtomDetails::Unknown(Box::new(left.ty.clone())))
+        {
+            return Ok((left, right));
         }
+
+        if left.ty == right.ty {
+            return Ok((left, right));
+        }
+
+        if can_implicitly_convert(&left.ty.kind, &right.ty.kind) {
+            let converted_left = self.type_cast(left, right.ty.clone())?;
+            return Ok((converted_left, right));
+        }
+
+        if can_implicitly_convert(&right.ty.kind, &left.ty.kind) {
+            let converted_right = self.type_cast(right, left.ty.clone())?;
+            return Ok((left, converted_right));
+        }
+
+        err!(
+            self,
+            ErrKind::InvaildType,
+            format!("cannot unify types {} and {}", left.ty, right.ty)
+        );
     }
 
-    pub fn type_conv(&mut self, mut lhs: Node, mut rhs: Node) -> Result<(Node, Node), ErrKind> {
-        // this code is not good rn
-        if lhs.ty != rhs.ty {
-            if let &Some(AtomDetails::Unknown(ref ty)) = &lhs.ty.details {
-                if &**ty == &rhs.ty {
-                    return Ok((lhs, rhs));
-                }
-            }
-
-            if let &Some(AtomDetails::Unknown(ref ty)) = &rhs.ty.details {
-                if &**ty == &lhs.ty {
-                    return Ok((lhs, rhs));
-                }
-            }
-
-            if lhs.ty.kind == AtomKind::Basic(BasicType::Float)
-                && rhs.ty.kind == AtomKind::Basic(BasicType::Int)
-            {
-                rhs = ty_as(&lhs.ty, rhs);
-            } else if lhs.ty.kind == AtomKind::Basic(BasicType::Int)
-                && rhs.ty.kind == AtomKind::Basic(BasicType::Float)
-            {
-                lhs = ty_as(&rhs.ty, lhs);
-            } else if lhs.ty.kind == AtomKind::Atom(types::Str.clone()) {
-                rhs = ty_as(&lhs.ty, rhs);
-            } else if rhs.ty.kind == AtomKind::Atom(types::Str.clone()) {
-                lhs = ty_as(&rhs.ty, lhs);
-            } else if lhs.ty.kind == AtomKind::Dynamic {
-                rhs = ty_as(&lhs.ty, rhs);
-            } else if rhs.ty.kind == AtomKind::Dynamic {
-                lhs = ty_as(&rhs.ty, lhs);
-            } else {
-                err!(
-                    self,
-                    ErrKind::InvaildType,
-                    format!("cannot make {:?} and {:?} as the same type", lhs.ty, rhs.ty)
-                );
-            }
+    pub fn type_cast(&mut self, from: Node, into: AtomType) -> Result<Node, ErrKind> {
+        if !can_implicitly_convert(&from.ty.kind, &into.kind) {
+            err!(
+                self,
+                ErrKind::InvaildType,
+                format!("cannot convert from {} into {}", from.ty, into)
+            );
         }
 
-        Ok((lhs, rhs))
+        Ok(ty_as(&into, from))
     }
 }

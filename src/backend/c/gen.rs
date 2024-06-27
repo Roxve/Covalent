@@ -335,7 +335,7 @@ impl Codegen {
                 AtomKind::Atom(ref atom) if atom == &*types::Str => self.call_one("__str__", item),
 
                 AtomKind::Dynamic => item,
-                _ => todo!("add conv dynamic from {:?}", from),
+                _ => todo!("add conv dynamic from {}", from),
             },
 
             &AtomKind::Basic(BasicType::Float) => match from.kind {
@@ -348,8 +348,11 @@ impl Codegen {
                 _ => panic!(),
             },
 
+            AtomKind::Atom(ref atom) if atom == &*types::Const => {
+                format!("({item})")
+            }
             _ => match &from.kind {
-                _ => todo!("add conv into {:?} from {:?}", into, from),
+                _ => todo!("add conv into {} from {}", into, from),
             },
         };
 

@@ -49,11 +49,20 @@ impl Display for BlueprintType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Atom {
     pub name: String,
     pub fields: HashMap<String, AtomType>,
     pub generics: IndexMap<String, AtomType>,
+}
+
+impl PartialEq for Atom {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.fields == other.fields
+            && self.generics.keys().collect::<Vec<&String>>()
+                == other.generics.keys().collect::<Vec<&String>>()
+    }
 }
 
 impl Atom {
