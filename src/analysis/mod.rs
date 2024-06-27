@@ -21,25 +21,22 @@ pub struct Analyzer {
     column: u16,
 }
 
-const COMPARE_OP: &[&str] = &["==", "<", ">", "<=", ">="];
-const LOGIC_OP: &[&str] = &["&&", "||"];
-
-const MATH_OP: &[&str] = &["+", "-", "*", "/", "%"];
-
 impl AtomType {
-    pub fn get_op(&self) -> Vec<&str> {
+    pub fn get_op(&self) -> &[&str] {
         match &self.kind {
-            &AtomKind::Basic(BasicType::Bool) => [LOGIC_OP, &["=="]].concat(),
+            &AtomKind::Basic(BasicType::Bool) => &["==", "||", "&&"],
             &AtomKind::Basic(BasicType::Float) | &AtomKind::Basic(BasicType::Int) => {
-                [MATH_OP, COMPARE_OP].concat()
+                &["+", "-", "*", "/", "%", "<", ">", "<=", ">=", "=="]
             }
             &AtomKind::Atom(ref atom)
                 if atom == &*types::Str || &atom.name == &*types::List.name =>
             {
-                [COMPARE_OP, &["+"]].concat()
+                &["<", ">", "==", "<=", ">=", "+", "-"]
             }
-            &AtomKind::Dynamic | &AtomKind::Unknown => [LOGIC_OP, COMPARE_OP, MATH_OP].concat(),
-            _ => Vec::new(),
+            &AtomKind::Dynamic | &AtomKind::Unknown => &[
+                "&&", "||", "==", "<", ">", "<=", ">=", "+", "-", "*", "/", "%",
+            ],
+            _ => &[],
         }
     }
 }
