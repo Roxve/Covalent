@@ -1,14 +1,22 @@
 use super::{Codegen, IROp};
 
+use crate::analysis::ty_as;
 use crate::enviroment::Symbol;
+use crate::err::ErrKind;
 use crate::parser::ast::{Expr, Ident, Node};
-use crate::types::{AtomKind, AtomType, BasicType};
+use crate::types::{
+    can_implicitly_convert, AtomDetails, AtomKind, AtomType, BasicType, FunctionType,
+};
 
 type IR = Vec<IROp>;
-type IRRes = Result<IR, u8>;
+type IRRes = Result<IR, ErrKind>;
 
 pub trait IRGen {
-    fn gen_prog(&mut self, exprs: Vec<Node>) -> IR;
+    fn replace_unknown_body(&mut self, body: &mut Vec<Node>) -> Result<(), ErrKind>;
+    fn replace_unknown(&mut self, node: &mut Node) -> Result<(), ErrKind>;
+
+    fn gen_body(&mut self, body: Vec<Node>) -> IRRes;
+    fn gen_prog(&mut self, exprs: Vec<Node>) -> IRRes;
     fn gen_func(
         &mut self,
         name: String,
@@ -26,16 +34,167 @@ pub trait IRGen {
 }
 
 impl IRGen for Codegen {
-    fn gen_prog(&mut self, exprs: Vec<Node>) -> IR {
-        let mut gen = vec![];
+    #[inline]
+    fn replace_unknown_body(&mut self, body: &mut Vec<Node>) -> Result<(), ErrKind> {
+        // first we build up an environment for our body
+        fn match_env(this: &mut Codegen, node: &Node) {
+            match &node.expr {
+                Expr::VarDeclare { name, .. } | Expr::Extern { name, .. } => {
+                    this.env.add(Symbol {
+                        name: name.val().clone(),
+                        ty: node.ty.clone(),
+                        value: None,
+                        expected: None,
+                    });
+                }
 
-        for expr in exprs {
-            let compiled_expr = self.gen_expr(expr);
-            if compiled_expr.is_ok() {
-                gen.append(&mut compiled_expr.unwrap());
+                Expr::Func { name, .. } | Expr::Import { name, .. } => {
+                    this.env.add(Symbol {
+                        name: name.clone(),
+                        ty: node.ty.clone(),
+                        value: None,
+                        expected: None,
+                    });
+                }
+
+                Expr::Discard(e) => match_env(this, &**e),
+                _ => (),
             }
         }
-        gen
+
+        for node in &*body {
+            match_env(self, node);
+        }
+
+        // We now have to run tought the thing and replace any refrence of Unknown to the correct type
+        for node in &mut *body {
+            self.replace_unknown(node)?;
+        }
+        Ok(())
+    }
+
+    fn replace_unknown(&mut self, node: &mut Node) -> Result<(), ErrKind> {
+        // first we see if we assuming something
+        let assume = if let &Some(AtomDetails::Unknown(ref assume)) = &node.ty.details {
+            Some((**assume).clone())
+        } else {
+            None
+        };
+
+        // replacing the insides of a node
+        match &mut (*node).expr {
+            &mut Expr::RetExpr(ref mut ret) => {
+                self.replace_unknown(ret)?;
+
+                node.ty = ret.ty.clone();
+            }
+
+            &mut Expr::BinaryExpr {
+                ref mut left,
+                ref mut right,
+                ..
+            } => {
+                self.replace_unknown(&mut *left)?;
+                self.replace_unknown(&mut *right)?;
+
+                node.ty = left.ty.clone();
+            }
+
+            &mut Expr::IfExpr {
+                ref mut condition,
+                ref mut body,
+                ref mut alt,
+            } => {
+                self.replace_unknown(&mut *condition)?;
+
+                if alt.is_some() {
+                    self.replace_unknown(alt.as_mut().unwrap())?;
+                }
+                self.replace_unknown_body(&mut *body)?;
+            }
+
+            &mut Expr::WhileExpr {
+                ref mut condition,
+                ref mut body,
+            } => {
+                self.replace_unknown(&mut *condition)?;
+                self.replace_unknown_body(&mut *body)?;
+            }
+
+            &mut Expr::Block(ref mut body) => return self.replace_unknown_body(&mut *body),
+
+            &mut Expr::FnCall {
+                ref mut name,
+                ref mut args,
+            } => {
+                self.replace_unknown(name)?;
+                self.replace_unknown_body(args)?;
+
+                let return_type = if let &AtomKind::Function(FunctionType {
+                    ref return_type, ..
+                }) = &name.ty.kind
+                {
+                    (**return_type).clone()
+                } else {
+                    dbg!(&name);
+                    panic!()
+                };
+
+                node.ty = return_type;
+            }
+
+            &mut Expr::As(ref mut thing) | &mut Expr::Discard(ref mut thing) => {
+                self.replace_unknown(&mut **thing)?;
+            }
+
+            &mut Expr::Ident(ref id) => {
+                node.ty = self.env.get_ty(id.val()).unwrap();
+            }
+
+            Expr::MemberExpr { parent, child } => {
+                self.replace_unknown(&mut **parent)?;
+
+                let ty = parent.ty.get(child).unwrap();
+
+                node.ty = ty.clone();
+            }
+
+            _ => (),
+        }
+
+        if Some(node.ty.clone()) != assume && assume.is_some() {
+            let assume = assume.unwrap();
+
+            if can_implicitly_convert(&node.ty.kind, &assume.kind) {
+                *node = ty_as(&assume, node.clone());
+            } else {
+                dbg!(&assume);
+                dbg!(&node);
+                todo!() // codegen errors
+            }
+        }
+
+        Ok(())
+    }
+    fn gen_body(&mut self, mut body: Vec<Node>) -> IRRes {
+        let mut exprs = Vec::new();
+        self.replace_unknown_body(&mut body)?;
+
+        for node in body {
+            exprs.append(&mut self.gen_expr(node)?);
+        }
+
+        for sym in self.env.symbols.values().clone() {
+            if let &AtomKind::Atom(_) = &sym.ty.kind {
+                exprs.push(IROp::Dealloc(sym.ty.clone(), sym.name.clone()));
+            }
+        }
+
+        Ok(exprs)
+    }
+
+    fn gen_prog(&mut self, exprs: Vec<Node>) -> IRRes {
+        self.gen_body(exprs)
     }
 
     fn gen_func(
@@ -45,6 +204,7 @@ impl IRGen for Codegen {
         ret: AtomType,
         body: Vec<Node>,
     ) -> IRRes {
+        self.env.child();
         for param in &params {
             self.env.add(Symbol {
                 name: param.val().clone(),
@@ -53,13 +213,10 @@ impl IRGen for Codegen {
                 expected: Some(param.ty().clone()),
             });
         }
-        let mut exprs = vec![];
 
-        for expr in body {
-            exprs.append(&mut self.gen_expr(expr)?);
-        }
-
-        Ok(vec![IROp::Def(ret, name, params, exprs)])
+        let body = self.gen_body(body)?;
+        self.env.parent();
+        Ok(vec![IROp::Def(ret, name, params, body)])
     }
 
     fn gen_expr(&mut self, expr: Node) -> IRRes {
@@ -162,16 +319,13 @@ impl IRGen for Codegen {
             } => {
                 let mut cond = self.gen_expr(*condition)?;
 
-                let mut compiled_body = vec![];
-
                 // TODO func which generates scope body
                 self.env.child();
-                for expr in body {
-                    compiled_body.append(&mut self.gen_expr(expr)?);
-                }
-                for sym in self.env.symbols.values() {
-                    compiled_body.push(IROp::Dealloc(sym.ty.clone(), sym.name.clone()));
-                }
+                let body = self.gen_body(body)?;
+
+                // for sym in self.env.symbols.values() {
+                //     body.push(IROp::Dealloc(sym.ty.clone(), sym.name.clone()));
+                // }
                 self.env.parent();
 
                 let alt = if alt.is_none() {
@@ -182,40 +336,30 @@ impl IRGen for Codegen {
 
                 let mut res = Vec::new();
                 res.append(&mut cond);
-                res.push(IROp::If(expr.ty, compiled_body, alt));
+                res.push(IROp::If(expr.ty, body, alt));
                 Ok(res)
             }
 
             Expr::Block(block) => {
-                let mut compiled_block = vec![];
                 self.env.child();
-                for expr in block {
-                    compiled_block.append(&mut self.gen_expr(expr)?);
-                }
+                let body = self.gen_body(block)?;
 
-                for sym in self.env.symbols.values() {
-                    compiled_block.push(IROp::Dealloc(sym.ty.clone(), sym.name.clone()));
-                }
+                // for sym in self.env.symbols.values() {
+                //     body.push(IROp::Dealloc(sym.ty.clone(), sym.name.clone()));
+                // }
                 self.env.parent();
-                Ok(compiled_block)
+                Ok(body)
             }
 
             Expr::WhileExpr { condition, body } => {
                 let mut cond = self.gen_expr(*condition)?;
 
-                let mut compiled_body = vec![];
                 self.env.child();
-                for expr in body {
-                    compiled_body.append(&mut self.gen_expr(expr)?);
-                }
-
-                for sym in self.env.symbols.values().clone() {
-                    compiled_body.push(IROp::Dealloc(sym.ty.clone(), sym.name.clone()));
-                }
+                let body = self.gen_body(body)?;
 
                 let mut res = Vec::new();
                 res.append(&mut cond);
-                res.push(IROp::While(compiled_body));
+                res.push(IROp::While(body));
 
                 self.env.parent();
                 Ok(res)

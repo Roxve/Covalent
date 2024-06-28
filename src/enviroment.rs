@@ -109,7 +109,11 @@ impl Enviroment {
         if sym.is_some() {
             Some(sym.unwrap().ty.clone())
         } else {
-            None
+            if self.parent.is_some() {
+                self.parent.as_ref().unwrap().get_ty(name)
+            } else {
+                None
+            }
         }
     }
 

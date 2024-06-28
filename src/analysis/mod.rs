@@ -1,5 +1,4 @@
 pub mod analysis;
-pub mod implicit;
 
 use std::vec;
 
@@ -53,96 +52,6 @@ pub fn ty_as(ty: &AtomType, expr: Node) -> Node {
 pub fn supports_op(ty: &AtomType, op: &String) -> bool {
     let ops = ty.get_op();
     ops.contains(&op.as_str())
-}
-#[inline]
-pub fn replace_body_ty(body: &mut Vec<Node>, old: &AtomType, new: &AtomType) {
-    for node in &mut *body {
-        replace_ty(node, old, new)
-    }
-}
-
-pub fn replace_ty(node: &mut Node, old: &AtomType, new: &AtomType) {
-    if &node.ty.kind == &AtomKind::Unknown && &node.ty.details == &None {
-        // If the new type is a function type, update the node's type to the function's return type, because we set any ref to our func to unknown
-        if let &AtomKind::Function(ref func) = &new.kind {
-            node.ty = *func.return_type.clone();
-        }
-    } else if &node.ty == old {
-        node.ty = new.to_owned()
-    }
-
-    // replacing the insides of a node
-    match &mut (*node).expr {
-        &mut Expr::RetExpr(ref mut ret) => {
-            replace_ty(&mut *ret, old, new);
-
-            // convert the return to the return type if its not already (if we are replacing with a function type)
-            if let &AtomKind::Function(ref func) = &new.kind {
-                if &*func.return_type != &ret.ty {
-                    **ret = ty_as(&func.return_type, (**ret).clone());
-                    node.ty = (*func.return_type).clone()
-                }
-            }
-        }
-        &mut Expr::BinaryExpr {
-            ref mut left,
-            ref mut right,
-            ..
-        } => {
-            replace_ty(&mut *left, old, new);
-            replace_ty(&mut *right, old, new);
-        }
-
-        &mut Expr::IfExpr {
-            ref mut condition,
-            ref mut body,
-            ref mut alt,
-        } => {
-            replace_ty(&mut *condition, old, new);
-
-            if alt.is_some() {
-                replace_ty(alt.as_mut().unwrap(), old, new);
-            }
-            replace_body_ty(&mut *body, old, new);
-        }
-
-        &mut Expr::WhileExpr {
-            ref mut condition,
-            ref mut body,
-        } => {
-            replace_ty(&mut *condition, old, new);
-            replace_body_ty(&mut *body, old, new);
-        }
-
-        &mut Expr::Block(ref mut body) => replace_body_ty(&mut *body, old, new),
-
-        &mut Expr::FnCall {
-            ref mut name,
-            ref mut args,
-        } => {
-            replace_ty(&mut *name, old, new);
-            replace_body_ty(&mut *args, old, new);
-
-            if let &AtomKind::Function(ref func) = &new.kind {
-                // if the call results is Unknown and expected of a type
-                if let &Some(AtomDetails::Unknown(ref ty)) = &node.ty.details {
-                    if &func.return_type == ty {
-                        node.ty = (*func.return_type).clone();
-                    } else {
-                        // if it doesnt return what is expected then convert it to that
-                        let ty = ty.to_owned();
-                        node.ty = (*func.return_type).clone();
-                        *node = ty_as(&ty, node.to_owned());
-                    }
-                }
-            }
-        }
-
-        &mut Expr::As(ref mut thing) | &mut Expr::Discard(ref mut thing) => {
-            replace_ty(&mut *thing, old, new)
-        }
-        _ => (),
-    }
 }
 
 fn get_ret_ty(node: &Node) -> Vec<AtomType> {
@@ -239,20 +148,21 @@ impl Analyzer {
         name: &str,
         params: Vec<AtomType>,
     ) {
-        self.env.push_function(
-            name.to_string(),
-            FunctionType {
-                params: params.clone(),
-                return_type: Box::new(ty.clone()),
-            },
-        );
+        let func = FunctionType {
+            params: params.clone(),
+            return_type: Box::new(ty),
+        };
+        self.env.push_function(name.to_string(), func.clone());
         body.push(Node {
             expr: Expr::Import {
                 module: module.to_string(),
                 name: name.to_string(),
                 params,
             },
-            ty,
+            ty: AtomType {
+                kind: AtomKind::Function(func),
+                details: None,
+            },
         })
     }
 

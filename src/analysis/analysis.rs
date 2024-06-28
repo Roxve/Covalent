@@ -1,6 +1,6 @@
 use std::fs;
 
-use analysis::implicit::can_implicitly_convert;
+use types::can_implicitly_convert;
 
 use crate::parser::parse::Parse;
 use crate::types::{mangle_types, type_mangle, AtomType};
@@ -324,7 +324,7 @@ impl Analyzer {
             typed_params.push(Ident::Typed(types[i].clone(), arg.val().clone()))
         }
 
-        let mut body = self.analyz_body(blueprint.body, false)?;
+        let body = self.analyz_body(blueprint.body, false)?;
         let ty = get_fn_type(&body);
 
         if !self.env.is_expected(&mangle, &ty) {
@@ -340,38 +340,41 @@ impl Analyzer {
             );
         }
 
-        let placeholder = AtomType {
-            kind: AtomKind::Function(placeholder),
-            details: None,
-        };
+        // let placeholder = AtomType {
+        //     kind: AtomKind::Function(placeholder),
+        //     details: None,
+        // };
 
         let func_type = FunctionType {
             return_type: Box::new(ty.clone()),
             params: types.clone(),
         };
 
-        replace_body_ty(
-            &mut body,
-            &placeholder,
-            &AtomType {
-                kind: AtomKind::Function(func_type.clone()),
-                details: None,
-            },
-        );
+        // replace_body_ty(
+        //     &mut body,
+        //     &placeholder,
+        //     &AtomType {
+        //         kind: AtomKind::Function(func_type.clone()),
+        //         details: None,
+        //     },
+        // );
 
         self.env.parent();
 
-        self.env.push_function(mangle.clone(), func_type);
+        self.env.push_function(mangle.clone(), func_type.clone());
 
         let func = Expr::Func {
-            ret: ty.clone(),
+            ret: ty,
             name: mangle.clone(),
             args: typed_params,
             body,
         };
 
         self.functions.push(Node {
-            ty: ty.clone(),
+            ty: AtomType {
+                kind: AtomKind::Function(func_type),
+                details: None,
+            },
             expr: func,
         });
 

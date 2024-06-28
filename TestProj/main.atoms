@@ -53,6 +53,9 @@ writeln: "LIST[0]: "
 writeln: do_s![0]
 
 set s = do_s!
+writeln: "s.size: "
+writeln: s.size
+
 s[0] = 0
 
 writeln: "s[0] = 0:"

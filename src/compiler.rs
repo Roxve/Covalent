@@ -62,7 +62,7 @@ impl CompilerConfig {
         }
 
         let mut codegen = Codegen::new();
-        let ir = codegen.gen_prog(prog);
+        let ir = codegen.gen_prog(prog).unwrap();
         if self.debug {
             dbg!(&ir);
         }
