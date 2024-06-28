@@ -1,6 +1,6 @@
 use core::panic;
 
-use crate::types::AtomKind;
+use crate::types::{self, AtomKind, AtomType, BasicType};
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Int(i32),
@@ -10,12 +10,15 @@ pub enum Literal {
 }
 
 impl Literal {
-    pub fn get_ty(&self) -> AtomKind {
-        match self {
-            &Self::Int(_) => AtomKind::Int,
-            &Self::Float(_) => AtomKind::Float,
-            &Self::Str(_) => AtomKind::Str,
-            &Self::Bool(_) => AtomKind::Bool,
+    pub fn get_ty(&self) -> AtomType {
+        AtomType {
+            kind: match self {
+                &Self::Int(_) => AtomKind::Basic(BasicType::Int),
+                &Self::Float(_) => AtomKind::Basic(BasicType::Float),
+                &Self::Str(_) => AtomKind::Atom(types::Str.clone()),
+                &Self::Bool(_) => AtomKind::Basic(BasicType::Bool),
+            },
+            details: None,
         }
     }
 }
@@ -62,11 +65,11 @@ pub enum Expr {
     Import {
         module: String,
         name: String,
-        args: Vec<AtomKind>,
+        params: Vec<AtomType>,
     },
 
     Func {
-        ret: AtomKind,
+        ret: AtomType,
         name: String,
         args: Vec<Ident>,
         body: Vec<Node>,
@@ -112,20 +115,23 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Node {
     pub expr: Expr,
-    pub ty: AtomKind,
+    pub ty: AtomType,
 }
 
 pub fn untyped(expr: Expr) -> Node {
     Node {
         expr,
-        ty: AtomKind::Unknown(None),
+        ty: AtomType {
+            kind: AtomKind::Unknown,
+            details: None,
+        },
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ident {
     Tagged(Box<Node>, String),
-    Typed(AtomKind, String),
+    Typed(AtomType, String),
     UnTagged(String),
 }
 
@@ -144,18 +150,27 @@ impl Ident {
         }
     }
 
-    pub fn tuple(self) -> (AtomKind, String) {
+    pub fn tuple(self) -> (AtomType, String) {
         match self {
             Ident::Typed(ty, val) => (ty, val),
-            Ident::UnTagged(val) => (AtomKind::Any, val),
+            Ident::UnTagged(val) => (
+                AtomType {
+                    kind: AtomKind::Any,
+                    details: None,
+                },
+                val,
+            ),
             _ => panic!(),
         }
     }
 
-    pub fn ty(&self) -> &AtomKind {
+    pub fn ty(&self) -> &AtomType {
         match self {
             Ident::Typed(ref ty, _) => ty,
-            Ident::UnTagged(_) => &AtomKind::Any,
+            Ident::UnTagged(_) => &AtomType {
+                kind: AtomKind::Any,
+                details: None,
+            },
             _ => panic!(),
         }
     }

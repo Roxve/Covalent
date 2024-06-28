@@ -4,12 +4,10 @@ extern cprompt@str: msg@str
 extern atoi@int: a@Const(Back(str))
 
 extern strtocstr@Back(str): s@str
-# temp function, implict convert system needs much rework to fix this
-extern mk_const@Const(Back(str)): s@Back(str)
 
 set Int@int: s@str {
 	set cstr = strtocstr: s 
-	ret atoi: mk_const: cstr
+	ret atoi: cstr
 }
 
 set name = cprompt: "name: "
@@ -55,6 +53,9 @@ writeln: "LIST[0]: "
 writeln: do_s![0]
 
 set s = do_s!
+writeln: "s.size: "
+writeln: s.size
+
 s[0] = 0
 
 writeln: "s[0] = 0:"

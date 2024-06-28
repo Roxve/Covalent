@@ -1,25 +1,25 @@
 use crate::parser::ast::{Ident, Literal};
 
 use crate::enviroment::Enviroment;
-use crate::types::AtomKind;
+use crate::types::{self, AtomKind, AtomType, BasicType};
 
 pub mod gen;
 pub mod tools;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum IROp {
-    Import(AtomKind, String, String, Vec<AtomKind>), // ty mod fun arg count
-    Extern(AtomKind, String, Vec<Ident>),
-    Def(AtomKind, String, Vec<Ident>, Vec<IROp>),
+    Import(AtomType, String, String, Vec<AtomType>), // ty mod fun arg count
+    Extern(AtomType, String, Vec<Ident>),
+    Def(AtomType, String, Vec<Ident>, Vec<IROp>),
 
-    Call(AtomKind, u16),
-    Ret(AtomKind),
+    Call(AtomType, u16),
+    Ret(AtomType),
 
-    Add(AtomKind),
-    Sub(AtomKind),
-    Mul(AtomKind),
-    Div(AtomKind),
-    Mod(AtomKind),
+    Add(AtomType),
+    Sub(AtomType),
+    Mul(AtomType),
+    Div(AtomType),
+    Mod(AtomType),
 
     Comp, // acts like GE to peform LE switch left and right
     EComp,
@@ -28,17 +28,17 @@ pub enum IROp {
     Or,
 
     Const(Literal),
-    List(AtomKind, Vec<Vec<IROp>>), // each item is a bunch of operations
-    Conv(AtomKind, AtomKind),
-    Alloc(AtomKind, String),
-    Dealloc(AtomKind, String), // when allocing a var with a new type we dealloc the old val
-    Store(AtomKind, String),
-    Set(AtomKind),
-    Load(AtomKind, String),     // load loads an id
-    LoadProp(AtomKind, String), // load prop loads a property from the id
-    LoadIdx(AtomKind),          // loads an index
+    List(AtomType, Vec<Vec<IROp>>), // each item is a bunch of operations
+    Conv(AtomType, AtomType),
+    Alloc(AtomType, String),
+    Dealloc(AtomType, String), // when allocing a var with a new type we dealloc the old val
+    Store(AtomType, String),
+    Set(AtomType),
+    Load(AtomType, String),     // load loads an id
+    LoadProp(AtomType, String), // load prop loads a property from the id
+    LoadIdx(AtomType),          // loads an index
 
-    If(AtomKind, Vec<IROp>, Vec<IROp>),
+    If(AtomType, Vec<IROp>, Vec<IROp>),
     While(Vec<IROp>),
     Pop,
 }
@@ -46,7 +46,16 @@ use crate::err::ATErr;
 
 use self::IROp::*;
 // TODO: better op impl
-pub fn get_op_type(op: &IROp) -> AtomKind {
+pub fn get_op_type(op: &IROp) -> AtomType {
+    let void: AtomType = AtomType {
+        kind: AtomKind::Basic(BasicType::Void),
+        details: None,
+    };
+
+    let bool: AtomType = AtomType {
+        kind: AtomKind::Basic(BasicType::Bool),
+        details: None,
+    };
     match op {
         Import(t, _, _, _) => t,
         Extern(t, _, _) => t,
@@ -61,13 +70,20 @@ pub fn get_op_type(op: &IROp) -> AtomKind {
         Div(t) => t,
         Mod(t) => t,
 
-        And => &AtomKind::Bool,
-        Or => &AtomKind::Bool,
-        Comp => &AtomKind::Bool,
-        EComp => &AtomKind::Bool,
-        Eq => &AtomKind::Bool,
+        And => &bool,
+        Or => &bool,
 
-        List(ref ty, _) => return AtomKind::List(Box::new(ty.clone())),
+        Comp => &bool,
+        EComp => &bool,
+        Eq => &bool,
+
+        List(ty, _) => {
+            return AtomType {
+                kind: AtomKind::Atom(types::List.spec(&[ty.clone()])),
+                details: None,
+            }
+        }
+
         Const(lit) => return lit.get_ty(),
         Conv(t, _) => t,
         Store(t, _) => t,
@@ -79,8 +95,8 @@ pub fn get_op_type(op: &IROp) -> AtomKind {
         Alloc(t, _) => t,
         Dealloc(t, _) => t,
         If(t, _, _) => t,
-        While(_) => &AtomKind::Void,
-        Pop => &AtomKind::Void,
+        While(_) => &void,
+        Pop => &void,
     }
     .clone()
 }

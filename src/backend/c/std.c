@@ -2,6 +2,7 @@
 #include "stdio.h"
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 
 void *GC_malloc(unsigned int);
@@ -298,7 +299,11 @@ Str *cprompt(Str *msg) {
   return __strnew__(cstr);
 }
 
-Str *itos(int i) { return __strnew__(""); }
+Str *itos(int i) {
+  char *str = GC_malloc(10);
+  sprintf(str, "%d", i);
+  return __strnew__(str);
+}
 
 char *strtocstr(Str *str) {
   char *cstr = GC_malloc(str->len + 1);
@@ -306,5 +311,3 @@ char *strtocstr(Str *str) {
   cstr[str->len] = '\0';
   return cstr;
 }
-
-const char *mk_const(char *a) { return a; }

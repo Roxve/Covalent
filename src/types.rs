@@ -1,55 +1,203 @@
 use core::fmt::Display;
+use indexmap::IndexMap;
 use std::collections::HashMap;
+
+use lazy_static::lazy_static;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BasicType {
+    Int,
+    Float,
+
+    Bool,
+    Void,
+}
+
+impl Display for BasicType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Float => write!(f, "float"),
+            Self::Int => write!(f, "int"),
+            Self::Void => write!(f, "void"),
+            Self::Bool => write!(f, "bool"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionType {
+    pub params: Vec<AtomType>,
+    pub return_type: Box<AtomType>,
+}
+
+impl Display for FunctionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let params: Vec<String> = self.params.iter().map(|param| param.to_string()).collect();
+        write!(f, "Fn({}) -> {}", params.join(", "), self.return_type)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BlueprintType {
+    pub name: String,
+    pub overloads: Vec<String>,
+}
+
+impl Display for BlueprintType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Blueprint({}, {})", self.name, self.overloads.join(", "))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Atom {
+    pub name: String,
+    pub fields: HashMap<String, AtomType>,
+    pub generics: IndexMap<String, AtomType>,
+}
+
+impl PartialEq for Atom {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.fields == other.fields
+            && self.generics.keys().collect::<Vec<&String>>()
+                == other.generics.keys().collect::<Vec<&String>>()
+    }
+}
+
+impl Atom {
+    pub fn new(
+        name: String,
+        fields: HashMap<String, AtomType>,
+        generics: IndexMap<String, AtomType>,
+    ) -> Atom {
+        Atom {
+            name,
+            fields,
+            generics,
+        }
+    }
+
+    // populates generics with given specs
+    pub fn spec(&self, specs: &[AtomType]) -> Self {
+        let mut this = self.clone();
+        for (idx, spec) in specs.iter().enumerate() {
+            *this.generics.get_index_mut(idx).unwrap().1 = spec.clone();
+        }
+        this
+    }
+}
+
+// makes an atom easily
+macro_rules! complex {
+    ($name:expr, { $($field_name:expr => $field_type:expr),* }, { $($generic_name:expr),* }) => {
+        Atom::new(
+            $name.to_owned(),
+            HashMap::from([$(($field_name.to_owned(), AtomType { kind: $field_type, details: None})),*]),
+            IndexMap::from([$(($generic_name.to_owned(), AtomType { kind: AtomKind::Unknown, details: None})),*]),
+        )
+    };
+}
+
+lazy_static! {
+    pub static ref List: Atom =
+        complex!("List", {"size" => AtomKind::Basic(BasicType::Int)}, {"T"});
+    pub static ref Str: Atom = complex!("str", {"size" => AtomKind::Basic(BasicType::Int)}, {});
+    pub static ref Back: Atom = complex!("Back", {}, { "T" });
+    pub static ref Const: Atom = complex!("Const", {"T" => AtomKind::Unknown}, {"T"});
+}
+
+impl Display for Atom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let generics = if !self.generics.is_empty() {
+            let gen_str: Vec<String> = self
+                .generics
+                .iter()
+                .map(|(gen_name, gen)| {
+                    if let AtomKind::Unknown = gen.kind {
+                        gen_name.clone()
+                    } else {
+                        gen.to_string()
+                    }
+                })
+                .collect();
+            format!("({})", gen_str.join(", "))
+        } else {
+            String::new()
+        };
+        write!(f, "{}{}", self.name, generics)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AtomKind {
-    Type(Box<Self>),
-    Backend(Box<Self>),
-    Const(Box<Self>),
-    Unknown(Option<Box<Self>>),
-
-    Int,
-    Float,
-    Str,
-    Bool,
-
-    Dynamic,
-    Any,
-    Void,
-
-    List(Box<Self>),
-
-    Func(Box<Self>, Vec<Self>, String),
-    Blueprint(String, Vec<String>),
-    Obj(HashMap<String, Self>),
+    Basic(BasicType),
+    Atom(Atom),
+    Function(FunctionType),
+    Blueprint(BlueprintType),
+    Dynamic, // may be scrapped, says that type is only known at runtime
+    Unknown, // Unknown and no details means that expr type is unknown later on it should be replaced with Unknown(AtomType) where AtomType is an assumption and even later it is unwarped or converted to the Some type (may be replaced to be simpler)
+    Any,     // mainly used for mangling and Symbol.expected, means that symbol can be of Any type
 }
 
-impl AtomKind {
-    pub fn get(&self, name: &String) -> Option<Self> {
+#[derive(Debug, Clone, PartialEq)]
+pub enum AtomDetails {
+    Type,
+    Unknown(Box<AtomType>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AtomType {
+    pub kind: AtomKind,
+    pub details: Option<AtomDetails>,
+}
+
+impl Display for AtomKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Obj(o) => o.get(name).cloned(),
-            Self::List(_) => {
-                if name == &"size".to_string() || name == &"elem_size".to_string() {
-                    Some(Self::Int)
-                } else {
-                    None
-                }
-            }
+            AtomKind::Any => write!(f, "any"),
+            AtomKind::Dynamic => write!(f, "Dynamic"),
+            AtomKind::Basic(b) => write!(f, "{}", b),
+            AtomKind::Atom(a) => write!(f, "{}", a),
+            AtomKind::Blueprint(b) => write!(f, "{}", b),
+            AtomKind::Function(fun) => write!(f, "{}", fun),
+            AtomKind::Unknown => write!(f, "Unknown"),
+        }
+    }
+}
+
+impl Display for AtomType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.kind)
+    }
+}
+
+impl AtomType {
+    pub fn is_type(&self) -> bool {
+        self.details == Some(AtomDetails::Type)
+    }
+
+    pub fn get(&self, name: &String) -> Option<&Self> {
+        match &self.kind {
+            AtomKind::Atom(a) => a.fields.get(name),
 
             _ => None,
         }
     }
 
     pub fn generics(&self) -> i32 {
-        match self {
-            &Self::List(_) | &Self::Backend(_) | &Self::Const(_) => 1,
-            &Self::Type(ref t) => (&**t).generics(),
-            _ => 0,
+        if self.is_type() {
+            match &self.kind {
+                AtomKind::Atom(a) => a.generics.len() as i32,
+                _ => 0,
+            }
+        } else {
+            0
         }
     }
 }
 
-pub fn type_mangle(mut name: String, types: Vec<AtomKind>) -> String {
+pub fn type_mangle(mut name: String, types: Vec<AtomType>) -> String {
     let name = {
         let idx = name.find('$');
         if idx.is_some() {
@@ -76,7 +224,14 @@ pub fn type_mangle(mut name: String, types: Vec<AtomKind>) -> String {
             first = false
         }
 
-        mangle.push_str(type_n.to_string().as_str());
+        mangle.push_str(
+            type_n
+                .to_string()
+                .replace("(", "__")
+                .replace(")", "__")
+                .replace(",", "_")
+                .as_str(),
+        );
     }
 
     return mangle;
@@ -86,47 +241,35 @@ pub fn mangle_types(mangle: String) -> Vec<String> {
     let types = mangle.get(mangle.find('$').unwrap() + 1..).unwrap();
     types.split('_').map(|s| s.to_string()).collect()
 }
-impl Display for AtomKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            &AtomKind::Int => write!(f, "int"),
-            &AtomKind::Float => write!(f, "float"),
-            &AtomKind::Bool => write!(f, "bool"),
-            &AtomKind::Str => write!(f, "str"),
 
-            &AtomKind::Any => write!(f, "any"),
-            &AtomKind::Dynamic => write!(f, "dynamic"),
-            &AtomKind::Void => write!(f, "void"),
+// from => [into]
+pub fn implicit_conversions(from: &AtomKind) -> Vec<AtomKind> {
+    // AtomKind::Any conversions (anything convert to these)
+    let mut results = vec![
+        AtomKind::Dynamic,
+        AtomKind::Atom(Str.clone()),
+        // Const(T) (TODO! this is a bit of a hack, but it works for now (C backend const pointers))
+        AtomKind::Atom(Const.spec(&[AtomType {
+            kind: from.clone(),
+            details: None,
+        }])),
+    ];
 
-            &AtomKind::Unknown(ref assume) => match assume {
-                &Some(ref t) => write!(f, "Unknown(some({}))", t.to_string()),
-                &None => write!(f, "Unknown(none)"),
-            },
+    // reset of conversions for each specific type
+    results.append(&mut match from {
+        AtomKind::Atom(ref atom) if atom == &*Const => vec![atom.generics[0].kind.clone()],
 
-            &AtomKind::Backend(ref t) => write!(f, "Back({})", t.to_string()),
-            &AtomKind::Const(ref t) => write!(f, "Const({})", t.to_string()),
+        AtomKind::Basic(BasicType::Int) => vec![AtomKind::Basic(BasicType::Float)],
 
-            &AtomKind::List(ref ty) => write!(f, "List({})", ty.to_string()),
-            &AtomKind::Type(ref ty) => write!(f, "Type({})", ty.to_string()),
-            &AtomKind::Func(ref ret, ref args, ref name) => write!(
-                f,
-                "{}@{}{}",
-                name,
-                ret,
-                if args.len() > 0 {
-                    ": ".to_owned()
-                        + &args
-                            .iter()
-                            .map(|arg| arg.to_string())
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                } else {
-                    "!".to_string()
-                }
-            ),
+        AtomKind::Dynamic => vec![AtomKind::Any],
+        _ => Vec::new(),
+    });
 
-            &AtomKind::Blueprint(ref ref_name, _) => write!(f, "Function(\"{}\")", ref_name),
-            &AtomKind::Obj(_) => todo!(),
-        }
-    }
+    results
+}
+
+pub fn can_implicitly_convert(from: &AtomKind, to: &AtomKind) -> bool {
+    let conversions = implicit_conversions(from);
+
+    conversions.contains(to) || conversions.contains(&AtomKind::Any)
 }

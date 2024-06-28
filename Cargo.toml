@@ -6,8 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
-# wasm3 = "0.3.1"
-
-# inkwell = { version = "0.3.0", features = ["llvm14-0"] }
+lazy_static = "1.5.0"
+indexmap = "2.2.6"
 [build-dependencies]

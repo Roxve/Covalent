@@ -2,14 +2,13 @@ pub mod gen;
 use crate::compiler::CompilerConfig;
 use crate::ir::IROp;
 use crate::parser::ast::Literal;
-use crate::types::AtomKind;
+use crate::types::{self, AtomKind, AtomType, BasicType};
 
 use std::cell::RefCell;
+
 use std::collections::HashMap;
 
-use std::fmt::Display;
-use std::fs;
-use std::process::Command;
+use std::{fmt::Display, fs, process::Command};
 
 pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
     let mut codegen = Codegen::new();
@@ -40,27 +39,38 @@ pub fn compile(config: &CompilerConfig, ir: Vec<IROp>) {
         .wait();
 }
 
-pub fn type_to_c(ty: AtomKind) -> String {
-    match ty {
-        AtomKind::Int => "int",
-        AtomKind::Float => "float",
+pub fn type_to_c(ty: AtomType) -> String {
+    match ty.kind {
+        AtomKind::Basic(BasicType::Int) => "int",
+        AtomKind::Basic(BasicType::Float) => "float",
+        AtomKind::Basic(BasicType::Bool) => "_Bool",
+        AtomKind::Basic(BasicType::Void) => "void",
+
         AtomKind::Dynamic => "Obj",
-        AtomKind::Str => "Str*",
 
-        AtomKind::List(_) => "List*",
-        AtomKind::Bool => "_Bool",
+        AtomKind::Atom(ref atom) if atom == &*types::Str => "Str*",
+        AtomKind::Atom(ref atom) if &atom.name == &*types::List.name => "List*",
+        AtomKind::Atom(ref atom) if &atom.name == &*types::Back.name => {
+            #[allow(non_snake_case)]
+            let T = &atom.generics[0];
 
-        AtomKind::Backend(x) if &type_to_c(*x.clone()) == "Str*" => "char*",
-        AtomKind::Const(x) => return format!("const {}", type_to_c(*x)),
-        AtomKind::Type(x) => return type_to_c(*x),
+            match &T.kind {
+                AtomKind::Atom(ref atom) if atom == &*types::Str => "char*",
+                _ => todo!("backend type error"),
+            }
+        }
+        AtomKind::Atom(ref atom) if &atom.name == &*types::Const.name => {
+            #[allow(non_snake_case)]
+            let T = &atom.generics[0];
+            return format!("const {}", type_to_c(T.clone()));
+        }
 
-        AtomKind::Void => "void",
         _ => todo!("{:?}", ty),
     }
     .to_string()
 }
 
-pub fn types_to_cnamed(tys: Vec<(AtomKind, String)>) -> String {
+pub fn types_to_cnamed(tys: Vec<(AtomType, String)>) -> String {
     let mut str = String::from("");
     let tys_len = tys.len();
     for (i, ty) in tys.into_iter().enumerate() {
@@ -77,18 +87,21 @@ pub fn types_to_cnamed(tys: Vec<(AtomKind, String)>) -> String {
 #[derive(Debug, Clone)]
 pub enum Item {
     Const(Literal),
-    Var(AtomKind, String),
-    Expr(AtomKind, String),
-    List(AtomKind, u16 /* size */),
+    Var(AtomType, String),
+    Expr(AtomType, String),
+    List(AtomType, u16 /* size */),
 }
 
 impl Item {
     #[inline]
-    pub fn get_ty(&self) -> AtomKind {
+    pub fn get_ty(&self) -> AtomType {
         match self.clone() {
             Self::Expr(ty, _) => ty,
             Self::Var(ty, _) => ty,
-            Self::List(ty, _) => AtomKind::List(Box::new(ty)),
+            Self::List(ty, _) => AtomType {
+                kind: AtomKind::Atom(types::List.spec(&[ty])),
+                details: None,
+            },
             Self::Const(literal) => (&literal).get_ty(),
         }
     }
@@ -230,7 +243,7 @@ impl Module {
 #[derive(Debug, Clone)]
 pub struct Codegen {
     stack: Vec<Item>,
-    variables: HashMap<String, (i32, AtomKind)>, // c doesnt allow redeclaration of vars with different types
+    variables: HashMap<String, (i32, AtomType)>, // c doesnt allow redeclaration of vars with different types
     pub module: Module,                          // code we are generating
 }
 
@@ -303,7 +316,7 @@ impl Codegen {
         }
     }
 
-    pub fn var(&mut self, name: String, ty: AtomKind) -> String {
+    pub fn var(&mut self, name: String, ty: AtomType) -> String {
         let count = self.variables.get(&name);
         if count.is_none() {
             self.variables.insert(name.clone(), (0, ty));

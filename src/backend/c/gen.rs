@@ -1,15 +1,11 @@
 use core::panic;
 
-use super::type_to_c;
-use super::Emit;
-
-use super::types_to_cnamed;
-use super::Codegen;
-use super::Item;
-use crate::ir::get_op_type;
-use crate::ir::IROp;
-use crate::parser::ast::Ident;
-use crate::types::AtomKind;
+use super::{type_to_c, types_to_cnamed, Codegen, Emit, Item};
+use crate::{
+    ir::{get_op_type, IROp},
+    parser::ast::Ident,
+    types::{self, AtomKind, AtomType, BasicType},
+};
 
 impl Codegen {
     #[inline]
@@ -41,15 +37,23 @@ impl Codegen {
             }
         }
 
-        self.bond_fn("main".to_string(), Vec::new(), AtomKind::Int, ir);
+        self.bond_fn(
+            "main".to_string(),
+            Vec::new(),
+            AtomType {
+                kind: AtomKind::Basic(BasicType::Int),
+                details: None,
+            },
+            ir,
+        );
 
         self.module.finish()
     }
     fn bond_fn(
         &mut self,
         name: String,
-        args: Vec<(AtomKind, String)>,
-        ret: AtomKind,
+        args: Vec<(AtomType, String)>,
+        ret: AtomType,
         body: Vec<IROp>,
     ) {
         let ty = type_to_c(ret);
@@ -65,7 +69,7 @@ impl Codegen {
         self.module.func(emiter.finish());
     }
 
-    fn bond_extern(&mut self, ret: AtomKind, name: String, params: Vec<Ident>) -> Emit {
+    fn bond_extern(&mut self, ret: AtomType, name: String, params: Vec<Ident>) -> Emit {
         let ty = type_to_c(ret);
         let params = types_to_cnamed(params.iter().map(|x| x.clone().tuple()).collect());
         self.module.extern_add(format!("{ty} {name}({params});"));
@@ -88,7 +92,7 @@ impl Codegen {
             IROp::Alloc(_, _) => (),
             IROp::Dealloc(ty, name) => {
                 // free heap allocated types
-                if ty == AtomKind::Str {
+                if ty.kind == AtomKind::Atom(types::Str.clone()) {
                     let line = self.call_one("free", name);
                     return Emit::Line(line);
                 }
@@ -136,7 +140,7 @@ impl Codegen {
                 let name = self.pop_str();
                 let args = self.pop_amount(arg_count).join(", ");
                 let call = format!("{}({})", name, args);
-                if &ty == &AtomKind::Void {
+                if &ty.kind == &AtomKind::Basic(BasicType::Void) {
                     // our compiler only insert a line when the stack is empty, void functions doesnt push anything to the stack
                     return Emit::Line(call);
                 } else {
@@ -239,8 +243,8 @@ impl Codegen {
     }
 
     #[inline]
-    fn genbinary(&mut self, op: &str, ty: AtomKind) -> Item {
-        if &self.borrow().get_ty() == &AtomKind::Str {
+    fn genbinary(&mut self, op: &str, ty: AtomType) -> Item {
+        if &self.borrow().get_ty().kind == &AtomKind::Atom(types::Str.clone()) {
             let binop = match op {
                 "+" => "__stradd__",
                 "-" => "__strsub__",
@@ -265,16 +269,25 @@ impl Codegen {
 
     #[inline]
     fn binaryb(&mut self, op: &str) -> Item {
-        self.genbinary(op, AtomKind::Bool)
+        self.genbinary(
+            op,
+            AtomType {
+                kind: AtomKind::Basic(BasicType::Bool),
+                details: None,
+            },
+        )
     }
 
     fn bond_binary(&mut self, op: IROp) -> Emit {
-        let item = if get_op_type(&op) == AtomKind::Dynamic
-            || self.borrow().get_ty() == AtomKind::Dynamic
+        let item = if get_op_type(&op).kind == AtomKind::Dynamic
+            || self.borrow().get_ty().kind == AtomKind::Dynamic
         {
             let ops = vec![self.pop_str(), self.pop_str()];
             Item::Expr(
-                AtomKind::Dynamic,
+                AtomType {
+                    kind: AtomKind::Dynamic,
+                    details: None,
+                },
                 self.call(
                     match op {
                         IROp::Add(_) => "__add__",
@@ -311,33 +324,35 @@ impl Codegen {
         Emit::None
     }
 
-    fn bond_conv(&mut self, into: AtomKind, from: AtomKind) {
+    fn bond_conv(&mut self, into: AtomType, from: AtomType) {
         let item = self.pop_str();
-        let conv = match &into {
-            &AtomKind::Dynamic => match from {
-                AtomKind::Int => self.call_one("__int__", item),
-                AtomKind::Float => self.call_one("__float__", item),
-                AtomKind::Str => self.call_one("__str__", item),
-                AtomKind::Bool => self.call_one("__bool__", item),
+        let conv = match &into.kind {
+            &AtomKind::Dynamic => match from.kind {
+                AtomKind::Basic(BasicType::Int) => self.call_one("__int__", item),
+                AtomKind::Basic(BasicType::Float) => self.call_one("__float__", item),
+                AtomKind::Basic(BasicType::Bool) => self.call_one("__bool__", item),
+
+                AtomKind::Atom(ref atom) if atom == &*types::Str => self.call_one("__str__", item),
+
                 AtomKind::Dynamic => item,
-                _ => todo!("add conv dynamic from {:?}", from),
+                _ => todo!("add conv dynamic from {}", from),
             },
 
-            &AtomKind::Float => match from {
-                AtomKind::Int => format!("(float){item}"),
+            &AtomKind::Basic(BasicType::Float) => match from.kind {
+                AtomKind::Basic(BasicType::Int) => format!("(float){item}"),
                 _ => panic!(),
             },
 
-            &AtomKind::Str => match from {
-                AtomKind::Int => format!("itos({item})"),
+            &AtomKind::Atom(ref atom) if atom == &*types::Str => match from.kind {
+                AtomKind::Basic(BasicType::Int) => format!("itos({item})"),
                 _ => panic!(),
             },
 
-            _ => match &from {
-                &AtomKind::Const(ref x) if &**x == &AtomKind::Type(Box::new(into.clone())) => {
-                    format!("{item}")
-                }
-                _ => todo!("add conv into {:?} from {:?}", into, from),
+            AtomKind::Atom(ref atom) if atom == &*types::Const => {
+                format!("({item})")
+            }
+            _ => match &from.kind {
+                _ => todo!("add conv into {} from {}", into, from),
             },
         };
 
