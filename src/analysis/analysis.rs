@@ -735,7 +735,7 @@ impl Analyzer {
                 format!(
                     "unexpected type {ty}, for id {}, expected {}",
                     name.val(),
-                    self.env.get_expected(name.val())
+                    self.env.get(name.val()).unwrap().expected.as_ref().unwrap()
                 )
             );
         }
@@ -767,7 +767,7 @@ impl Analyzer {
             if name.ty.kind == AtomKind::Unknown {
                 ty = name.ty.clone();
             } else {
-                err!(self, ErrKind::InvaildType, format!("cannot set the value of an Obj property to a value of different type, got type {:?} expected {:?}, in expr {:?} = {:?}", val.ty, name.ty, name, val));
+                err!(self, ErrKind::InvaildType, format!("cannot set the value of an Obj property to a value of different type, got type {} expected {}, in expr {:?} = {:?}", val.ty, name.ty, name, val));
             }
         }
 

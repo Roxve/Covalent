@@ -16,7 +16,6 @@ pub struct Symbol {
 #[derive(Clone, Debug)]
 pub struct Enviroment {
     pub symbols: HashMap<String, Symbol>,
-    pub expects: HashMap<String, AtomType>,
     pub parent: Option<Box<Enviroment>>,
     pub blueprints: Vec<Blueprint>,
 }
@@ -80,7 +79,6 @@ impl Enviroment {
 
         Self {
             symbols,
-            expects: HashMap::new(), // TODO: remove?
             parent: None,
             blueprints: Vec::new(),
         }
@@ -89,7 +87,6 @@ impl Enviroment {
     pub fn new(parent: Option<Box<Self>>) -> Self {
         Self {
             symbols: HashMap::new(),
-            expects: HashMap::new(),
             parent,
             blueprints: Vec::new(),
         }
@@ -218,16 +215,6 @@ impl Enviroment {
         self.symbols
             .get_mut(name)
             .map(|sym| sym.expected = Some(ty));
-    }
-
-    pub fn get_expected(&mut self, name: &String) -> &AtomType {
-        let expect = self.expects.get(name);
-
-        if expect.is_none() {
-            return self.parent.as_mut().unwrap().get_expected(name);
-        }
-
-        expect.unwrap()
     }
 
     pub fn is_expected(&mut self, name: &String, ty: &AtomType) -> bool {
