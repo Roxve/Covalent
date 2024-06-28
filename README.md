@@ -1,6 +1,3 @@
-# this is an unstable branch of a type rewrite, it will introduce big changes and it is not expected for it to compile
-
-
 # Covalent
 <p align="center">
 <img src="img/1.png" alt="logo" width="200"/>
