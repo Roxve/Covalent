@@ -28,11 +28,9 @@ you can compile gc.o from [bdwgc](https://github.com/ivmai/bdwgc) (put it in lib
 - functions, blueprints(some fancy stuff that generates a typed function from a copy of an untyped function on call), and externs
 - function and blueprint call `func: args` `argless_func!`
 - built-in types: str, int, float, bool, List(T), Dynamic, Back(T) backend version of T, Const(T) C const pointers
-- 
 - MemberExpr for fields (List(T).size for example), no implantation for member functions yet
 - IndexExpr for indexing (List(T)\[index] for example)
 - SpecExpr for specifying generics (List(str) for example)
-
 - poor error system
 - operators: -, +, *, /, %, &&, ||, ==, >, <, <=, >=
 
