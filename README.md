@@ -1,3 +1,5 @@
+# this branch name may be misleading, it will also contain a redesign of the AST -> Analyzed AST -> IR -> Backend pipeline
+
 # Covalent
 <p align="center">
 <img src="img/1.png" alt="logo" width="200"/>
