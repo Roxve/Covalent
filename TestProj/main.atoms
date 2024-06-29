@@ -1,3 +1,13 @@
+# Atom test 
+use "types.atoms"
+
+set welcome: person@Person {
+	writeln: "Hello " + person.name + "!"
+}
+
+welcome: new Person: name@"mazen", age@14
+
+
 # extern test
 extern cprompt@str: msg@str
 

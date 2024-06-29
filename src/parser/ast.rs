@@ -1,4 +1,5 @@
 use core::panic;
+use std::fmt::Display;
 
 use crate::types::{self, AtomKind, AtomType, BasicType};
 #[derive(Debug, Clone, PartialEq)]
@@ -47,6 +48,12 @@ pub enum Expr {
     },
 
     Ident(Ident),
+
+    AtomDeclare {
+        name: String,
+        fields: Vec<Node>,
+    },
+
     VarDeclare {
         name: Ident,
         val: Box<Node>,
@@ -116,6 +123,45 @@ pub enum Expr {
 pub struct Node {
     pub expr: Expr,
     pub ty: AtomType,
+}
+
+impl Display for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.expr {
+            Expr::SpecExpr { parent, spec } => {
+                write!(
+                    f,
+                    "{parent}({})",
+                    spec.iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<String>>()
+                        .join(",")
+                )
+            }
+            Expr::IndexExpr { parent, index } => {
+                write!(f, "{parent}[{index}]")
+            }
+
+            Expr::Block(items) => {
+                write!(
+                    f,
+                    "{{\n{}}}",
+                    items
+                        .iter()
+                        .map(|item| item.to_string())
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                )
+            }
+
+            Expr::Discard(d) => write!(f, "discard {d}"),
+            Expr::BinaryExpr { op, left, right } => write!(f, "{left} {op} {right}"),
+
+            Expr::As(e) => write!(f, "{e} as {}", &self.ty),
+            Expr::RetExpr(ret) => write!(f, "ret {ret}"),
+            _ => write!(f, "{:#?}", &self.expr),
+        }
+    }
 }
 
 pub fn untyped(expr: Expr) -> Node {

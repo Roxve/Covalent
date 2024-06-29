@@ -1,0 +1,4 @@
+set Person {
+    name@str,
+    age@int,
+}

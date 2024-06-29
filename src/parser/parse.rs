@@ -27,13 +27,14 @@ pub trait Parse {
     fn parse_spec(&mut self) -> Result<Node, ()>;
     fn parse_call_fn(&mut self) -> Result<Node, ()>;
 
-    fn parse_spec_list(&mut self) -> Result<Vec<Node>, ()>;
     fn parse_member(&mut self) -> Result<Node, ()>;
 
     fn parse_expr(&mut self) -> Result<Node, ()>;
 
     fn parse_extern(&mut self) -> Result<Node, ()>;
+
     fn parse_declare(&mut self) -> Result<Node, ()>;
+    fn parse_declare_atom(&mut self, name: Ident) -> Result<Node, ()>;
     fn parse_declare_fn(&mut self, id: Ident) -> Result<Node, ()>;
 
     fn parse_if_expr(&mut self) -> Result<Node, ()>;
@@ -41,6 +42,12 @@ pub trait Parse {
     fn parse_ret_expr(&mut self) -> Result<Node, ()>;
 
     fn parse_body(&mut self) -> Vec<Node>;
+
+    fn parse_list_of<F, OF>(&mut self, func: F, of: OF, term: Token) -> Result<Vec<Node>, ()>
+    where
+        F: Fn(&mut Self) -> Result<Node, ()>,
+        OF: Fn(&Node) -> bool;
+
     fn parse_list(&mut self) -> Result<Vec<Node>, ()>;
 }
 
@@ -147,7 +154,7 @@ impl Parse for Parser {
 
         if self.current() == Token::LeftParen {
             self.next();
-            let spec = self.parse_spec_list()?;
+            let spec = self.parse_list_of(Self::parse_spec, |_| true, Token::RightParen)?;
 
             left = untyped(Expr::SpecExpr {
                 parent: Box::new(left),
@@ -157,18 +164,6 @@ impl Parse for Parser {
         }
 
         Ok(left)
-    }
-
-    fn parse_spec_list(&mut self) -> Result<Vec<Node>, ()> {
-        let mut items: Vec<Node> = Vec::new();
-
-        items.push(self.parse_spec()?);
-        while self.current() == Token::Comma {
-            self.next();
-            items.push(self.parse_spec()?);
-        }
-
-        Ok(items)
     }
 
     fn parse_member(&mut self) -> Result<Node, ()> {
@@ -194,12 +189,34 @@ impl Parse for Parser {
     }
 
     fn parse_list(&mut self) -> Result<Vec<Node>, ()> {
+        self.parse_list_of(|this| this.parse_level(0), |_| true, Token::EOF)
+    }
+
+    fn parse_list_of<F, OF>(&mut self, func: F, of: OF, term: Token) -> Result<Vec<Node>, ()>
+    where
+        F: Fn(&mut Self) -> Result<Node, ()>,
+        OF: Fn(&Node) -> bool,
+    {
         let mut items: Vec<Node> = Vec::new();
 
-        items.push(self.parse_level(0)?);
-        while self.current() == Token::Comma {
+        loop {
+            if self.current() == term {
+                break;
+            }
+
+            let item = func(self)?;
+
+            if of(&item) {
+                items.push(item);
+            } else {
+                self.err(ErrKind::UnexceptedTokenE, format!("unexpected expr {item}"));
+                return Err(());
+            }
+
+            if self.current() != Token::Comma {
+                break;
+            }
             self.next();
-            items.push(self.parse_level(0)?);
         }
 
         Ok(items)
@@ -352,13 +369,15 @@ impl Parse for Parser {
                 self.next();
 
                 let expr = self.parse_level(0)?;
-                return untyped!(Expr::VarDeclare {
+                untyped!(Expr::VarDeclare {
                     name,
                     val: Box::new(expr),
-                });
+                })
+            } else if self.current() == Token::LeftBracket {
+                self.parse_declare_atom(name)
+            } else {
+                self.parse_declare_fn(name)
             }
-
-            self.parse_declare_fn(name)
         } else {
             self.err(
                 ErrKind::UnexceptedTokenE,
@@ -371,6 +390,37 @@ impl Parse for Parser {
             Ok(left)
         }
     }
+
+    fn parse_declare_atom(&mut self, name: Ident) -> Result<Node, ()> {
+        let name = match name {
+            Ident::UnTagged(id) => id,
+            _ => {
+                self.err(
+                    ErrKind::UnexceptedTokenE,
+                    format!("expected an untagged id as a name for Atom in Atom declare"),
+                );
+                return Err(());
+            }
+        };
+
+        self.next();
+
+        let fields = self.parse_list_of(
+            Self::parse_expr,
+            |node| {
+                if let Expr::Ident(Ident::Tagged(_, _)) = node.expr {
+                    return true;
+                }
+                false
+            },
+            Token::RightBracket,
+        )?;
+
+        self.except(Token::RightBracket);
+
+        untyped!(Expr::AtomDeclare { name, fields })
+    }
+
     fn parse_declare_fn(&mut self, id: Ident) -> Result<Node, ()> {
         let mut id_args: Vec<Ident> = Vec::new();
 
