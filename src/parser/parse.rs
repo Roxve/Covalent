@@ -6,21 +6,9 @@ use crate::err::ErrKind;
 
 use crate::lexer::token::Token;
 
-use crate::types::{AtomKind, AtomType};
-macro_rules! untyped {
-    ($expr: expr) => {
-        Ok(Node {
-            expr: $expr,
-            ty: AtomType {
-                kind: AtomKind::Unknown,
-                details: None,
-            },
-        })
-    };
-}
-
 pub trait Parse {
-    fn parse_prog(&mut self) -> Vec<Node>;
+    // consumes a parser and returns a program
+    fn parse_prog(self) -> Program;
     fn parse_level(&mut self, level: u8) -> Result<Node, ()>;
 
     fn parse_index(&mut self) -> Result<Node, ()>;
@@ -52,8 +40,7 @@ pub trait Parse {
 }
 
 impl Parse for Parser {
-    fn parse_prog(&mut self) -> Vec<Node> {
-        let mut body = Vec::new();
+    fn parse_prog(mut self) -> Program {
         while self.current() != Token::EOF {
             self.current_scope = Scope::Top;
             let expr = self.parse_level(0);
@@ -61,14 +48,14 @@ impl Parse for Parser {
                 let mut expr = expr.unwrap();
 
                 if !self.current_scope.is_used() {
-                    expr = untyped(Expr::Discard(Box::new(expr)));
+                    expr = self.untyped(Expr::Discard(Box::new(expr)));
                 }
 
-                body.push(expr);
+                self.program.body.push(expr);
             }
         }
 
-        body
+        self.program
     }
 
     fn parse_level(&mut self, level: u8) -> Result<Node, ()> {
@@ -83,7 +70,7 @@ impl Parse for Parser {
                     self.current_scope = Scope::Value;
                     let right = self.parse_level(0)?;
 
-                    left = untyped(Expr::VarAssign {
+                    left = self.untyped(Expr::VarAssign {
                         name: Box::new(left),
                         val: Box::new(right),
                     });
@@ -98,7 +85,7 @@ impl Parse for Parser {
                 self.next();
                 right = self.parse_level(current_op_level + 1)?;
 
-                left = untyped(Expr::BinaryExpr {
+                left = self.untyped(Expr::BinaryExpr {
                     op: c,
                     left: Box::new(left),
                     right: Box::new(right),
@@ -119,10 +106,10 @@ impl Parse for Parser {
             let index = Box::new(self.parse_level(0)?);
             self.except(Token::RightBrace);
 
-            return untyped!(Expr::IndexExpr {
+            return Ok(self.untyped(Expr::IndexExpr {
                 parent: Box::new(expr),
                 index,
-            });
+            }));
         }
         Ok(expr)
     }
@@ -132,18 +119,18 @@ impl Parse for Parser {
         if self.current() == Token::Colon {
             self.next();
             let args = self.parse_list()?;
-            return untyped!(Expr::FnCall {
+            return Ok(self.untyped(Expr::FnCall {
                 name: Box::new(call),
                 args,
-            });
+            }));
         }
 
         if self.current() == Token::Exec {
             self.next();
-            return untyped!(Expr::FnCall {
+            return Ok(self.untyped(Expr::FnCall {
                 name: Box::new(call),
                 args: Vec::new(),
-            });
+            }));
         }
 
         Ok(call)
@@ -156,7 +143,7 @@ impl Parse for Parser {
             self.next();
             let spec = self.parse_list_of(Self::parse_spec, |_| true, Token::RightParen)?;
 
-            left = untyped(Expr::SpecExpr {
+            left = self.untyped(Expr::SpecExpr {
                 parent: Box::new(left),
                 spec,
             });
@@ -172,16 +159,16 @@ impl Parse for Parser {
             self.next();
             let right = self.parse_expr()?;
             if let Expr::Ident(id) = right.expr {
-                untyped!(Expr::MemberExpr {
+                Ok(self.untyped(Expr::MemberExpr {
                     parent: Box::new(left),
                     child: id.val().clone(),
-                })
+                }))
             } else {
                 self.err(
                     ErrKind::UnexceptedTokenE,
                     format!("expected id in member expr got {:?}", right),
                 );
-                untyped!(Expr::Literal(Literal::Int(0)))
+                Ok(self.untyped(Expr::Literal(Literal::Int(0))))
             }
         } else {
             Ok(left)
@@ -227,19 +214,19 @@ impl Parse for Parser {
         match tok {
             Token::Int(i) => {
                 self.next();
-                untyped!(Expr::Literal(Literal::Int(i)))
+                Ok(self.untyped(Expr::Literal(Literal::Int(i))))
             }
             Token::Float(f) => {
                 self.next();
-                untyped!(Expr::Literal(Literal::Float(f)))
+                Ok(self.untyped(Expr::Literal(Literal::Float(f))))
             }
             Token::Bool(val) => {
                 self.next();
-                untyped!(Expr::Literal(Literal::Bool(val)))
+                Ok(self.untyped(Expr::Literal(Literal::Bool(val))))
             }
             Token::Str(s) => {
                 self.next();
-                untyped!(Expr::Literal(Literal::Str(s)))
+                Ok(self.untyped(Expr::Literal(Literal::Str(s))))
             }
 
             Token::Err(_) => Err(()),
@@ -248,9 +235,11 @@ impl Parse for Parser {
                 self.next();
                 if self.current() == Token::Dash {
                     self.next();
-                    untyped!(Expr::Ident(Ident::Tagged(Box::new(self.parse_spec()?), id)))
+                    let tag = self.parse_spec()?;
+
+                    Ok(self.untyped(Expr::Ident(Ident::Tagged(Box::new(tag), id))))
                 } else {
-                    untyped!(Expr::Ident(Ident::UnTagged(id)))
+                    Ok(self.untyped(Expr::Ident(Ident::UnTagged(id))))
                 }
             }
             // Token::Tag(tag) => {
@@ -275,13 +264,13 @@ impl Parse for Parser {
                 self.next();
                 let values = self.parse_list()?;
                 self.except(Token::RightBrace);
-                untyped!(Expr::ListExpr(values))
+                Ok(self.untyped(Expr::ListExpr(values)))
             }
             Token::UseKw => {
                 if let Token::Str(path) = self.next() {
                     self.current_scope = Scope::Use;
                     self.next();
-                    untyped!(Expr::Use(path))
+                    Ok(self.untyped(Expr::Use(path)))
                 } else {
                     let tok = self.current();
                     self.err(
@@ -340,7 +329,7 @@ impl Parse for Parser {
                 }
                 let params = id_params;
 
-                untyped!(Expr::Extern { name, params })
+                Ok(self.untyped(Expr::Extern { name, params }))
             } else {
                 self.err(
                     ErrKind::UnexceptedTokenE,
@@ -369,10 +358,10 @@ impl Parse for Parser {
                 self.next();
 
                 let expr = self.parse_level(0)?;
-                untyped!(Expr::VarDeclare {
+                Ok(self.untyped(Expr::VarDeclare {
                     name,
                     val: Box::new(expr),
-                })
+                }))
             } else if self.current() == Token::LeftBracket {
                 self.parse_declare_atom(name)
             } else {
@@ -418,7 +407,7 @@ impl Parse for Parser {
 
         self.except(Token::RightBracket);
 
-        untyped!(Expr::AtomDeclare { name, fields })
+        Ok(self.untyped(Expr::AtomDeclare { name, fields }))
     }
 
     fn parse_declare_fn(&mut self, id: Ident) -> Result<Node, ()> {
@@ -446,7 +435,7 @@ impl Parse for Parser {
 
         self.push_function(id.clone(), id_args, body);
         self.current_scope = Scope::Value;
-        untyped!(Expr::PosInfo(id.val().clone(), self.line, self.column))
+        Ok(self.untyped(Expr::PosInfo(id.val().clone(), self.line, self.column)))
     }
 
     fn parse_if_expr(&mut self) -> Result<Node, ()> {
@@ -461,15 +450,17 @@ impl Parse for Parser {
             if self.current() == Token::IfKw {
                 alt = Some(Box::new(self.parse_if_expr()?));
             } else {
-                alt = Some(Box::new(untyped(Expr::Block(self.parse_body()))));
+                let body = self.parse_body();
+
+                alt = Some(Box::new(self.untyped(Expr::Block(body))));
             }
         }
 
-        untyped!(Expr::IfExpr {
+        Ok(self.untyped(Expr::IfExpr {
             condition: Box::new(condition),
             body,
             alt,
-        })
+        }))
     }
     fn parse_while_expr(&mut self) -> Result<Node, ()> {
         self.next();
@@ -477,10 +468,10 @@ impl Parse for Parser {
         let condition = self.parse_level(0)?;
         let body = self.parse_body();
 
-        untyped!(Expr::WhileExpr {
+        Ok(self.untyped(Expr::WhileExpr {
             condition: Box::new(condition),
             body,
-        })
+        }))
     }
 
     #[inline]
@@ -495,7 +486,7 @@ impl Parse for Parser {
                 let mut expr = expr.unwrap();
 
                 if !self.current_scope.is_used() {
-                    expr = untyped(Expr::Discard(Box::new(expr)));
+                    expr = self.untyped(Expr::Discard(Box::new(expr)));
                 }
 
                 body.push(expr);
@@ -510,6 +501,6 @@ impl Parse for Parser {
         self.next();
         self.current_scope = Scope::Value;
         let expr = self.parse_level(0)?;
-        untyped!(Expr::RetExpr(Box::new(expr)))
+        Ok(self.untyped(Expr::RetExpr(Box::new(expr))))
     }
 }

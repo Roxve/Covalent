@@ -1,4 +1,4 @@
-# this branch name may be misleading, it will also contain a redesign of the AST -> Analyzed AST -> IR -> Backend pipeline
+# it will contain a redesign of the AST -> Analyzed AST -> IR -> Backend pipeline
 
 # Covalent
 <p align="center">

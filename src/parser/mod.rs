@@ -1,10 +1,11 @@
 pub mod ast;
 pub mod parse;
-use self::ast::{Blueprint, Ident};
+use self::ast::{Blueprint, Expr, Ident, Program};
 use crate::err::{ATErr, ErrKind};
 use crate::lexer::token::Token;
 use crate::lexer::Lexer;
 use crate::scope::Scope;
+use crate::types::{AtomKind, AtomType};
 use ast::Node;
 
 #[derive(Debug, Clone)]
@@ -13,7 +14,7 @@ pub struct Parser {
     line: u16,
     column: u16,
     current_tok: Option<Token>,
-    pub functions: Vec<Blueprint>,
+    pub program: Program,
     current_scope: Scope,
     pub errors: Vec<ATErr>,
 }
@@ -25,7 +26,11 @@ impl Parser {
             line: 1,
             column: 0,
             current_tok: None,
-            functions: vec![],
+            program: Program {
+                body: Vec::new(),
+                functions: Vec::new(),
+                types: Vec::new(),
+            },
             current_scope: Scope::Top,
             errors: Vec::new(),
         }
@@ -43,7 +48,7 @@ impl Parser {
     }
 
     pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Node>) {
-        self.functions.push(Blueprint { name, args, body });
+        self.program.functions.push(Blueprint { name, args, body });
     }
     fn current(&mut self) -> Token {
         if self.current_tok.is_none() {
@@ -68,6 +73,19 @@ impl Parser {
             Token::Err("unexcepted token".to_string())
         } else {
             self.next()
+        }
+    }
+
+    pub fn untyped(&self, expr: Expr) -> Node {
+        Node {
+            expr,
+            ty: AtomType {
+                kind: AtomKind::Unknown,
+                details: None,
+            },
+            line: self.line,
+            start: self.column,
+            end: self.column,
         }
     }
 }

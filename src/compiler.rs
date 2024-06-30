@@ -53,10 +53,10 @@ impl CompilerConfig {
         }
     }
     pub fn compile(&self) {
-        let mut parser = Parser::new(self.input.clone());
+        let parser = Parser::new(self.input.clone());
         let prog = parser.parse_prog();
 
-        let prog = Analyzer::analyz_prog(prog, parser.functions, self.workdir.clone()).unwrap();
+        let prog = Analyzer::analyz_prog(prog, self.workdir.clone()).unwrap();
         if self.debug {
             dbg!(&prog);
         }

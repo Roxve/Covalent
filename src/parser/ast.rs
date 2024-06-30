@@ -36,6 +36,20 @@ pub fn get_operator_level(op: &str) -> u8 {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Program {
+    pub body: Vec<Node>,
+    pub functions: Vec<Blueprint>,
+    pub types: Vec<Atom>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Atom {
+    name: String,
+    generics: Vec<String>,
+    fields: Vec<Ident>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Use(String),
     Literal(Literal),
@@ -123,6 +137,9 @@ pub enum Expr {
 pub struct Node {
     pub expr: Expr,
     pub ty: AtomType,
+    pub line: u16,
+    pub start: u16,
+    pub end: u16,
 }
 
 impl Display for Node {
@@ -161,16 +178,6 @@ impl Display for Node {
             Expr::RetExpr(ret) => write!(f, "ret {ret}"),
             _ => write!(f, "{:#?}", &self.expr),
         }
-    }
-}
-
-pub fn untyped(expr: Expr) -> Node {
-    Node {
-        expr,
-        ty: AtomType {
-            kind: AtomKind::Unknown,
-            details: None,
-        },
     }
 }
 
@@ -222,7 +229,7 @@ impl Ident {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Blueprint {
     pub name: Ident,
     pub args: Vec<Ident>,

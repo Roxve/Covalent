@@ -8,7 +8,7 @@ use crate::types::{mangle_types, type_mangle, AtomType};
 use crate::err;
 use crate::err::{ATErr, ErrKind};
 
-use crate::parser::ast::{Blueprint, Expr, Ident, Node};
+use crate::parser::ast::{Blueprint, Expr, Ident, Node, Program};
 
 use super::*;
 
@@ -55,11 +55,7 @@ impl Analyzer {
         Ok(analyzed_items)
     }
 
-    pub fn analyz_prog(
-        exprs: Vec<Node>,
-        functions: Vec<Blueprint>,
-        workdir: String,
-    ) -> Result<Vec<Node>, ErrKind> {
+    pub fn analyz_prog(program: Program, workdir: String) -> Result<Vec<Node>, ErrKind> {
         let mut analyzer = Analyzer::new(workdir);
         let mut analyzed_prog = Vec::new();
 
@@ -78,8 +74,8 @@ impl Analyzer {
         );
 
         // setting our env blueprints to our uncompiled functions (blueprints are then compiled pased on call arguments)
-        analyzer.blueprints(functions)?;
-        analyzed_prog.append(&mut analyzer.analyz_body(exprs, true)?);
+        analyzer.blueprints(program.functions)?;
+        analyzed_prog.append(&mut analyzer.analyz_body(program.body, true)?);
 
         analyzed_prog = [
             analyzer.imports.clone(),
