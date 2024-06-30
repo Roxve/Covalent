@@ -6,44 +6,12 @@ use crate::err::ErrKind;
 
 use crate::lexer::token::Token;
 
-pub trait Parse {
+impl Parser {
     // consumes a parser and returns a program
-    fn parse_prog(self) -> Program;
-    fn parse_level(&mut self, level: u8) -> Result<Node, ()>;
-
-    fn parse_index(&mut self) -> Result<Node, ()>;
-    fn parse_spec(&mut self) -> Result<Node, ()>;
-    fn parse_call_fn(&mut self) -> Result<Node, ()>;
-
-    fn parse_member(&mut self) -> Result<Node, ()>;
-
-    fn parse_expr(&mut self) -> Result<Node, ()>;
-
-    fn parse_extern(&mut self) -> Result<Node, ()>;
-
-    fn parse_declare(&mut self) -> Result<Node, ()>;
-    fn parse_declare_atom(&mut self, name: Ident) -> Result<Node, ()>;
-    fn parse_declare_fn(&mut self, id: Ident) -> Result<Node, ()>;
-
-    fn parse_if_expr(&mut self) -> Result<Node, ()>;
-    fn parse_while_expr(&mut self) -> Result<Node, ()>;
-    fn parse_ret_expr(&mut self) -> Result<Node, ()>;
-
-    fn parse_body(&mut self) -> Vec<Node>;
-
-    fn parse_list_of<F, OF>(&mut self, func: F, of: OF, term: Token) -> Result<Vec<Node>, ()>
-    where
-        F: Fn(&mut Self) -> Result<Node, ()>,
-        OF: Fn(&Node) -> bool;
-
-    fn parse_list(&mut self) -> Result<Vec<Node>, ()>;
-}
-
-impl Parse for Parser {
-    fn parse_prog(mut self) -> Program {
+    pub fn parse_prog(mut self) -> Program {
         while self.current() != Token::EOF {
             self.current_scope = Scope::Top;
-            let expr = self.parse_level(0);
+            let expr = self.parse_level(Precedence::Low);
             if expr.is_ok() {
                 let mut expr = expr.unwrap();
 
@@ -58,7 +26,7 @@ impl Parse for Parser {
         self.program
     }
 
-    fn parse_level(&mut self, level: u8) -> Result<Node, ()> {
+    fn parse_level(&mut self, precedence: Precedence) -> Result<Node, ()> {
         let mut left = self.parse_index()?;
         let mut right;
 
@@ -68,7 +36,7 @@ impl Parse for Parser {
                 if c == "=" {
                     self.next();
                     self.current_scope = Scope::Value;
-                    let right = self.parse_level(0)?;
+                    let right = self.parse_level(Precedence::Low)?;
 
                     left = self.untyped(Expr::VarAssign {
                         name: Box::new(left),
@@ -78,12 +46,12 @@ impl Parse for Parser {
                 }
 
                 let current_op_level = get_operator_level(c.as_str());
-                if current_op_level < level {
+                if !(current_op_level > precedence) {
                     break;
                 }
 
                 self.next();
-                right = self.parse_level(current_op_level + 1)?;
+                right = self.parse_level(current_op_level)?;
 
                 left = self.untyped(Expr::BinaryExpr {
                     op: c,
@@ -103,7 +71,7 @@ impl Parse for Parser {
 
         if self.current() == Token::LeftBrace {
             self.next();
-            let index = Box::new(self.parse_level(0)?);
+            let index = Box::new(self.parse_level(Precedence::Low)?);
             self.except(Token::RightBrace);
 
             return Ok(self.untyped(Expr::IndexExpr {
@@ -176,7 +144,11 @@ impl Parse for Parser {
     }
 
     fn parse_list(&mut self) -> Result<Vec<Node>, ()> {
-        self.parse_list_of(|this| this.parse_level(0), |_| true, Token::EOF)
+        self.parse_list_of(
+            |this| this.parse_level(Precedence::Low),
+            |_| true,
+            Token::EOF,
+        )
     }
 
     fn parse_list_of<F, OF>(&mut self, func: F, of: OF, term: Token) -> Result<Vec<Node>, ()>
@@ -255,7 +227,7 @@ impl Parse for Parser {
             // }
             Token::LeftParen => {
                 self.next();
-                let expr = self.parse_level(0);
+                let expr = self.parse_level(Precedence::Low);
                 self.except(Token::RightParen);
                 expr
             }
@@ -357,7 +329,7 @@ impl Parse for Parser {
             if Token::Operator("=".to_string()) == self.current() {
                 self.next();
 
-                let expr = self.parse_level(0)?;
+                let expr = self.parse_level(Precedence::Low)?;
                 Ok(self.untyped(Expr::VarDeclare {
                     name,
                     val: Box::new(expr),
@@ -425,7 +397,7 @@ impl Parse for Parser {
                         ErrKind::UnexceptedArgs,
                         "excepted an id for arg".to_string(),
                     );
-                    return self.parse_level(0);
+                    return self.parse_level(Precedence::Low);
                 }
             }
         } else {
@@ -441,7 +413,7 @@ impl Parse for Parser {
     fn parse_if_expr(&mut self) -> Result<Node, ()> {
         self.next(); // remove if
         self.current_scope = Scope::Value;
-        let condition = self.parse_level(0)?;
+        let condition = self.parse_level(Precedence::Low)?;
         let body = self.parse_body();
 
         let mut alt: Option<Box<Node>> = None;
@@ -465,7 +437,7 @@ impl Parse for Parser {
     fn parse_while_expr(&mut self) -> Result<Node, ()> {
         self.next();
         self.current_scope = Scope::Value;
-        let condition = self.parse_level(0)?;
+        let condition = self.parse_level(Precedence::Low)?;
         let body = self.parse_body();
 
         Ok(self.untyped(Expr::WhileExpr {
@@ -481,7 +453,7 @@ impl Parse for Parser {
         self.except(Token::LeftBracket);
         while self.current() != Token::RightBracket && self.current() != Token::EOF {
             self.current_scope = Scope::Top;
-            let expr = self.parse_level(0);
+            let expr = self.parse_level(Precedence::Low);
             if expr.is_ok() {
                 let mut expr = expr.unwrap();
 
@@ -500,7 +472,7 @@ impl Parse for Parser {
     fn parse_ret_expr(&mut self) -> Result<Node, ()> {
         self.next();
         self.current_scope = Scope::Value;
-        let expr = self.parse_level(0)?;
+        let expr = self.parse_level(Precedence::Low)?;
         Ok(self.untyped(Expr::RetExpr(Box::new(expr))))
     }
 }

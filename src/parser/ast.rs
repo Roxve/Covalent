@@ -24,13 +24,23 @@ impl Literal {
     }
 }
 
-pub fn get_operator_level(op: &str) -> u8 {
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Precedence {
+    Low, // Lowest possible precedence
+    Logic,
+    Eq,
+    Cmp,
+    Add,
+    Mul,
+}
+
+pub fn get_operator_level(op: &str) -> Precedence {
     match op {
-        "&&" | "||" => 1,
-        "==" => 2,
-        "<" | ">" | ">=" | "<=" => 3,
-        "+" | "-" => 4,
-        "*" | "/" | "%" => 5,
+        "&&" | "||" => Precedence::Logic,
+        "==" => Precedence::Eq,
+        "<" | ">" | ">=" | "<=" => Precedence::Cmp,
+        "+" | "-" => Precedence::Add,
+        "*" | "/" | "%" => Precedence::Mul,
         _ => todo!(),
     }
 }

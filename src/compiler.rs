@@ -2,9 +2,6 @@ use std::env::current_exe;
 
 use crate::analysis::Analyzer;
 use crate::backend::c;
-use crate::ir::gen::IRGen;
-use crate::ir::Codegen;
-use crate::parser::parse::Parse;
 use crate::parser::Parser;
 
 #[allow(unused)]
