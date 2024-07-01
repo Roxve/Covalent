@@ -1,20 +1,22 @@
-use self::types::*;
+use crate::types::*;
 
 use super::*;
 use crate::err;
 use crate::err::*;
-use crate::ir;
-use crate::ir::IROp;
-use crate::ir::Instruction;
+
+use crate::ir::{self, IROp, Instruction};
+
 use crate::parser::ast;
 
 fn get_instrs_type(instrs: &Vec<ir::Instruction>) -> AtomType {
     instrs[instrs.len() - 1].ty()
 }
 
+type Instructions = Result<Vec<ir::Instruction>, ErrKind>;
+
 impl Analyzer {
     pub fn analyze_program(workdir: String, program: ast::Program) -> Result<ir::Program, ErrKind> {
-        let analyzer = Analyzer::new(workdir);
+        let mut analyzer = Analyzer::new(workdir);
 
         let mut instructions = Vec::new();
 
@@ -26,17 +28,34 @@ impl Analyzer {
         Ok(ir::Program { instructions })
     }
 
-    pub fn analyze(&self, node: ast::Node) -> Result<Vec<ir::Instruction>, ErrKind> {
+    pub fn analyze(&mut self, node: ast::Node) -> Instructions {
         use ast::Expr;
         match node.expr {
-            Expr::BinaryExpr { op, left, right } => {
-                self.analyze_binary_expr(op.as_str(), *left, *right)
-            }
-
             Expr::Literal(lit) => Ok(vec![Instruction::new(
                 IROp::Const(lit.clone()),
                 lit.get_ty(),
             )]),
+
+            Expr::Ident(id) => {
+                let sym = self.env.get(&id.val());
+                if sym.is_none() {
+                    err!(
+                        self,
+                        ErrKind::UndeclaredVar,
+                        format!("undeclared variable: {}", id.val())
+                    );
+                }
+
+                let sym = sym.unwrap().clone();
+
+                Ok(vec![Instruction::new(IROp::Load(sym.name), sym.ty)])
+            }
+
+            Expr::BinaryExpr { op, left, right } => {
+                self.analyze_binary_expr(op.as_str(), *left, *right)
+            }
+
+            Expr::VarDeclare { name, val } => self.analyze_var_declare(name, *val),
 
             Expr::Discard(e) => {
                 let mut results = self.analyze(*e)?;
@@ -46,7 +65,7 @@ impl Analyzer {
                     details: None,
                 };
 
-                results.push(ir::Instruction::new(IROp::Pop, ty));
+                results.push(Instruction::new(IROp::Pop, ty));
                 Ok(results)
             }
 
@@ -64,9 +83,9 @@ impl Analyzer {
 
         if left_type != right_type {
             if types::can_implicitly_convert(&left_type.kind, &right_type.kind) {
-                right.push(Instruction::new(IROp::Conv(left_type), right_type));
+                left.push(Instruction::new(IROp::Conv(left_type), right_type));
             } else if types::can_implicitly_convert(&right_type.kind, &left_type.kind) {
-                left.push(Instruction::new(IROp::Conv(right_type), left_type));
+                right.push(Instruction::new(IROp::Conv(right_type), left_type));
             } else {
                 err!(
                     self,
@@ -79,12 +98,7 @@ impl Analyzer {
         Ok((left, right))
     }
 
-    pub fn analyze_binary_expr(
-        &self,
-        op: &str,
-        left: ast::Node,
-        right: ast::Node,
-    ) -> Result<Vec<ir::Instruction>, ErrKind> {
+    fn analyze_binary_expr(&mut self, op: &str, left: ast::Node, right: ast::Node) -> Instructions {
         let mut result = Vec::new();
 
         let left_instructions = self.analyze(left)?;
@@ -102,7 +116,7 @@ impl Analyzer {
 
             "<" => {
                 (left, right) = (right, left);
-                IROp::Comp // peforms GE that is why we gotta swap
+                IROp::Comp // peforms GT that is why we gotta swap to peform LT
             }
             ">" => IROp::Comp,
 
@@ -131,6 +145,57 @@ impl Analyzer {
         let op = Instruction::new(op, ty);
         result.push(op);
 
+        Ok(result)
+    }
+
+    fn analyze_unknown_id(&mut self, mut id: Ident) -> Result<Ident, ErrKind> {
+        if let &Ident::Tagged(ref tag, ref name) = &id {
+            let ty = get_instrs_type(&self.analyze(*tag.clone())?);
+
+            if ty.details != Some(AtomDetails::Type) {
+                err!(
+                    self,
+                    ErrKind::InvaildType,
+                    format!("got {} but expected a type", tag)
+                );
+            }
+
+            id = Ident::Typed(ty, name.clone());
+        }
+
+        Ok(id)
+    }
+
+    fn analyze_var_declare(&mut self, name: Ident, val: Node) -> Instructions {
+        let name = self.analyze_unknown_id(name)?;
+
+        let mut result = Vec::new();
+
+        let expected_ty = AtomType {
+            kind: name.ty().kind.clone(),
+            details: None,
+        }; // it is any if no type provided, removes details
+
+        let val_instructions = self.analyze(val)?;
+        let ty = get_instrs_type(&val_instructions);
+
+        if ty != expected_ty {
+            err!(
+                self,
+                ErrKind::InvaildType,
+                format!("got {} but expected {}", ty, expected_ty)
+            );
+        }
+
+        self.env.add(Symbol {
+            name: name.val().to_owned(),
+            ty: ty.clone(),
+            value: None,
+            expected: None,
+        });
+
+        result.extend(val_instructions);
+        result.push(Instruction::new(IROp::Store(name.val().to_owned()), ty));
         Ok(result)
     }
 }

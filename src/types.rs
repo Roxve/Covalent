@@ -146,7 +146,7 @@ pub enum AtomDetails {
     Unknown(Box<AtomType>),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct AtomType {
     pub kind: AtomKind,
     pub details: Option<AtomDetails>,
@@ -194,6 +194,16 @@ impl AtomType {
         } else {
             0
         }
+    }
+}
+
+impl PartialEq for AtomType {
+    fn eq(&self, other: &Self) -> bool {
+        if self.kind == AtomKind::Any || other.kind == AtomKind::Any {
+            return true;
+        }
+
+        self.kind == other.kind && self.details == other.details
     }
 }
 

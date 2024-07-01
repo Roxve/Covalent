@@ -107,7 +107,7 @@ impl Parser {
     fn parse_spec(&mut self) -> Result<Node, ()> {
         let mut left = self.parse_member()?;
 
-        if self.current() == Token::LeftParen {
+        if self.current() == Token::LeftParen && matches!(left.expr, Expr::Ident(_)) {
             self.next();
             let spec = self.parse_list_of(Self::parse_spec, |_| true, Token::RightParen)?;
 
