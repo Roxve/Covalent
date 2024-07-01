@@ -10,6 +10,7 @@ pub enum ErrKind {
     VarAlreadyDeclared,
     OperationNotGranted,
     UnexceptedArgs,
+    TypeMismatch,
 }
 
 #[derive(Debug, Clone)]

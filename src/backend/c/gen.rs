@@ -2,7 +2,7 @@ use core::panic;
 
 use super::{type_to_c, types_to_cnamed, Codegen, Emit, Item};
 use crate::{
-    ir::{get_op_type, IROp},
+    ir::IROp,
     parser::ast::Ident,
     types::{self, AtomKind, AtomType, BasicType},
 };
@@ -20,14 +20,17 @@ impl Codegen {
     pub fn codegen(&mut self, mut ir: Vec<IROp>) -> String {
         // generate function and import section
         for op in ir.clone() {
-            if let IROp::Import(_, module, _, _) = op {
+            if let IROp::Import(module, _, _) = op {
                 self.module.include(module);
                 ir.remove(0);
-            } else if let IROp::Def(ret, name, args, body) = op {
+            } else if let IROp::Def(name, args, body) = op {
                 self.bond_fn(
                     name,
                     args.into_iter().map(|i| i.tuple().clone()).collect(),
-                    ret,
+                    AtomType {
+                        kind: AtomKind::Basic(BasicType::Int),
+                        details: None,
+                    },
                     body,
                 );
 
@@ -76,114 +79,121 @@ impl Codegen {
         Emit::None
     }
 
-    pub fn bond(&mut self, op: IROp) -> Emit {
-        match op {
-            IROp::Def(ret, name, args, body) => {
-                self.bond_fn(
-                    name,
-                    args.into_iter().map(|i| i.tuple().clone()).collect(),
-                    ret,
-                    body,
-                );
-            }
+    pub fn bond(&mut self, _op: IROp) -> Emit {
+        // match op {
+        //     IROp::Def(name, args, body) => {
+        //         // self.bond_fn(
+        //         //     name,
+        //         //     args.into_iter().map(|i| i.tuple().clone()).collect(),
+        //         //     todo!(),
+        //         //     body,
+        //         // );
+        //     }
 
-            IROp::Extern(ret, name, params) => return self.bond_extern(ret, name, params),
+        //     IROp::Extern(name, params) => return self.bond_extern(todo!(), name, params),
 
-            IROp::Alloc(_, _) => (),
-            IROp::Dealloc(ty, name) => {
-                // free heap allocated types
-                if ty.kind == AtomKind::Atom(types::Str.clone()) {
-                    let line = self.call_one("free", name);
-                    return Emit::Line(line);
-                }
-            }
+        //     IROp::Alloc(_) => (),
+        //     IROp::Dealloc(name) => {
+        //         // free heap allocated types
+        //         // if ty.kind == AtomKind::Atom(types::Str.clone()) {
+        //         //     let line = self.call_one("free", name);
+        //         //     return Emit::Line(line);
+        //         // }
+        //     }
 
-            IROp::Const(con) => self.push(Item::Const(con)),
-            IROp::List(ty, items) => {
-                for item in items.clone() {
-                    for expr in item {
-                        self.bond(expr);
-                    }
-                }
-                self.push(Item::List(ty, items.len() as u16));
-            }
+        //     IROp::Const(con) => self.push(Item::Const(con)),
+        //     IROp::List(ty, items) => {
+        //         for item in items.clone() {
+        //             for expr in item {
+        //                 self.bond(expr);
+        //             }
+        //         }
+        //         self.push(Item::List(ty, items.len() as u16));
+        //     }
 
-            IROp::Store(ty, name) => {
-                let val = self.pop_str();
-                let tyc = type_to_c(ty.clone());
+        //     IROp::Store(name) => {
+        //         let val = self.pop_str();
+        //         let tyc = type_to_c(todo!());
 
-                return Emit::Line(format!("{} {} = {}", tyc, name, val));
-            }
+        //         return Emit::Line(format!("{} {} = {}", tyc, name, val));
+        //     }
 
-            IROp::Load(ty, name) => {
-                let name = self.get_var(name);
-                self.push(Item::Var(ty, name));
-            }
+        //     IROp::Load(name) => {
+        //         let name = self.get_var(name);
+        //         self.push(Item::Var(todo!(), name));
+        //     }
 
-            IROp::LoadProp(ty, name) => {
-                let id = self.pop_str();
-                self.push(Item::Expr(ty, format!("{}->{}", id, name)));
-            }
+        //     IROp::LoadProp(name) => {
+        //         let id = self.pop_str();
+        //         self.push(Item::Expr(todo!(), format!("{}->{}", id, name)));
+        //     }
 
-            IROp::LoadIdx(ty) => {
-                let idx = self.pop_str();
-                let expr = self.pop_str();
+        //     IROp::LoadIdx => {
+        //         // let idx = self.pop_str();
+        //         // let expr = self.pop_str();
 
-                self.push(Item::Expr(
-                    ty.clone(),
-                    format!("__listget__({expr}, {}, {idx})", type_to_c(ty)),
-                ))
-            }
+        //         // self.push(Item::Expr(
+        //         //     todo!(),
+        //         //     format!("__listget__({expr}, {}, {idx})", type_to_c(todo!())),
+        //         // ))
+        //     }
 
-            IROp::Call(ty, count) => {
-                let arg_count = count;
-                let name = self.pop_str();
-                let args = self.pop_amount(arg_count).join(", ");
-                let call = format!("{}({})", name, args);
-                if &ty.kind == &AtomKind::Basic(BasicType::Void) {
-                    // our compiler only insert a line when the stack is empty, void functions doesnt push anything to the stack
-                    return Emit::Line(call);
-                } else {
-                    self.push(Item::Expr(ty, call));
-                }
-            }
-            IROp::While(body) => return self.bond_while(body),
-            IROp::If(_, body, alt) => return self.bond_if(body, alt),
+        //     IROp::Call(count) => {
+        //         let arg_count = count;
+        //         let name = self.pop_str();
+        //         let args = self.pop_amount(arg_count).join(", ");
+        //         let call = format!("{}({})", name, args);
+        //         /*if &ty.kind == &AtomKind::Basic(BasicType::Void) {
+        //             // our compiler only insert a line when the stack is empty, void functions doesnt push anything to the stack
+        //             return Emit::Line(call);
+        //         } else {
+        //             self.push(Item::Expr(ty, call));
+        //         }*/
+        //     }
+        //     IROp::While(body) => return self.bond_while(body),
+        //     IROp::If(body, alt) => return self.bond_if(body, alt),
 
-            IROp::Conv(into, from) => {
-                self.bond_conv(into, from);
-            }
+        //     IROp::Conv(from) => {
+        //         // TODO FIX
+        //         self.bond_conv(
+        //             AtomType {
+        //                 kind: AtomKind::Basic(BasicType::Int),
+        //                 details: None,
+        //             },
+        //             from,
+        //         );
+        //     }
 
-            IROp::Pop => {
-                if self.stack.len() > 0 {
-                    return Emit::Line(self.pop_str());
-                }
-            }
+        //     IROp::Pop => {
+        //         if self.stack.len() > 0 {
+        //             return Emit::Line(self.pop_str());
+        //         }
+        //     }
 
-            IROp::Set(ty) => {
-                let val = self.pop_str();
+        //     IROp::Set => {
+        //         let val = self.pop_str();
 
-                let name = self.pop_str();
-                let tyc = type_to_c(ty.clone());
+        //         let name = self.pop_str();
+        //         let tyc = type_to_c(todo!());
 
-                let var = self.variables.get(&name);
-                if var.is_some() {
-                    if var.unwrap().1 != ty {
-                        let name = self.var(name, ty);
+        //         let var = self.variables.get(&name);
+        //         // if var.is_some() {
+        //         //     if var.unwrap().1 != ty {
+        //         //         let name = self.var(name, ty);
 
-                        return Emit::Line(format!("{} {} = {}", tyc, name, val));
-                    }
-                } else {
-                    let name = self.get_var(name);
-                    return Emit::Line(format!("{} = {}", name, val));
-                }
-            }
-            IROp::Ret(_) => {
-                let val = self.pop_str();
-                return Emit::Line(format!("return {}", val));
-            }
-            _ => return self.bond_binary(op), // attempt to bond binary expr instead
-        }
+        //         //         return Emit::Line(format!("{} {} = {}", tyc, name, val));
+        //         //     }
+        //         // } else {
+        //         //     let name = self.get_var(name);
+        //         //     return Emit::Line(format!("{} = {}", name, val));
+        //         // }
+        //     }
+        //     IROp::Ret => {
+        //         let val = self.pop_str();
+        //         return Emit::Line(format!("return {}", val));
+        //     }
+        //     _ => return self.bond_binary(op), // attempt to bond binary expr instead
+        // }
         Emit::None
     }
     fn bond_while(&mut self, body: Vec<IROp>) -> Emit {
@@ -278,49 +288,49 @@ impl Codegen {
         )
     }
 
-    fn bond_binary(&mut self, op: IROp) -> Emit {
-        let item = if get_op_type(&op).kind == AtomKind::Dynamic
-            || self.borrow().get_ty().kind == AtomKind::Dynamic
-        {
-            let ops = vec![self.pop_str(), self.pop_str()];
-            Item::Expr(
-                AtomType {
-                    kind: AtomKind::Dynamic,
-                    details: None,
-                },
-                self.call(
-                    match op {
-                        IROp::Add(_) => "__add__",
-                        IROp::Sub(_) => "__sub__",
-                        IROp::Mul(_) => "__mul__",
-                        IROp::Div(_) => "__div__",
-                        IROp::Mod(_) => "__mod__",
-                        IROp::Comp => "__comp__",
-                        IROp::EComp => "__ecomp__",
-                        IROp::Eq => "__eq__",
-                        IROp::And => "__and__",
-                        IROp::Or => "__or__",
-                        _ => todo!(),
-                    },
-                    ops,
-                ),
-            )
-        } else {
-            match op {
-                IROp::Add(_) => self.binary("+"),
-                IROp::Sub(_) => self.binary("-"),
-                IROp::Mul(_) => self.binary("*"),
-                IROp::Div(_) => self.binary("/"),
-                IROp::Mod(_) => self.binary("%"),
-                IROp::Comp => self.binaryb(">"),
-                IROp::Eq => self.binaryb("=="),
-                IROp::EComp => self.binaryb(">="),
-                IROp::And => self.binaryb("&&"),
-                IROp::Or => self.binaryb("||"),
-                _ => todo!("unimplented op {:#?}", op),
-            }
-        };
-        self.push(item);
+    fn bond_binary(&mut self, _op: IROp) -> Emit {
+        // let item = if get_op_type(&op).kind == AtomKind::Dynamic
+        //     || self.borrow().get_ty().kind == AtomKind::Dynamic
+        // {
+        //     let ops = vec![self.pop_str(), self.pop_str()];
+        //     Item::Expr(
+        //         AtomType {
+        //             kind: AtomKind::Dynamic,
+        //             details: None,
+        //         },
+        //         self.call(
+        //             match op {
+        //                 IROp::Add => "__add__",
+        //                 IROp::Sub => "__sub__",
+        //                 IROp::Mul => "__mul__",
+        //                 IROp::Div => "__div__",
+        //                 IROp::Mod => "__mod__",
+        //                 IROp::Comp => "__comp__",
+        //                 IROp::EComp => "__ecomp__",
+        //                 IROp::Eq => "__eq__",
+        //                 IROp::And => "__and__",
+        //                 IROp::Or => "__or__",
+        //                 _ => todo!(),
+        //             },
+        //             ops,
+        //         ),
+        //     )
+        // } else {
+        //     match op {
+        //         IROp::Add => self.binary("+"),
+        //         IROp::Sub => self.binary("-"),
+        //         IROp::Mul => self.binary("*"),
+        //         IROp::Div => self.binary("/"),
+        //         IROp::Mod => self.binary("%"),
+        //         IROp::Comp => self.binaryb(">"),
+        //         IROp::Eq => self.binaryb("=="),
+        //         IROp::EComp => self.binaryb(">="),
+        //         IROp::And => self.binaryb("&&"),
+        //         IROp::Or => self.binaryb("||"),
+        //         _ => todo!("unimplented op {:#?}", op),
+        //     }
+        // };
+        // self.push(item);
         Emit::None
     }
 

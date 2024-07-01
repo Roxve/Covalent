@@ -13,6 +13,10 @@ pub struct Instruction {
 }
 
 impl Instruction {
+    pub fn new(op: IROp, ty: AtomType) -> Self {
+        Self { op, ty }
+    }
+
     pub fn ty(&self) -> AtomType {
         self.ty.clone()
     }

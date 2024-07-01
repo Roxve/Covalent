@@ -53,19 +53,15 @@ impl CompilerConfig {
         let parser = Parser::new(self.input.clone());
         let prog = parser.parse_prog();
 
-        let prog = Analyzer::analyz_prog(prog, self.workdir.clone()).unwrap();
+        let prog = Analyzer::analyze_program(self.workdir.clone(), prog).unwrap();
         if self.debug {
             dbg!(&prog);
         }
 
-        let mut codegen = Codegen::new();
-        let ir = codegen.gen_prog(prog).unwrap();
-        if self.debug {
-            dbg!(&ir);
-        }
         match self.backend {
             Backend::C(_) => {
-                c::compile(self, ir);
+                // c::compile(self, prog);
+                todo!()
             }
             _ => todo!(),
         }
