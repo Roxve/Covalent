@@ -37,6 +37,17 @@ impl Analyzer {
             )]),
 
             Expr::Ident(id) => {
+                match id {
+                    Ident::UnTagged(_) => (),
+                    _ => {
+                        err!(
+                            self,
+                            ErrKind::UnexceptedTokenE,
+                            format!("ID {} must be untagged (without @Type)", id.val())
+                        );
+                    }
+                }
+
                 let sym = self.env.get(&id.val());
                 if sym.is_none() {
                     err!(
@@ -51,11 +62,15 @@ impl Analyzer {
                 Ok(vec![Instruction::new(IROp::Load(sym.name), sym.ty)])
             }
 
+            Expr::FnCall { name, args } => self.analyze_fn_call(*name, args),
+
             Expr::BinaryExpr { op, left, right } => {
                 self.analyze_binary_expr(op.as_str(), *left, *right)
             }
 
             Expr::VarDeclare { name, val } => self.analyze_var_declare(name, *val),
+
+            Expr::VarAssign { name, val } => self.analyze_var_assign(*name, *val),
 
             Expr::Discard(e) => {
                 let mut results = self.analyze(*e)?;
@@ -71,6 +86,16 @@ impl Analyzer {
 
             e => todo!("{:#?}", e),
         }
+    }
+
+    fn analyze_items(&mut self, items: Vec<Node>) -> Result<Vec<Vec<Instruction>>, ErrKind> {
+        let mut instr = Vec::new();
+
+        for item in items {
+            instr.push(self.analyze(item)?);
+        }
+
+        Ok(instr)
     }
 
     pub fn type_unify(
@@ -96,6 +121,67 @@ impl Analyzer {
         }
 
         Ok((left, right))
+    }
+
+    fn analyze_fn_call(&mut self, name: Node, args: Vec<Node>) -> Instructions {
+        let name_instructions = self.analyze(name)?;
+        let ty = get_instrs_type(&name_instructions);
+
+        match ty.kind {
+            AtomKind::Function(func_t) => {
+                self.handle_function_call(func_t, name_instructions, args)
+            }
+            _ => {
+                err!(
+                    self,
+                    ErrKind::InvaildType,
+                    format!("type {ty} doesnt impl Call, cannot call {ty}")
+                );
+            }
+        }
+    }
+
+    fn handle_function_call(
+        &mut self,
+        func_t: FunctionType,
+        name: Vec<Instruction>,
+        args: Vec<Node>,
+    ) -> Instructions {
+        let mut result = Vec::new();
+        let count = args.len();
+
+        let args = self.analyze_items(args)?;
+
+        if count != func_t.params.len() {
+            err!(
+                self,
+                ErrKind::UnexceptedArgs,
+                format!("expected {} args got {count}", func_t.params.len())
+            );
+        }
+
+        for (index, arg) in args.iter().enumerate() {
+            if get_instrs_type(&arg) != func_t.params[index] {
+                err!(
+                    self,
+                    ErrKind::TypeMismatch,
+                    format!(
+                        "expected arg of type {} got {}, at arg {}",
+                        func_t.params[index],
+                        get_instrs_type(&arg),
+                        index
+                    )
+                );
+            }
+        }
+
+        let ty = get_instrs_type(&name);
+        result.extend(args.into_iter().flatten());
+        result.extend(name);
+
+        result.push(Instruction::new(IROp::Call(count as u16), ty));
+
+        Ok(result)
     }
 
     fn analyze_binary_expr(&mut self, op: &str, left: ast::Node, right: ast::Node) -> Instructions {
@@ -196,6 +282,32 @@ impl Analyzer {
 
         result.extend(val_instructions);
         result.push(Instruction::new(IROp::Store(name.val().to_owned()), ty));
+        Ok(result)
+    }
+
+    fn analyze_var_assign(&mut self, name: Node, val: Node) -> Instructions {
+        let name_instructions = self.analyze(name.clone())?; // may be used later on error
+
+        let mut result = Vec::new();
+
+        let val_instructions = self.analyze(val)?;
+        let ty = get_instrs_type(&val_instructions);
+
+        if ty != get_instrs_type(&name_instructions) {
+            err!(
+                self,
+                ErrKind::TypeMismatch,
+                format!(
+                    "type mismatch got {} and {}, cannot assign to {} with a value of different type",
+                    ty,
+                    get_instrs_type(&name_instructions),
+                    name
+                )
+            );
+        }
+
+        result.extend(val_instructions);
+        result.push(Instruction::new(IROp::Set, ty));
         Ok(result)
     }
 }

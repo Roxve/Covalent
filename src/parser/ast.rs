@@ -113,13 +113,13 @@ pub enum Expr {
 
     IfExpr {
         condition: Box<Node>,
-        body: Vec<Node>,
+        body: Box<Node>,
         alt: Option<Box<Node>>,
     },
 
     WhileExpr {
         condition: Box<Node>,
-        body: Vec<Node>,
+        body: Box<Node>,
     },
 
     MemberExpr {

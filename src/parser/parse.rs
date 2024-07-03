@@ -414,7 +414,10 @@ impl Parser {
         self.next(); // remove if
         self.current_scope = Scope::Value;
         let condition = self.parse_level(Precedence::Low)?;
+
         let body = self.parse_body();
+        let body = self.untyped(Expr::Block(body));
+        let body = Box::new(body);
 
         let mut alt: Option<Box<Node>> = None;
         if self.current() == Token::ElseKw {
@@ -423,8 +426,9 @@ impl Parser {
                 alt = Some(Box::new(self.parse_if_expr()?));
             } else {
                 let body = self.parse_body();
+                let body = Box::new(self.untyped(Expr::Block(body)));
 
-                alt = Some(Box::new(self.untyped(Expr::Block(body))));
+                alt = Some(body);
             }
         }
 
@@ -438,7 +442,10 @@ impl Parser {
         self.next();
         self.current_scope = Scope::Value;
         let condition = self.parse_level(Precedence::Low)?;
+
         let body = self.parse_body();
+        let body = self.untyped(Expr::Block(body));
+        let body = Box::new(body);
 
         Ok(self.untyped(Expr::WhileExpr {
             condition: Box::new(condition),
