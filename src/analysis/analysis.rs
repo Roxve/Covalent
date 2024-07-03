@@ -84,6 +84,16 @@ impl Analyzer {
                 Ok(results)
             }
 
+            Expr::Block(block) => {
+                let mut results = Vec::new();
+                for node in block {
+                    results.extend(self.analyze(node)?);
+                }
+                let ty = get_instrs_type(&results);
+
+                Ok(vec![Instruction::new(IROp::Block(results), ty)])
+            }
+
             e => todo!("{:#?}", e),
         }
     }

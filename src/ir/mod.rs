@@ -57,7 +57,9 @@ pub enum IROp {
     LoadProp(String), // load prop loads a property from the id
     LoadIdx,          // loads an index
 
-    If(Vec<IROp>, Vec<IROp>),
-    While(Vec<IROp>),
+    Block(Vec<Instruction>),
+
+    If(Vec<Instruction>, Vec<Instruction>),
+    While(Vec<Instruction>),
     Pop,
 }

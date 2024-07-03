@@ -56,14 +56,16 @@ fn get_ret_ty(node: &Node) -> Vec<AtomType> {
         }
 
         Expr::IfExpr { body, alt, .. } => {
-            let mut ty = get_body_types(&body);
+            let mut ty = get_ret_ty(&body);
             if alt.is_some() {
                 ty = get_ret_ty(&alt.unwrap());
             }
             ty
         }
 
-        Expr::WhileExpr { body, .. } | Expr::Block(body) => get_body_types(&body),
+        Expr::WhileExpr { body, .. } => get_ret_ty(&body),
+
+        Expr::Block(body) => get_body_types(&body),
         // get fn ty => Block , ifBody
         _ => Vec::new(),
     }

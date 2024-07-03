@@ -232,12 +232,18 @@ impl Parser {
                 expr
             }
 
+            Token::LeftBracket => {
+                let body = self.parse_body();
+                Ok(self.untyped(Expr::Block(body)))
+            }
+
             Token::LeftBrace => {
                 self.next();
                 let values = self.parse_list()?;
                 self.except(Token::RightBrace);
                 Ok(self.untyped(Expr::ListExpr(values)))
             }
+
             Token::UseKw => {
                 if let Token::Str(path) = self.next() {
                     self.current_scope = Scope::Use;
@@ -258,6 +264,7 @@ impl Parser {
             Token::WhileKw => self.parse_while_expr(),
             Token::IfKw => self.parse_if_expr(),
             Token::RetKw => self.parse_ret_expr(),
+
             _ => {
                 self.err(
                     ErrKind::UnexceptedTokenE,
@@ -415,8 +422,7 @@ impl Parser {
         self.current_scope = Scope::Value;
         let condition = self.parse_level(Precedence::Low)?;
 
-        let body = self.parse_body();
-        let body = self.untyped(Expr::Block(body));
+        let body = self.parse_expr()?;
         let body = Box::new(body);
 
         let mut alt: Option<Box<Node>> = None;
@@ -425,8 +431,8 @@ impl Parser {
             if self.current() == Token::IfKw {
                 alt = Some(Box::new(self.parse_if_expr()?));
             } else {
-                let body = self.parse_body();
-                let body = Box::new(self.untyped(Expr::Block(body)));
+                let body = self.parse_expr()?;
+                let body = Box::new(body);
 
                 alt = Some(body);
             }
@@ -443,8 +449,7 @@ impl Parser {
         self.current_scope = Scope::Value;
         let condition = self.parse_level(Precedence::Low)?;
 
-        let body = self.parse_body();
-        let body = self.untyped(Expr::Block(body));
+        let body = self.parse_expr()?;
         let body = Box::new(body);
 
         Ok(self.untyped(Expr::WhileExpr {
