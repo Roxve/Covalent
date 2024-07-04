@@ -75,6 +75,10 @@ impl Analyzer {
             Expr::Discard(e) => {
                 let mut results = self.analyze(*e)?;
 
+                if get_instrs_type(&results).kind == AtomKind::Basic(BasicType::Void) {
+                    return Ok(results); // no need to pop if we have void as it pushs nothing into the stack
+                }
+
                 let ty = AtomType {
                     kind: AtomKind::Basic(BasicType::Void),
                     details: None,
