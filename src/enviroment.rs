@@ -77,11 +77,27 @@ impl Enviroment {
         complex!(types::Str);
         complex!(types::Const);
 
-        Self {
+        let mut env = Self {
             symbols,
             parent: None,
             blueprints: Vec::new(),
-        }
+        };
+
+        env.push_function(
+            format!("writeln"),
+            FunctionType {
+                params: vec![AtomType {
+                    kind: AtomKind::Dynamic,
+                    details: None,
+                }],
+                return_type: Box::new(AtomType {
+                    kind: AtomKind::Basic(BasicType::Void),
+                    details: None,
+                }),
+            },
+        );
+
+        env
     }
 
     pub fn new(parent: Option<Box<Self>>) -> Self {

@@ -160,7 +160,7 @@ impl Analyzer {
         let mut result = Vec::new();
         let count = args.len();
 
-        let args = self.analyze_items(args)?;
+        let mut args = self.analyze_items(args)?;
 
         if count != func_t.params.len() {
             err!(
@@ -170,18 +170,27 @@ impl Analyzer {
             );
         }
 
-        for (index, arg) in args.iter().enumerate() {
-            if get_instrs_type(&arg) != func_t.params[index] {
-                err!(
-                    self,
-                    ErrKind::TypeMismatch,
-                    format!(
-                        "expected arg of type {} got {}, at arg {}",
-                        func_t.params[index],
-                        get_instrs_type(&arg),
-                        index
-                    )
-                );
+        for (index, arg) in args.iter_mut().enumerate() {
+            let ty = get_instrs_type(&arg);
+
+            if ty != func_t.params[index] {
+                if can_implicitly_convert(&func_t.params[index].kind, &ty.kind) {
+                    arg.extend(vec![Instruction::new(
+                        IROp::Conv(ty),
+                        func_t.params[index].clone(),
+                    )])
+                } else {
+                    err!(
+                        self,
+                        ErrKind::TypeMismatch,
+                        format!(
+                            "expected arg of type {} got {}, at arg {}",
+                            func_t.params[index],
+                            get_instrs_type(&arg),
+                            index
+                        )
+                    );
+                }
             }
         }
 
