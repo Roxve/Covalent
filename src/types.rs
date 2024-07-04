@@ -207,7 +207,10 @@ impl PartialEq for AtomType {
     }
 }
 
-pub fn type_mangle(mut name: String, types: Vec<AtomType>) -> String {
+pub fn type_mangle(name: &String, types: &Vec<AtomType>) -> String {
+    let mut name = name.clone();
+    let types = types.clone();
+
     let name = {
         let idx = name.find('$');
         if idx.is_some() {
@@ -247,7 +250,7 @@ pub fn type_mangle(mut name: String, types: Vec<AtomType>) -> String {
     return mangle;
 }
 
-pub fn mangle_types(mangle: String) -> Vec<String> {
+pub fn mangle_types(mangle: &String) -> Vec<String> {
     let types = mangle.get(mangle.find('$').unwrap() + 1..).unwrap();
     types.split('_').map(|s| s.to_string()).collect()
 }

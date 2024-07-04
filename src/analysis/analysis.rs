@@ -62,6 +62,37 @@ impl Analyzer {
                 Ok(vec![Instruction::new(IROp::Load(sym.name), sym.ty)])
             }
 
+            Expr::Extern { name, params } => {
+                let name = self.analyze_unknown_id(name)?;
+
+                let mut params_types = Vec::new();
+                for param in params.clone() {
+                    params_types.push(self.analyze_unknown_id(param)?.ty().clone());
+                }
+
+                let ty = FunctionType {
+                    params: params_types,
+                    return_type: Box::new(name.ty().clone()),
+                };
+
+                let ty = AtomType {
+                    kind: AtomKind::Function(ty),
+                    details: None,
+                };
+
+                self.env.add(Symbol {
+                    name: name.val().to_owned(),
+                    ty: ty.clone(),
+                    value: None,
+                    expected: None,
+                });
+
+                Ok(vec![Instruction::new(
+                    IROp::Extern(name.val().to_owned(), params),
+                    ty,
+                )])
+            }
+
             Expr::FnCall { name, args } => self.analyze_fn_call(*name, args),
 
             Expr::BinaryExpr { op, left, right } => {
@@ -142,6 +173,10 @@ impl Analyzer {
         let ty = get_instrs_type(&name_instructions);
 
         match ty.kind {
+            AtomKind::Blueprint(blueprint_t) => {
+                self.handle_blueprint_call(blueprint_t, name_instructions, args)
+            }
+
             AtomKind::Function(func_t) => {
                 self.handle_function_call(func_t, name_instructions, args)
             }
@@ -153,6 +188,82 @@ impl Analyzer {
                 );
             }
         }
+    }
+
+    fn handle_blueprint_call(
+        &mut self,
+        blueprint_t: BlueprintType,
+        name: Vec<Instruction>,
+        args: Vec<Node>,
+    ) -> Instructions {
+        let args_types = self.analyze_items(args.clone())?;
+
+        let args_types = args_types
+            .into_iter()
+            .map(|arg| get_instrs_type(&arg))
+            .collect();
+
+        let mangled_name = type_mangle(&blueprint_t.name, &args_types);
+        let mangled_name_types = mangle_types(&mangled_name);
+
+        let mut least_anyc = 0;
+        let mut choosen_overload = String::new();
+
+        for overload in blueprint_t.overloads {
+            if overload == mangled_name {
+                choosen_overload = overload;
+                break;
+            }
+
+            let mut anyc = 0;
+
+            // checking if it is possible
+            let overload_types = mangle_types(&overload);
+
+            for (index, ty) in overload_types.iter().enumerate() {
+                if ty != &mangled_name_types[index] && ty != "any" {
+                    break;
+                }
+
+                if ty == "any" {
+                    anyc += 1;
+                }
+            }
+
+            // choosing the best overload
+            if anyc < least_anyc {
+                least_anyc = anyc;
+                choosen_overload = overload;
+            }
+        }
+
+        if choosen_overload.is_empty() {
+            err!(
+                self,
+                ErrKind::InvaildType,
+                format!(
+                    "no overload found for types {}, function {}",
+                    mangled_name_types.join(", "),
+                    blueprint_t.name
+                )
+            );
+        }
+
+        if self
+            .env
+            .get(&choosen_overload)
+            .is_some_and(|x| matches!(x.ty.kind, AtomKind::Function(_)))
+        {
+            let func_t = self.env.get(&choosen_overload).unwrap().ty.kind.clone();
+            let func_t = match func_t {
+                AtomKind::Function(func_t) => func_t,
+                _ => unreachable!(),
+            };
+
+            return self.handle_function_call(func_t, name, args); // too lazy to do this manually, TODO: this is inefficent
+        }
+
+        todo!("build blueprint")
     }
 
     fn handle_function_call(
