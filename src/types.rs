@@ -94,7 +94,7 @@ macro_rules! complex {
         Atom::new(
             $name.to_owned(),
             HashMap::from([$(($field_name.to_owned(), AtomType { kind: $field_type, details: None})),*]),
-            IndexMap::from([$(($generic_name.to_owned(), AtomType { kind: AtomKind::Unknown, details: None})),*]),
+            IndexMap::from([$(($generic_name.to_owned(), AtomType { kind: AtomKind::Unknown(0), details: None})),*]),
         )
     };
 }
@@ -104,7 +104,7 @@ lazy_static! {
         complex!("List", {"size" => AtomKind::Basic(BasicType::Int)}, {"T"});
     pub static ref Str: Atom = complex!("str", {"size" => AtomKind::Basic(BasicType::Int)}, {});
     pub static ref Back: Atom = complex!("Back", {}, { "T" });
-    pub static ref Const: Atom = complex!("Const", {"T" => AtomKind::Unknown}, {"T"});
+    pub static ref Const: Atom = complex!("Const", {}, {"T"});
 }
 
 impl Display for Atom {
@@ -114,7 +114,7 @@ impl Display for Atom {
                 .generics
                 .iter()
                 .map(|(gen_name, gen)| {
-                    if let AtomKind::Unknown = gen.kind {
+                    if let AtomKind::Unknown(_) = gen.kind {
                         gen_name.clone()
                     } else {
                         gen.to_string()
@@ -135,15 +135,14 @@ pub enum AtomKind {
     Atom(Atom),
     Function(FunctionType),
     Blueprint(BlueprintType),
-    Dynamic, // may be scrapped, says that type is only known at runtime
-    Unknown, // Unknown and no details means that expr type is unknown later on it should be replaced with Unknown(AtomType) where AtomType is an assumption and even later it is unwarped or converted to the Some type (may be replaced to be simpler)
-    Any,     // mainly used for mangling and Symbol.expected, means that symbol can be of Any type
+    Dynamic,      // may be scrapped, says that type is only known at runtime
+    Unknown(u32), // unknown for now figure it out later using type relationship, u32 == it's count
+    Any, // mainly used for mangling and Symbol.expected, means that symbol can be of Any type
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AtomDetails {
     Type,
-    Unknown(Box<AtomType>),
 }
 
 #[derive(Debug, Clone)]
@@ -161,7 +160,7 @@ impl Display for AtomKind {
             AtomKind::Atom(a) => write!(f, "{}", a),
             AtomKind::Blueprint(b) => write!(f, "{}", b),
             AtomKind::Function(fun) => write!(f, "{}", fun),
-            AtomKind::Unknown => write!(f, "Unknown"),
+            AtomKind::Unknown(c) => write!(f, "${c}"),
         }
     }
 }

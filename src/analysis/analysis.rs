@@ -13,6 +13,7 @@ fn get_instrs_type(instrs: &Vec<ir::Instruction>) -> AtomType {
 }
 
 type Instructions = Result<Vec<ir::Instruction>, ErrKind>;
+type IInstructions = Result<Vec<Vec<Instruction>>, ErrKind>;
 
 impl Analyzer {
     pub fn analyze_program(workdir: String, program: ast::Program) -> Result<ir::Program, ErrKind> {
@@ -120,10 +121,10 @@ impl Analyzer {
             }
 
             Expr::Block(block) => {
-                let mut results = Vec::new();
-                for node in block {
-                    results.extend(self.analyze(node)?);
-                }
+                self.env.child();
+                let results = self.analyze_items(block)?.into_iter().flatten().collect();
+                self.env.parent();
+
                 let ty = get_instrs_type(&results);
 
                 Ok(vec![Instruction::new(IROp::Block(results), ty)])
@@ -133,7 +134,7 @@ impl Analyzer {
         }
     }
 
-    fn analyze_items(&mut self, items: Vec<Node>) -> Result<Vec<Vec<Instruction>>, ErrKind> {
+    fn analyze_items(&mut self, items: Vec<Node>) -> IInstructions {
         let mut instr = Vec::new();
 
         for item in items {
@@ -249,21 +250,58 @@ impl Analyzer {
             );
         }
 
-        if self
-            .env
-            .get(&choosen_overload)
-            .is_some_and(|x| matches!(x.ty.kind, AtomKind::Function(_)))
-        {
-            let func_t = self.env.get(&choosen_overload).unwrap().ty.kind.clone();
-            let func_t = match func_t {
-                AtomKind::Function(func_t) => func_t,
-                _ => unreachable!(),
-            };
+        let overload_kind = self.env.get(&choosen_overload).unwrap().ty.kind.clone();
 
-            return self.handle_function_call(func_t, name, args); // too lazy to do this manually, TODO: this is inefficent
+        let blueprint = match overload_kind {
+            AtomKind::Function(func_t) => return self.handle_function_call(func_t, name, args),
+            AtomKind::Blueprint(_) => self.env.get_blueprint(&choosen_overload).unwrap().clone(),
+            _ => unreachable!(),
+        };
+
+        self.env.child();
+
+        // adding params to env with args_types
+        for (i, ty) in args_types.iter().cloned().enumerate() {
+            let name = blueprint.params[i].val().clone();
+
+            self.env.add(Symbol {
+                name,
+                ty,
+                value: None,
+                expected: None,
+            });
         }
+        
+        // adding a placeholder function to env with same name
+        
+        let placeholder = FunctionType {
+            params: args_types, 
+            return_type: Box::new(AtomType { kind: AtomKind::Unknown(self.env.next_unknown()), details: None }),
+        };
 
-        todo!("build blueprint")
+        let placeholder = AtomType {
+            kind: AtomKind::Function(placeholder), 
+            details: None
+        };
+
+        self.env.add(Symbol { name: mangled_name, ty: placeholder, value: None, expected: None });
+
+        let instrs = self.analyze_items(blueprint.body)?;
+        self.env.parent();
+        
+        let body = instrs.into_iter().flatten().collect::<Vec<Instruction>>();
+        
+        let func_t: FunctionType = todo!();
+        self.env.push_function(mangled_name, func_t.clone());
+
+        let op = IROp::Def(*func_t.return_type.clone(), mangled_name, Vec::new(), body);
+        let ty = AtomType {kind: AtomKind::Function(func_t.clone()), details: None};
+
+        let mut results = Vec::new();
+        results.push(Instruction::new(op, ty));
+
+        results.push(Instruction::new(IROp::Call(func_t.params.len() as u16), *func_t.return_type));
+        Ok(results)
     }
 
     fn handle_function_call(

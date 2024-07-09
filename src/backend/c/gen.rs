@@ -2,7 +2,7 @@ use core::panic;
 
 use super::{type_to_c, types_to_cnamed, Codegen, Emit, Item};
 use crate::{
-    ir::IROp,
+    ir::{IROp, Instruction},
     parser::ast::Ident,
     types::{self, AtomKind, AtomType, BasicType},
 };
@@ -23,7 +23,7 @@ impl Codegen {
             if let IROp::Import(module, _, _) = op {
                 self.module.include(module);
                 ir.remove(0);
-            } else if let IROp::Def(name, args, body) = op {
+            } else if let IROp::Def(_, name, args, body) = op {
                 self.bond_fn(
                     name,
                     args.into_iter().map(|i| i.tuple().clone()).collect(),
@@ -40,15 +40,15 @@ impl Codegen {
             }
         }
 
-        self.bond_fn(
-            "main".to_string(),
-            Vec::new(),
-            AtomType {
-                kind: AtomKind::Basic(BasicType::Int),
-                details: None,
-            },
-            ir,
-        );
+        // self.bond_fn(
+        //     "main".to_string(),
+        //     Vec::new(),
+        //     AtomType {
+        //         kind: AtomKind::Basic(BasicType::Int),
+        //         details: None,
+        //     },
+        //     ir,
+        // );
 
         self.module.finish()
     }
@@ -57,14 +57,14 @@ impl Codegen {
         name: String,
         args: Vec<(AtomType, String)>,
         ret: AtomType,
-        body: Vec<IROp>,
+        body: Vec<Instruction>,
     ) {
         let ty = type_to_c(ret);
         let args = types_to_cnamed(args);
         let mut emiter = self.emiter();
         emiter.emit_header(format!("{} {}({}) {{", ty, name, args));
         for op in body {
-            let emit = self.bond(op);
+            let emit = self.bond(op.op);
 
             emiter.embed(emit);
         }

@@ -16,8 +16,11 @@ pub struct Symbol {
 #[derive(Clone, Debug)]
 pub struct Enviroment {
     pub symbols: HashMap<String, Symbol>,
-    pub parent: Option<Box<Enviroment>>,
+    pub unknown_c: u32,
+    pub types_relationships: Vec<(AtomType, AtomType)>, // 0 == 1;
+
     pub blueprints: Vec<Blueprint>,
+    pub parent: Option<Box<Enviroment>>,
 }
 
 impl Enviroment {
@@ -80,6 +83,8 @@ impl Enviroment {
         let mut env = Self {
             symbols,
             parent: None,
+            unknown_c: 0,
+            types_relationships: Vec::new(),
             blueprints: Vec::new(),
         };
 
@@ -104,6 +109,8 @@ impl Enviroment {
         Self {
             symbols: HashMap::new(),
             parent,
+            unknown_c: 0,
+            types_relationships: Vec::new(),
             blueprints: Vec::new(),
         }
     }
@@ -248,5 +255,9 @@ impl Enviroment {
         }
 
         &sym.unwrap().expected == &Some(ty.clone())
+    }
+
+    pub fn next_unknown(&self) -> u32 {
+        self.unknown_c + 1
     }
 }

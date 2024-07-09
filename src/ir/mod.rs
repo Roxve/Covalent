@@ -26,7 +26,7 @@ impl Instruction {
 pub enum IROp {
     Import(String, String, Vec<AtomType>), // ty mod fun arg count
     Extern(String, Vec<Ident>),
-    Def(String, Vec<Ident>, Vec<IROp>),
+    Def(AtomType, String, Vec<Ident>, Vec<Instruction>),
 
     Call(u16),
     Ret,

@@ -47,8 +47,8 @@ impl Parser {
         err.out_error();
     }
 
-    pub fn push_function(&mut self, name: Ident, args: Vec<Ident>, body: Vec<Node>) {
-        self.program.functions.push(Blueprint { name, args, body });
+    pub fn push_function(&mut self, name: Ident, params: Vec<Ident>, body: Vec<Node>) {
+        self.program.functions.push(Blueprint { name,params, body });
     }
     fn current(&mut self) -> Token {
         if self.current_tok.is_none() {
@@ -80,7 +80,7 @@ impl Parser {
         Node {
             expr,
             ty: AtomType {
-                kind: AtomKind::Unknown,
+                kind: AtomKind::Unknown(0),
                 details: None,
             },
             line: self.line,

@@ -242,7 +242,7 @@ impl Ident {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Blueprint {
     pub name: Ident,
-    pub args: Vec<Ident>,
+    pub params: Vec<Ident>,
     pub body: Vec<Node>,
     // pub line: u16,
     // pub column: u16,

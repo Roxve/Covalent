@@ -14,8 +14,7 @@ use crate::types::{
 pub struct Analyzer {
     workdir: String,
     pub env: Enviroment,
-    pub imports: Vec<Node>,   // Import nodes
-    pub functions: Vec<Node>, // Func nodes
+    pub unknown_c: u32,
     line: u16,
     column: u16,
 }
@@ -32,7 +31,7 @@ impl AtomType {
             {
                 &["<", ">", "==", "<=", ">=", "+", "-"]
             }
-            &AtomKind::Dynamic | &AtomKind::Unknown => &[
+            &AtomKind::Dynamic | &AtomKind::Unknown(_) => &[
                 "&&", "||", "==", "<", ">", "<=", ">=", "+", "-", "*", "/", "%",
             ],
             _ => &[],
@@ -49,9 +48,9 @@ pub fn _supports_op(ty: &AtomType, op: &String) -> bool {
 fn get_ret_ty(node: &Node) -> Vec<AtomType> {
     match node.expr.clone() {
         Expr::RetExpr(node) => {
-            if let &Some(AtomDetails::Unknown(ref ty)) = &node.ty.details {
-                return vec![(**ty).clone()];
-            }
+            // if let &Some(AtomDetails::Unknown(ref ty)) = &node.ty.details {
+            //     return vec![(**ty).clone()];
+            // }
             return vec![node.ty.clone()];
         }
 
@@ -114,7 +113,7 @@ pub fn _get_fn_type(body: &Vec<Node>) -> AtomType {
         }
 
         return AtomType {
-            kind: AtomKind::Unknown,
+            kind: AtomKind::Unknown(0),
             details: None,
         };
     }
@@ -125,8 +124,7 @@ impl Analyzer {
     pub fn new(workdir: String) -> Self {
         Self {
             env: Enviroment::init(),
-            functions: Vec::new(),
-            imports: Vec::new(),
+            unknown_c: 0,
             line: 0,
             column: 0,
             workdir,
