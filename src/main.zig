@@ -16,6 +16,13 @@ pub fn main() !void {
     _ = args.skip();
 
     const path = args.next() orelse return repl();
+    const abs_path = try std.fs.realpathAlloc(c_allocator, path);
+
+    const file = try std.fs.openFileAbsolute(abs_path, std.fs.File.OpenFlags{});
+    const input = try file.readToEndAlloc(c_allocator, std.math.maxInt(usize));
+    file.close();
+
+    try root.run(input);
     print("path: {s}\n", .{path});
 }
 
