@@ -11,7 +11,7 @@ defintion may contain other rules without ""
 ```
 rule -> other_rule;
 ```
-or terminal "tokens"
+or terminal "tokens" or 'tokens'
 ```
 rule -> "rule";
 ```
@@ -33,8 +33,8 @@ rule -> rule2?;
 ```
 rule -> rule2*;
 ```
-* means that rule2 may appear one or more times
+* means that rule2 may appear zero or more times
 ```
 rule -> rule2+;
 ```
-+ means that rule2 may appear zero or more times
++ means that rule2 may appear one or more times

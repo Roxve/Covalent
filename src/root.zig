@@ -1,10 +1,12 @@
 const std = @import("std");
 const Tokenizer = @import("Tokenizer.zig");
+const AST = @import("AST.zig");
+const Token = @import("Token.zig");
+const Parser = @import("Parser.zig");
 
 pub fn run(input: []u8) !void {
-    var tokenizer = Tokenizer{ .input = input };
-    while (!tokenizer.is_eof()) {
-        try tokenizer.next();
-        std.debug.print("{}\n", .{tokenizer.current_token});
-    }
+    const parser = try Parser.init(input);
+    const node = try parser.parse_expression();
+
+    try node.print();
 }

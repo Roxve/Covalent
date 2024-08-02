@@ -1,0 +1,14 @@
+expression -> binary ;
+binary -> coordinative ;
+
+coordinative -> equality ( ( "and" | "or") equality)* ;
+equality -> comparative ( ( "!=" | "==" ) comparative )* ;
+
+comparative -> additive ( ( "<" | ">" | "<=" | ">=" ) additive )* ;
+additive -> multiplicative ( ( "-" | "+" ) multiplicative )* ;
+
+multiplicative -> unary ( ( "/" | "*" | "%" ) unary )* ;
+unary -> ( "!" | "-" ) unary | primary ;
+
+primary -> literal | "(" expression ")" ;
+literal -> NUMBER | STR | CHAR | "true" | "false" ;
