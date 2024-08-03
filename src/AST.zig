@@ -3,16 +3,11 @@ const Token = @import("Token.zig");
 
 pub const BinaryExpr = struct { left: *const Node, right: *const Node, operator: Token.TokenType };
 
-pub const IntLiteral = struct { val: u32 };
-pub const FloatLiteral = struct { val: f32 };
-pub const StrLiteral = struct { val: []const u8 };
+pub const Literal = union(enum) { int: u32, float: f32, str: []const u8 };
 
 pub const Expr = union(enum) {
-    BinaryExpr: BinaryExpr,
-
-    IntLiteral: IntLiteral,
-    FloatLiteral: FloatLiteral,
-    StrLiteral: StrLiteral,
+    binary_expr: BinaryExpr,
+    literal: Literal,
 };
 
 pub const Node = struct {
@@ -22,92 +17,117 @@ pub const Node = struct {
     col: u16 = 0,
     width: usize = 0,
 
+    fn appendIdent(buf: *std.ArrayList(u8), ident: *u32) !void {
+        var i: u32 = 0;
+        while (i != ident.*) : (i += 1) {
+            try buf.append(' ');
+        }
+    }
+
+    fn append(buf: *std.ArrayList(u8), slice: []const u8, ident: *u32) !void {
+        try appendIdent(buf, ident);
+        try buf.appendSlice(slice);
+    }
+
     /// pretty much a mess that converts A node to a string for debugging purposes
-    pub fn visit_str(this: @This()) ![][]const u8 {
-        var str = std.ArrayList([]const u8).init(std.heap.c_allocator);
+    fn to_str_inner(this: @This(), ident: *u32) ![]const u8 {
+        var str = std.ArrayList(u8).init(std.heap.c_allocator);
         errdefer str.deinit();
 
         switch (this.expr) {
-            inline else => |e| {
-                const ty = @TypeOf(e);
-                const name = @typeName(ty);
-                try str.append((name ++ ":"));
+            inline else => |x| {
+                const ty = @TypeOf(x);
 
-                const info = @typeInfo(ty).Struct;
-                const fields = info.fields;
+                try append(&str, @typeName(ty) ++ ":\n", ident);
+                ident.* += 1;
 
-                inline for (fields) |field| {
-                    const value = @field(e, field.name);
-                    const f_info = @typeInfo(field.type);
+                inline for (std.meta.fields(ty), 0..) |field, index| {
+                    blk: {
+                        // dont continue this block if x is a union and field is not active
+                        switch (@typeInfo(ty)) {
+                            .Union => {
+                                if (index != @intFromEnum(x)) {
+                                    break :blk;
+                                }
+                            },
+                            else => {},
+                        }
 
-                    try str.append("\t");
-                    try str.append(field.name ++ ":");
-                    try str.append("\t");
+                        const value = @field(x, field.name);
+                        try append(&str, field.name ++ ":\n", ident);
+                        ident.* += 1;
 
-                    switch (field.type) {
-                        *const Node => {
-                            const visited = try value.visit_str();
-                            for (visited) |line| {
-                                try str.append("\t");
-                                try str.append(line);
-                            }
-                        },
+                        switch (field.type) {
+                            *const Node => {
+                                const slice = try value.to_str_inner(ident);
 
-                        u32, f32 => {
-                            var buf: [20]u8 = undefined;
+                                // ident already aplied on to_str_inner no need to re-apply
+                                try str.appendSlice(slice);
+                            },
 
-                            const parsed = try std.fmt.bufPrint(&buf, "{}", .{value});
-                            try str.append("\t");
-                            try str.append(try std.mem.Allocator.dupe(std.heap.c_allocator, u8, parsed));
-                        },
-
-                        []u8, []const u8 => {
-                            try str.append("\t");
-                            try str.append(value);
-                        },
-
-                        else => {
-                            switch (f_info) {
-                                .Union => {
-                                    const un = f_info.Union;
-                                    const union_fields = un.fields;
-
-                                    switch (value) {
-                                        inline else => {
-                                            const expected_index = @intFromEnum(value);
-
-                                            inline for (union_fields, 0..) |union_field, index| {
-                                                if (index == expected_index) {
-                                                    try str.append("\t");
-                                                    try str.append(@typeName(field.type) ++ "." ++ union_field.name);
-                                                    break;
-                                                }
-                                            }
-                                        },
-                                    }
-                                },
-                                else => {},
-                            }
-                        },
+                            []const u8, []u8 => {
+                                try appendIdent(&str, ident);
+                                try std.fmt.format(str.writer(), "\"{s}\"\n", .{value});
+                            },
+                            inline else => {
+                                try appendIdent(&str, ident);
+                                try std.fmt.format(str.writer(), "{}\n", .{value});
+                            },
+                        }
+                        ident.* -= 1;
                     }
                 }
             },
         }
 
+        ident.* -= 1;
+
         return try str.toOwnedSlice();
     }
 
-    /// prints the node after visiting it using this.visit_str(), treats "\t" as one space
+    /// warpper around `to_str_inner` that converts a Node into a string from scratch
+    pub fn to_str(this: @This()) ![]const u8 {
+        var ident: u32 = 0;
+        return this.to_str_inner(&ident);
+    }
+
+    /// prints the node to stderr after converting it into a str using `to_str`
     pub fn print(this: @This()) !void {
-        const str = try this.visit_str();
+        const str = try this.to_str();
 
-        for (str) |line| {
-            if (std.mem.eql(u8, line, "\t")) {
-                std.debug.print(" ", .{});
-                continue;
-            }
+        std.debug.print("{s}\n", .{str});
+    }
 
-            std.debug.print("{s}\n", .{line});
+    /// init a ptr to Node
+    pub fn init() !*@This() {
+        return try std.heap.c_allocator.create(@This());
+    }
+
+    /// deinits a ptr to Node, also deinits any other child Nodes
+    pub fn deinit(this: *const @This()) void {
+        switch (this.expr) {
+            // deinits child nodes
+            inline else => |x| {
+                inline for (std.meta.fields(@TypeOf(x)), 0..) |field, index| {
+                    blk: {
+                        // dont continue this block if x is a union and field is not active
+                        switch (@typeInfo(@TypeOf(x))) {
+                            .Union => {
+                                if (index != @intFromEnum(x)) {
+                                    break :blk;
+                                }
+                            },
+                            else => {},
+                        }
+
+                        if (field.type == *const Node or field.type == *Node) {
+                            @field(x, field.name).deinit();
+                        }
+                    }
+                }
+            },
         }
+
+        std.heap.c_allocator.destroy(this);
     }
 };

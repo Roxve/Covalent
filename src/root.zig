@@ -5,8 +5,9 @@ const Token = @import("Token.zig");
 const Parser = @import("Parser.zig");
 
 pub fn run(input: []u8) !void {
-    const parser = try Parser.init(input);
+    var parser = try Parser.init(input);
     const node = try parser.parse_expression();
 
     try node.print();
+    node.deinit();
 }

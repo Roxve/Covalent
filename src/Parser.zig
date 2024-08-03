@@ -13,7 +13,7 @@ col: u16 = 1,
 start: usize = 0,
 
 /// makes an AST.Node from one of the struct that the tagged union AST.Expr takes, just pass that struct as val
-pub fn make_node(self: @This(), val: anytype) AST.Node {
+pub fn make_node(self: @This(), val: anytype) !*AST.Node {
     const field = comptime f: {
         const fields = @typeInfo(AST.Expr).Union.fields;
 
@@ -25,7 +25,10 @@ pub fn make_node(self: @This(), val: anytype) AST.Node {
     };
 
     const node = AST.Node{ .line = self.line, .col = self.col, .width = self.tokenizer.pos - self.start, .expr = @unionInit(AST.Expr, field, val) };
-    return node;
+
+    const ptr = try std.heap.c_allocator.create(AST.Node);
+    ptr.* = node;
+    return ptr;
 }
 
 pub fn init(input: []u8) !@This() {
@@ -55,12 +58,11 @@ fn advance(self: *@This()) !void {
     try self.tokenizer.next();
 
     self.prev_token = prev;
-    return prev;
 }
 
 /// advances tokenizer (Tokenizer.next) only if Token.type(TokenType) is one of the expected matches and returns true otherwise returns false, doesn't respect union values it converts expections to int (@intFromEnum) and checks them as that
-fn eat_match(self: *@This(), expections: []TokenType) bool {
-    for (expections) |expection| {
+fn eat_match(self: *@This(), expections: anytype) !bool {
+    inline for (expections) |expection| {
         if (@intFromEnum(expection) == @intFromEnum(self.peek().type)) {
             try self.advance();
             return true;
@@ -74,13 +76,37 @@ inline fn is_eof(self: @This()) bool {
     return self.tokenizer.is_eof();
 }
 
-pub fn parse_expression(self: @This()) !AST.Node {
-    return self.parse_literal();
+pub fn parse_expression(self: *@This()) !*AST.Node {
+    return self.parse_additive_expression();
 }
 
-fn parse_literal(self: @This()) !AST.Node {
-    return switch (self.peek().type) {
-        .string => |val| self.make_node(AST.StrLiteral{ .val = val }),
+pub fn parse_additive_expression(self: *@This()) !*AST.Node {
+    var expr = try self.parse_multipactive_expression();
+
+    while (try self.eat_match(.{ TokenType.plus, TokenType.minus })) {
+        const operator = self.peek_prev().type;
+        const right = try self.parse_multipactive_expression();
+
+        expr = try self.make_node(AST.BinaryExpr{ .left = expr, .right = right, .operator = operator });
+    }
+    return expr;
+}
+
+pub fn parse_multipactive_expression(self: *@This()) !*AST.Node {
+    var expr = try self.parse_literal();
+
+    while (try self.eat_match(.{ TokenType.mul, TokenType.div })) {
+        const operator = self.peek_prev().type;
+        const right = try self.parse_literal();
+
+        expr = try self.make_node(AST.BinaryExpr{ .left = expr, .right = right, .operator = operator });
+    }
+    return expr;
+}
+
+fn parse_literal(self: *@This()) !*AST.Node {
+    return switch ((try self.eat()).type) {
+        .string => |val| self.make_node(AST.Literal{ .str = val }),
         .number => |literal| {
             var is_float = false;
 
@@ -93,10 +119,10 @@ fn parse_literal(self: @This()) !AST.Node {
 
             if (is_float) {
                 const float = std.fmt.parseFloat(f32, literal) catch unreachable;
-                return self.make_node(AST.FloatLiteral{ .val = float });
+                return self.make_node(AST.Literal{ .float = float });
             } else {
                 const int = std.fmt.parseInt(u32, literal, 10) catch unreachable;
-                return self.make_node(AST.IntLiteral{ .val = int });
+                return self.make_node(AST.Literal{ .int = int });
             }
         },
         else => error.UnexpectedToken,
