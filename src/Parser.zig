@@ -28,7 +28,7 @@ pub fn pos(self: *const @This()) usize {
 }
 
 /// makes an AST.Node from one of the struct that the tagged union AST.Expr takes, just pass that struct as val
-pub fn make_node(self: @This(), val: anytype) !*AST.Node {
+pub inline fn make_node(self: @This(), val: anytype) !*AST.Node {
     const field = comptime f: {
         const fields = @typeInfo(AST.Expr).Union.fields;
 
