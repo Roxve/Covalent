@@ -1,11 +1,16 @@
 const std = @import("std");
 const Token = @import("Token.zig");
 
+pub const UnaryExpr = struct { operator: Token.TokenType, expr: *const Node };
 pub const BinaryExpr = struct { left: *const Node, right: *const Node, operator: Token.TokenType };
 
-pub const Literal = union(enum) { int: u32, float: f32, str: []const u8 };
+pub const Literal = union(enum) { int: u32, float: f32, str: []const u8, bool: bool };
+
+pub const Program = struct { body: []*const Node, errored: bool };
 
 pub const Expr = union(enum) {
+    program: Program,
+    unary_expr: UnaryExpr,
     binary_expr: BinaryExpr,
     literal: Literal,
 };
@@ -64,12 +69,18 @@ pub const Node = struct {
                                 // ident already aplied on to_str_inner no need to re-apply
                                 try str.appendSlice(slice);
                             },
-
                             []const u8, []u8 => {
                                 try appendIdent(&str, ident);
                                 try std.fmt.format(str.writer(), "\"{s}\"\n", .{value});
                             },
-                            inline else => {
+                            //  TODO: format bodies
+                            []*const Node, []*Node => {
+                                for (value) |node| {
+                                    const results = try node.to_str_inner(ident);
+                                    try str.appendSlice(results);
+                                }
+                            },
+                            else => {
                                 try appendIdent(&str, ident);
                                 try std.fmt.format(str.writer(), "{}\n", .{value});
                             },
@@ -120,8 +131,17 @@ pub const Node = struct {
                             else => {},
                         }
 
-                        if (field.type == *const Node or field.type == *Node) {
-                            @field(x, field.name).deinit();
+                        switch (field.type) {
+                            *const Node, *Node => {
+                                @field(x, field.name).deinit();
+                            },
+                            []*const Node, []*Node => {
+                                for (@field(x, field.name)) |node| {
+                                    node.deinit();
+                                }
+                            },
+
+                            else => {},
                         }
                     }
                 }

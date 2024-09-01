@@ -4,7 +4,7 @@
 <img src="img/1.png" alt="logo" width="200"/>
 </p>
 
-WIP toy programming language, main purposes is to expirment with "Generic" programming style where everything is generic by default, and to get better at programming
+WIP toy programming language, main purposes is to expirment with a "Generic" programming style where everything is generic by default, and to get better at programming, i also hope i can get it working on my [hobby OS](https://github.com/NaviOSS/NaviOS) to develop my OS's eco-system using it, compiling to C and WASM is top priority
 
 for example this code
 ```

@@ -3,6 +3,7 @@ const c_allocator = std.heap.c_allocator;
 
 const Token = @import("Token.zig");
 const TokenType = Token.TokenType;
+const ATError = @import("errors.zig").ATError;
 
 current_token: Token = undefined,
 input: []u8,
@@ -16,11 +17,11 @@ pub fn is_eof(self: @This()) bool {
     return self.pos >= self.input.len;
 }
 
-inline fn at(self: @This()) u8 {
+pub inline fn at(self: @This()) u8 {
     return self.input[self.pos];
 }
 
-inline fn skip(self: *@This()) void {
+pub inline fn skip(self: *@This()) void {
     self.pos += 1;
     self.col += 1;
 }
@@ -37,7 +38,7 @@ fn skip_if(self: *@This(), expected: u8) bool {
     return false;
 }
 
-fn eat(self: *@This()) u8 {
+pub fn eat(self: *@This()) u8 {
     defer self.skip();
     return self.at();
 }
@@ -67,31 +68,31 @@ fn next_num(self: *@This(), start: u8) !TokenType {
     var res = std.ArrayList(u8).init(c_allocator);
     errdefer res.deinit();
 
-    try res.append(start);
-    while (self.is_num()) try res.append(self.eat());
+    res.append(start) catch return ATError.AllocatorError;
+    while (self.is_num()) res.append(self.eat()) catch return ATError.AllocatorError;
 
-    return TokenType{ .number = try res.toOwnedSlice() };
+    return TokenType{ .number = res.toOwnedSlice() catch return ATError.AllocatorError };
 }
 
 fn next_string(self: *@This()) !TokenType {
     var res = std.ArrayList(u8).init(c_allocator);
     errdefer res.deinit();
 
-    while (if (!self.is_eof()) self.at() != '"' else false) try res.append(self.eat());
+    while (if (!self.is_eof()) self.at() != '"' else false) res.append(self.eat()) catch return ATError.AllocatorError;
     if (self.is_eof()) {
-        return error.UnterminatedStringLiteral;
+        return ATError.UnterminatedStringLiteral;
     }
 
     self.skip(); // skips '"'
 
-    const slice = try res.toOwnedSlice();
+    const slice = res.toOwnedSlice() catch return ATError.AllocatorError;
     return TokenType{ .string = slice };
 }
 
 fn next_char(self: *@This()) !TokenType {
     const c = self.eat();
-    if (self.is_eof()) return error.UnterminatedCharLiteral;
-    if (self.eat() != '\'') return error.UnterminatedCharLiteral;
+    if (self.is_eof()) return ATError.UnterminatedCharLiteral;
+    if (self.eat() != '\'') return ATError.UnterminatedCharLiteral;
 
     return TokenType{ .char = c };
 }
@@ -100,21 +101,17 @@ fn next_ident(self: *@This(), start: u8) !TokenType {
     var res = std.ArrayList(u8).init(c_allocator);
     errdefer res.deinit();
 
-    try res.append(start);
-    while (self.is_allowed_ident()) try res.append(self.eat());
+    res.append(start) catch return ATError.AllocatorError;
+    while (self.is_allowed_ident()) res.append(self.eat()) catch return ATError.AllocatorError;
 
-    const slice = try res.toOwnedSlice();
+    const slice = res.toOwnedSlice() catch return ATError.AllocatorError;
     return Token.keywords.get(slice) orelse return TokenType{ .ident = slice };
 }
 
 /// generates a token starting from current position in input buffer then sets @This().current_token to it
-pub fn next(self: *@This()) !void {
-    if (self.is_eof()) {
-        return self.token(TokenType.eof);
-    }
-
+pub fn next(self: *@This()) ATError!void {
     // skip until we can actually make a token
-    while (true) {
+    while (!self.is_eof()) {
         switch (self.at()) {
             ' ', '\t', '\r' => self.skip(),
             '\n' => {
@@ -126,6 +123,10 @@ pub fn next(self: *@This()) !void {
         }
     }
 
+    if (self.is_eof()) {
+        return self.token(TokenType.eof);
+    }
+
     self.start_pos = self.pos;
 
     const ttype: TokenType = switch (self.eat()) {
@@ -133,7 +134,13 @@ pub fn next(self: *@This()) !void {
         '-' => TokenType.minus,
         '*' => TokenType.mul,
         '/' => TokenType.div,
+
+        '>' => if (self.skip_if('=')) TokenType.bigger_then_equal else TokenType.bigger_then,
+        '<' => if (self.skip_if('=')) TokenType.smaller_then_equal else TokenType.smaller_then,
+
+        '!' => TokenType.bang,
         '=' => if (self.skip_if('=')) TokenType.equal_equal else TokenType.equal,
+
         '(' => TokenType.left_paren,
         ')' => TokenType.right_paren,
 
@@ -146,7 +153,7 @@ pub fn next(self: *@This()) !void {
             return self.next();
         },
 
-        else => |_| return error.UnknownChar,
+        else => |_| return ATError.InvaildChar,
     };
 
     self.token(ttype);

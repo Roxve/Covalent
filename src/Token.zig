@@ -10,8 +10,14 @@ col: u16,
 pub const TokenType = union(enum) {
     plus,
     minus,
+    bang,
     mul,
     div,
+
+    bigger_then,
+    smaller_then,
+    bigger_then_equal,
+    smaller_then_equal,
 
     left_paren,
     right_paren,

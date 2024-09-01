@@ -6,7 +6,7 @@ const Parser = @import("Parser.zig");
 
 pub fn run(input: []u8) !void {
     var parser = try Parser.init(input);
-    const node = try parser.parse_expression();
+    const node = try parser.parse_program();
 
     try node.print();
     node.deinit();

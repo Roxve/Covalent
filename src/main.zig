@@ -23,7 +23,7 @@ pub fn main() !void {
     file.close();
 
     try root.run(input);
-    print("path: {s}\n", .{path});
+    print("path: {s}\ninput:\n{s}\n", .{ path, input });
 }
 
 fn repl() !void {
