@@ -1,18 +1,24 @@
 const std = @import("std");
 const Token = @import("Token.zig");
 
+pub const Block = struct { body: []*const Node };
+pub const Ident = struct { ident: []const u8 };
+
+pub const LetStmt = struct { name: Ident, expr: *const Node };
 pub const UnaryExpr = struct { operator: Token.TokenType, expr: *const Node };
 pub const BinaryExpr = struct { left: *const Node, right: *const Node, operator: Token.TokenType };
 
-pub const Literal = union(enum) { int: u32, float: f32, str: []const u8, bool: bool };
+pub const Literal = union(enum) { int: u32, float: f32, str: []const u8, bool: bool, char: u8 };
 
 pub const Program = struct { body: []*const Node, errored: bool };
 
 pub const Expr = union(enum) {
     program: Program,
+    let_stmt: LetStmt,
     unary_expr: UnaryExpr,
     binary_expr: BinaryExpr,
     literal: Literal,
+    Ident: Ident,
 };
 
 pub const Node = struct {

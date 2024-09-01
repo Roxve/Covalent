@@ -1,13 +1,13 @@
 const std = @import("std");
 
 type: TokenType,
-
+lexeme: []const u8,
 start: usize,
 width: u16,
 line: u16,
 col: u16,
 
-pub const TokenType = union(enum) {
+pub const TokenType = enum {
     plus,
     minus,
     bang,
@@ -26,11 +26,11 @@ pub const TokenType = union(enum) {
     equal_equal,
 
     // literals
-    number: []u8,
-    char: u8,
-    string: []u8,
+    number,
+    char,
+    string,
 
-    ident: []u8,
+    ident,
 
     // keywords
     let_kw,
@@ -45,7 +45,7 @@ pub const TokenType = union(enum) {
 
 // some comptime magic that creates a slice of .{any TokenType variant that ends with _kw name without _kw, that variant}
 fn get_keywords() ![]struct { []const u8, TokenType } {
-    const fields = comptime @typeInfo(TokenType).Union.fields;
+    const fields = comptime @typeInfo(TokenType).Enum.fields;
     var results: [fields.len]struct { []const u8, TokenType } = .{.{ "", TokenType.eof }} ** fields.len;
     var i = 0;
 

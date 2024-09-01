@@ -43,8 +43,8 @@ pub fn eat(self: *@This()) u8 {
     return self.at();
 }
 
-fn token(self: *@This(), ttype: TokenType) void {
-    self.current_token = Token{ .type = ttype, .line = self.line, .col = self.col, .start = self.start_pos, .width = @truncate(self.pos - self.start_pos) };
+fn token(self: *@This(), ttype: TokenType, lexeme: []const u8) void {
+    self.current_token = Token{ .type = ttype, .lexeme = lexeme, .line = self.line, .col = self.col, .start = self.start_pos, .width = @truncate(self.pos - self.start_pos) };
 }
 
 inline fn is_num(self: @This()) bool {
@@ -64,17 +64,18 @@ inline fn is_allowed_ident(self: @This()) bool {
     };
 }
 
-fn next_num(self: *@This(), start: u8) !TokenType {
+fn next_num(self: *@This(), start: u8) !void {
     var res = std.ArrayList(u8).init(c_allocator);
     errdefer res.deinit();
 
     res.append(start) catch return ATError.AllocatorError;
     while (self.is_num()) res.append(self.eat()) catch return ATError.AllocatorError;
 
-    return TokenType{ .number = res.toOwnedSlice() catch return ATError.AllocatorError };
+    const lexeme = res.toOwnedSlice() catch return ATError.AllocatorError;
+    return self.token(.number, lexeme);
 }
 
-fn next_string(self: *@This()) !TokenType {
+fn next_string(self: *@This()) !void {
     var res = std.ArrayList(u8).init(c_allocator);
     errdefer res.deinit();
 
@@ -86,18 +87,18 @@ fn next_string(self: *@This()) !TokenType {
     self.skip(); // skips '"'
 
     const slice = res.toOwnedSlice() catch return ATError.AllocatorError;
-    return TokenType{ .string = slice };
+    return self.token(.string, slice);
 }
 
-fn next_char(self: *@This()) !TokenType {
+fn next_char(self: *@This()) !void {
     const c = self.eat();
     if (self.is_eof()) return ATError.UnterminatedCharLiteral;
     if (self.eat() != '\'') return ATError.UnterminatedCharLiteral;
 
-    return TokenType{ .char = c };
+    return self.token(.char, &[_]u8{c});
 }
 
-fn next_ident(self: *@This(), start: u8) !TokenType {
+fn next_ident(self: *@This(), start: u8) !void {
     var res = std.ArrayList(u8).init(c_allocator);
     errdefer res.deinit();
 
@@ -105,7 +106,9 @@ fn next_ident(self: *@This(), start: u8) !TokenType {
     while (self.is_allowed_ident()) res.append(self.eat()) catch return ATError.AllocatorError;
 
     const slice = res.toOwnedSlice() catch return ATError.AllocatorError;
-    return Token.keywords.get(slice) orelse return TokenType{ .ident = slice };
+    const ttype = Token.keywords.get(slice) orelse .ident;
+
+    return self.token(ttype, slice);
 }
 
 /// generates a token starting from current position in input buffer then sets @This().current_token to it
@@ -124,12 +127,12 @@ pub fn next(self: *@This()) ATError!void {
     }
 
     if (self.is_eof()) {
-        return self.token(TokenType.eof);
+        return self.token(TokenType.eof, "<EOF>");
     }
 
     self.start_pos = self.pos;
 
-    const ttype: TokenType = switch (self.eat()) {
+    const ttype = switch (self.eat()) {
         '+' => TokenType.plus,
         '-' => TokenType.minus,
         '*' => TokenType.mul,
@@ -144,10 +147,10 @@ pub fn next(self: *@This()) ATError!void {
         '(' => TokenType.left_paren,
         ')' => TokenType.right_paren,
 
-        '0'...'9' => |d| try self.next_num(d),
-        '"' => try self.next_string(),
-        '\'' => try self.next_char(),
-        'a'...'z', 'A'...'Z', '_' => |c| try self.next_ident(c),
+        '0'...'9' => |d| return self.next_num(d),
+        '"' => return self.next_string(),
+        '\'' => return self.next_char(),
+        'a'...'z', 'A'...'Z', '_' => |c| return self.next_ident(c),
         '#' => {
             while (if (!self.is_eof()) self.at() != '\n' else false) self.skip();
             return self.next();
@@ -156,7 +159,7 @@ pub fn next(self: *@This()) ATError!void {
         else => |_| return ATError.InvaildChar,
     };
 
-    self.token(ttype);
+    self.token(ttype, self.input[self.start_pos .. self.pos - 1]);
 }
 
 pub fn init(input: []u8) !@This() {

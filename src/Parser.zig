@@ -106,8 +106,8 @@ pub fn parse_program(self: *@This()) !*AST.Node {
     var errored = false;
 
     while (!self.is_eof()) {
-        // start parsing again after the first newline
-        const expr = self.parse_expression() catch |err| {
+        // TODO: start parsing again after the first newline
+        const expr = self.parse_statement() catch |err| {
             errored = true;
             errors.report(err, self.peek_prev().line, self.peek_prev().col);
             continue;
@@ -118,6 +118,28 @@ pub fn parse_program(self: *@This()) !*AST.Node {
 
     const program = AST.Program{ .body = try list.toOwnedSlice(), .errored = errored };
     return self.make_node(program);
+}
+
+pub fn parse_statement(self: *@This()) ATError!*AST.Node {
+    return switch (self.peek().type) {
+        .let_kw => self.parse_let_statement(),
+        else => self.parse_expression(),
+    };
+}
+
+pub fn parse_let_statement(self: *@This()) ATError!*AST.Node {
+    try self.advance();
+
+    const token = try self.eat();
+    const ident = switch (token.type) {
+        .ident => AST.Ident{ .ident = token.lexeme },
+        else => return ATError.UnexpectedToken,
+    };
+
+    try self.expect(TokenType.equal);
+    const expr = try self.parse_expression();
+
+    return self.make_node(AST.LetStmt{ .name = ident, .expr = expr });
 }
 
 pub fn parse_expression(self: *@This()) ATError!*AST.Node {
@@ -204,14 +226,23 @@ pub fn parse_primary_expression(self: *@This()) ATError!*AST.Node {
             try self.expect(TokenType.right_paren);
             return expr;
         },
+        .ident => {
+            const token = try self.eat();
+            return self.make_node(AST.Ident{ .ident = token.lexeme });
+        },
         else => self.parse_literal(),
     };
 }
 
 fn parse_literal(self: *@This()) ATError!*AST.Node {
-    return switch ((try self.eat()).type) {
-        .string => |val| self.make_node(AST.Literal{ .str = val }),
-        .number => |literal| {
+    const token = try self.eat();
+    return switch (token.type) {
+        .string => self.make_node(AST.Literal{ .str = token.lexeme }),
+        .char => self.make_node(AST.Literal{ .char = token.lexeme[0] }),
+
+        .number => {
+            const literal = token.lexeme;
+
             var is_float = false;
 
             for (literal) |char| {
