@@ -105,7 +105,7 @@ pub fn parse_program(self: *@This()) !*AST.Node {
     errdefer list.deinit();
     var errored = false;
 
-    while (!self.is_eof()) {
+    while (self.peek().type != Token.TokenType.eof) {
         // TODO: start parsing again after the first newline
         const expr = self.parse_statement() catch |err| {
             errored = true;
@@ -139,7 +139,7 @@ pub fn parse_let_statement(self: *@This()) ATError!*AST.Node {
     try self.expect(TokenType.equal);
     const expr = try self.parse_expression();
 
-    return self.make_node(AST.LetStmt{ .name = ident, .expr = expr });
+    return self.make_node(AST.LetDecl{ .name = ident, .expr = expr });
 }
 
 pub fn parse_expression(self: *@This()) ATError!*AST.Node {

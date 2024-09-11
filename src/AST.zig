@@ -1,20 +1,22 @@
 const std = @import("std");
+const NodeKind = @import("analysis.zig").NodeKind;
+
 const Token = @import("Token.zig");
 
-pub const Block = struct { body: []*const Node };
+pub const Block = struct { body: []*Node };
 pub const Ident = struct { ident: []const u8 };
 
-pub const LetStmt = struct { name: Ident, expr: *const Node };
-pub const UnaryExpr = struct { operator: Token.TokenType, expr: *const Node };
-pub const BinaryExpr = struct { left: *const Node, right: *const Node, operator: Token.TokenType };
+pub const LetDecl = struct { name: Ident, expr: *Node };
+pub const UnaryExpr = struct { operator: Token.TokenType, expr: *Node };
+pub const BinaryExpr = struct { left: *Node, right: *Node, operator: Token.TokenType };
 
 pub const Literal = union(enum) { int: u32, float: f32, str: []const u8, bool: bool, char: u8 };
 
-pub const Program = struct { body: []*const Node, errored: bool };
+pub const Program = struct { body: []*Node, errored: bool };
 
 pub const Expr = union(enum) {
     program: Program,
-    let_stmt: LetStmt,
+    let_decl: LetDecl,
     unary_expr: UnaryExpr,
     binary_expr: BinaryExpr,
     literal: Literal,
@@ -27,6 +29,7 @@ pub const Node = struct {
     line: u16 = 0,
     col: u16 = 0,
     width: usize = 0,
+    kind: NodeKind = undefined,
 
     fn appendIdent(buf: *std.ArrayList(u8), ident: *u32) !void {
         var i: u32 = 0;
@@ -69,23 +72,25 @@ pub const Node = struct {
                         ident.* += 1;
 
                         switch (field.type) {
-                            *const Node => {
+                            *const Node, *Node => {
                                 const slice = try value.to_str_inner(ident);
 
                                 // ident already aplied on to_str_inner no need to re-apply
                                 try str.appendSlice(slice);
                             },
+
                             []const u8, []u8 => {
                                 try appendIdent(&str, ident);
                                 try std.fmt.format(str.writer(), "\"{s}\"\n", .{value});
                             },
-                            //  TODO: format bodies
+
                             []*const Node, []*Node => {
                                 for (value) |node| {
                                     const results = try node.to_str_inner(ident);
                                     try str.appendSlice(results);
                                 }
                             },
+
                             else => {
                                 try appendIdent(&str, ident);
                                 try std.fmt.format(str.writer(), "{}\n", .{value});
@@ -96,6 +101,9 @@ pub const Node = struct {
                 }
             },
         }
+
+        try appendIdent(&str, ident);
+        try std.fmt.format(str.writer(), "kind: {}\n", .{this.kind});
 
         ident.* -= 1;
 

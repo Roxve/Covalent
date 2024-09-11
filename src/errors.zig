@@ -1,12 +1,6 @@
 const std = @import("std");
 
-pub const ATError = error{
-    InvaildChar,
-    UnexpectedToken,
-    UnterminatedStringLiteral,
-    UnterminatedCharLiteral,
-    AllocatorError,
-};
+pub const ATError = error{ InvaildChar, UnexpectedToken, UnterminatedStringLiteral, UnterminatedCharLiteral, AllocatorError, InvaildType, TypeMismatch, UndeclaredVariable };
 
 /// reports an error to stderr
 // TODO: error messages

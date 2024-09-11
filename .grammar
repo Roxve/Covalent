@@ -1,5 +1,5 @@
 statement -> expression | letStatement;
-letStatement -> "let" ID ("=" expression)? ;
+letDecl -> "let" ID ("=" expression)? ;
 
 expression -> binary ;
 binary -> coordinative ;

@@ -36,6 +36,7 @@ pub const TokenType = enum {
     let_kw,
     and_kw,
     or_kw,
+    fn_kw,
 
     true_kw,
     false_kw,
@@ -43,13 +44,13 @@ pub const TokenType = enum {
     eof,
 };
 
-// some comptime magic that creates a slice of .{any TokenType variant that ends with _kw name without _kw, that variant}
+// some comptime magic that creates a slice of .{(any TokenType variant that ends with _kw name without _kw), (that variant)}
 fn get_keywords() ![]struct { []const u8, TokenType } {
     const fields = comptime @typeInfo(TokenType).Enum.fields;
-    var results: [fields.len]struct { []const u8, TokenType } = .{.{ "", TokenType.eof }} ** fields.len;
-    var i = 0;
+    comptime var results: [fields.len]struct { []const u8, TokenType } = .{undefined} ** fields.len;
+    comptime var i = 0;
 
-    inline for (fields) |field| {
+    for (fields) |field| {
         if (std.mem.eql(u8, field.name[field.name.len - 3 ..], "_kw")) {
             results[i] = .{ field.name[0 .. field.name.len - 3], @field(TokenType, field.name) };
             i += 1;
