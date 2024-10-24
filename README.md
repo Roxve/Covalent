@@ -1,5 +1,5 @@
 # Covalent
-# The compiler will start being rewritten from scratch and the goals syntax etc will be re-tought the current compiler and repo is pretty much a mess checkout the rewrite branch
+## this project is a failure therfore it will be archived ...
 
 <p align="center">
 <img src="img/1.png" alt="logo" width="200"/>
